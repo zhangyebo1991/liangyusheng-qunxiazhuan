@@ -1,68 +1,68 @@
-# Godot Base Framework Design
+# Godot 基础框架设计
 
-Date: 2026-05-08
-Project: liangyusheng-qunxiazhuan
-Engine target: Godot 4.6
+日期：2026-05-08
+项目：liangyusheng-qunxiazhuan
+目标引擎：Godot 4.6
 
-## Goal
+## 目标
 
-Create the first Godot 4.6 project framework for a free single-player wuxia RPG in the style of classic open-ended martial arts RPGs.
+创建第一个 Godot 4.6 项目框架，用于开发一款免费的单机武侠角色扮演游戏，整体方向接近经典开放式群侠题材角色扮演游戏。
 
-The framework should be runnable in Godot after the engine is installed, easy for AI-assisted development to modify, and structured for a future vertical slice containing exploration, dialogue, quests, battle, rewards, and save/load.
+这个框架需要在安装 Godot 后可以打开运行，便于人工智能辅助长期修改，并为后续垂直切片预留结构。垂直切片应覆盖探索、对话、任务、战斗、奖励、存档和读档。
 
-## Scope
+## 范围
 
-This change creates the foundation only:
+本次变更只创建基础框架：
 
-- Godot project configuration and boot scene.
-- Minimal placeholder scenes for boot, main menu, world, and battle.
-- Global core services for event dispatch, game state, scene changes, and data loading.
-- Domain classes for actor, item, martial art, quest, party, and combat result data.
-- System classes for dialogue, quests, combat flow, and saves.
-- Example JSON data for actors, items, martial arts, quests, and dialogue.
-- Lightweight GDScript test runner and tests for pure logic.
-- Developer documentation for structure and next steps.
+- Godot 项目配置和启动场景。
+- 最小占位场景：启动、主菜单、世界地图和战斗。
+- 全局核心服务：事件分发、游戏状态、场景切换和数据加载。
+- 领域类：角色、物品、武学、任务、队伍和战斗结果数据。
+- 系统类：对话、任务、战斗流程和存档。
+- 示例 JSON 数据：角色、物品、武学、任务和对话。
+- 轻量 GDScript 测试运行器，以及用于纯逻辑的测试。
+- 开发文档：项目结构和后续开发规则。
 
-This change does not create final art, final UI, full combat rules, real maps, or production content.
+本次变更不创建最终美术、最终界面、完整战斗规则、真实地图或正式内容。
 
-## Architecture
+## 架构
 
-The project separates game rules from scene presentation:
+项目将游戏规则与场景表现分离：
 
-- `scripts/domain/` contains small data and rule objects with no scene dependencies.
-- `scripts/systems/` contains workflow services such as data loading, quests, dialogue, combat, and saves.
-- `scripts/core/` contains global wiring: event bus, game state, scene manager, and bootstrap.
-- `scenes/` contains Godot scenes that call systems and render placeholder UI.
-- `data/` contains editable JSON content used by the initial systems.
-- `tests/` contains logic tests that can run from the command line or Godot editor.
+- `scripts/domain/` 存放小型数据对象和规则对象，不依赖场景。
+- `scripts/systems/` 存放流程服务，例如数据加载、任务、对话、战斗和存档。
+- `scripts/core/` 存放全局连接层，例如事件总线、游戏状态、场景管理和启动流程。
+- `scenes/` 存放 Godot 场景，场景调用系统并显示占位界面。
+- `data/` 存放可编辑 JSON 内容，供初始系统读取。
+- `tests/` 存放逻辑测试，可从命令行或 Godot 编辑器运行。
 
-Scene nodes should depend on systems. Systems may depend on domain classes. Domain classes should not depend on scenes.
+场景节点可以依赖系统。系统可以依赖领域类。领域类不得依赖场景。
 
-## Data Flow
+## 数据流
 
-On startup, the boot scene initializes global services and loads JSON data. The main menu can start a new game, which creates default game state and switches to the world scene. The world scene demonstrates dialogue and quest state. The battle scene demonstrates entering and resolving a simple combat flow.
+启动时，启动场景初始化全局服务并加载 JSON 数据。主菜单可以开始新游戏，新游戏会创建默认游戏状态并切换到世界地图场景。世界地图场景演示对话和任务状态。战斗场景演示进入战斗并结算一个简单战斗流程。
 
-Save data is versioned so future schema changes can migrate old saves instead of breaking them silently.
+存档数据需要带版本号，方便未来数据结构变化时迁移旧存档，而不是静默破坏旧存档。
 
-## Error Handling
+## 错误处理
 
-Data loading should fail loudly in development with clear push errors and safe empty results. Save/load should return success values instead of assuming disk writes always work.
+开发阶段的数据加载需要明确报错，使用清晰的 Godot 错误输出，并在必要时返回安全的空结果。存档和读档需要返回成功或失败状态，不能假设磁盘读写一定成功。
 
-Game systems should validate required IDs before mutating state. Missing content IDs should not crash unrelated scenes.
+游戏系统在修改状态前需要校验必要的内容编号。缺失内容编号不应导致无关场景崩溃。
 
-## Testing
+## 测试
 
-The first tests focus on non-visual logic:
+首批测试聚焦非视觉逻辑：
 
-- Data loader can parse example content.
-- Quest system can start and complete a quest.
-- Combat flow can produce a deterministic result.
-- Save system can serialize and deserialize basic game state.
+- 数据加载器可以解析示例内容。
+- 任务系统可以开始并完成任务。
+- 战斗流程可以产生确定性的结果。
+- 存档系统可以序列化和反序列化基础游戏状态。
 
-Visual scenes are verified by opening the project in Godot once Godot 4.6 is installed.
+视觉场景在安装 Godot 4.6 后，通过打开项目进行验证。
 
-## Implementation Notes
+## 实现说明
 
-Use GDScript as the primary language. Avoid external plugins in the first framework pass. Keep files small and named in `snake_case.gd` to match Godot conventions.
+主要开发语言使用 GDScript。第一版框架不引入外部插件。文件保持小而清晰，文件名使用 `snake_case.gd`，以符合 Godot 常见约定。
 
-The first runnable version should prefer simple placeholders over incomplete abstractions. Any future editor tooling for quests, actors, martial arts, and maps can be added after the vertical slice proves the data model.
+第一版可运行框架应优先使用简单占位内容，而不是提前引入不完整的抽象。任务、角色、武学和地图等编辑器工具，等垂直切片验证数据模型后再补充。
