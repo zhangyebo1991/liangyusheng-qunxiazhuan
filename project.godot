@@ -1,0 +1,16 @@
+; Engine configuration file.
+; Godot 4.6 项目配置。
+
+config_version=5
+
+[application]
+
+config/name="梁羽生群侠传"
+config/features=PackedStringArray("4.6")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
