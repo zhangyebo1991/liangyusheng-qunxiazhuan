@@ -3,12 +3,14 @@ extends SceneTree
 const TestAssertionsScript = preload("res://tests/support/test_assertions.gd")
 const TestDataLoaderScript = preload("res://tests/test_data_loader.gd")
 const TestDomainModelsScript = preload("res://tests/test_domain_models.gd")
+const TestQuestAndDialogueScript = preload("res://tests/test_quest_and_dialogue.gd")
 
 func _init() -> void:
 	var assertions = TestAssertionsScript.new()
 	var suites: Array = [
 		TestDataLoaderScript.new(),
 		TestDomainModelsScript.new(),
+		TestQuestAndDialogueScript.new(),
 	]
 
 	for suite in suites:
