@@ -1,0 +1,9 @@
+[
+  {
+    "id": "quest_first_step",
+    "title": "初入江湖",
+    "description": "向青衫客请教江湖规矩。",
+    "start_dialogue": "intro_meet_master",
+    "reward_items": ["herb_small"]
+  }
+]

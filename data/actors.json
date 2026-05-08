@@ -1,0 +1,22 @@
+[
+  {
+    "id": "hero_yun",
+    "name": "云游少侠",
+    "level": 1,
+    "hp": 120,
+    "max_hp": 120,
+    "attack": 18,
+    "defense": 8,
+    "martial_arts": ["basic_sword"]
+  },
+  {
+    "id": "bandit_01",
+    "name": "山道强人",
+    "level": 1,
+    "hp": 70,
+    "max_hp": 70,
+    "attack": 12,
+    "defense": 4,
+    "martial_arts": ["rough_fist"]
+  }
+]

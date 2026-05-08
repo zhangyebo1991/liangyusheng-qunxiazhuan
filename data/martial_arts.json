@@ -1,0 +1,18 @@
+[
+  {
+    "id": "basic_sword",
+    "name": "基础剑法",
+    "school": "江湖",
+    "power": 12,
+    "cost": 3,
+    "description": "入门剑招，胜在稳妥。"
+  },
+  {
+    "id": "rough_fist",
+    "name": "粗浅拳脚",
+    "school": "江湖",
+    "power": 7,
+    "cost": 1,
+    "description": "街头斗殴中磨出的拳脚。"
+  }
+]

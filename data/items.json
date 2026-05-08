@@ -1,0 +1,16 @@
+[
+  {
+    "id": "herb_small",
+    "name": "小还丹",
+    "type": "consumable",
+    "description": "恢复少量气血。",
+    "value": 30
+  },
+  {
+    "id": "iron_sword",
+    "name": "铁剑",
+    "type": "weapon",
+    "description": "寻常江湖人常用的长剑。",
+    "value": 120
+  }
+]
