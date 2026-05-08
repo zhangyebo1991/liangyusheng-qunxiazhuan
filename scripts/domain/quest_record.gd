@@ -7,8 +7,8 @@ var description: String = ""
 var start_dialogue: String = ""
 var reward_items: Array[String] = []
 
-static func from_dictionary(data: Dictionary) -> QuestRecord:
-	var quest = QuestRecord.new()
+static func from_dictionary(data: Dictionary):
+	var quest = new()
 	quest.id = str(data.get("id", ""))
 	quest.title = str(data.get("title", ""))
 	quest.description = str(data.get("description", ""))

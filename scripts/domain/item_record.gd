@@ -7,8 +7,8 @@ var type: String = ""
 var description: String = ""
 var value: int = 0
 
-static func from_dictionary(data: Dictionary) -> ItemRecord:
-	var item = ItemRecord.new()
+static func from_dictionary(data: Dictionary):
+	var item = new()
 	item.id = str(data.get("id", ""))
 	item.name = str(data.get("name", ""))
 	item.type = str(data.get("type", ""))

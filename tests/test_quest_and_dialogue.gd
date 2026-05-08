@@ -21,3 +21,4 @@ func run(assertions) -> void:
 	assertions.assert_eq(lines.size(), 2, "对话应返回 2 行文本")
 	assertions.assert_eq(lines[0].get("speaker", ""), "青衫客", "第一行说话人应正确")
 	assertions.assert_eq(dialogue_system.get_title("missing_dialogue"), "", "缺失对话标题应返回空字符串")
+	repository.free()

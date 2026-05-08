@@ -10,8 +10,8 @@ var attack: int = 1
 var defense: int = 0
 var martial_arts: Array[String] = []
 
-static func from_dictionary(data: Dictionary) -> ActorState:
-	var actor = ActorState.new()
+static func from_dictionary(data: Dictionary):
+	var actor = new()
 	actor.id = str(data.get("id", ""))
 	actor.name = str(data.get("name", ""))
 	actor.level = int(data.get("level", 1))

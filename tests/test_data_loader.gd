@@ -11,3 +11,4 @@ func run(assertions) -> void:
 	assertions.assert_eq(repository.get_martial_art("basic_sword").get("name", ""), "基础剑法", "应按编号读取武学")
 	assertions.assert_eq(repository.get_dialogue("intro_meet_master").get("title", ""), "初入江湖", "应按编号读取对话")
 	assertions.assert_eq(repository.get_actor("missing_id"), {}, "缺失角色编号应返回空字典")
+	repository.free()

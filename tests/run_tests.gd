@@ -6,7 +6,7 @@ const TestDomainModelsScript = preload("res://tests/test_domain_models.gd")
 const TestQuestAndDialogueScript = preload("res://tests/test_quest_and_dialogue.gd")
 const TestCombatAndSaveScript = preload("res://tests/test_combat_and_save.gd")
 
-func _init() -> void:
+func _initialize() -> void:
 	var assertions = TestAssertionsScript.new()
 	var suites: Array = [
 		TestDataLoaderScript.new(),
