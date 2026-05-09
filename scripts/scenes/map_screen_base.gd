@@ -8,6 +8,7 @@ const DialogueSystemScript = preload("res://scripts/systems/dialogue_system.gd")
 const MapObjectSpawnerScript = preload("res://scripts/systems/map_object_spawner.gd")
 const MapTransitionSystemScript = preload("res://scripts/systems/map_transition_system.gd")
 const InventorySystemScript = preload("res://scripts/systems/inventory_system.gd")
+const ShopSystemScript = preload("res://scripts/systems/shop_system.gd")
 
 var player
 var hud
@@ -16,6 +17,8 @@ var dialogue_system = DialogueSystemScript.new()
 var spawner = MapObjectSpawnerScript.new()
 var transition_system = MapTransitionSystemScript.new()
 var inventory_system = InventorySystemScript.new()
+var shop_system = ShopSystemScript.new()
+var current_shop_record: Dictionary = {}
 var map_data: Dictionary = {}
 var interactables: Array = []
 var map_id: String = ""
@@ -30,7 +33,7 @@ func configure_map(next_map_id: String, next_fallback_spawn: Vector2, next_backg
 	obstacle_color = next_obstacle_color
 
 func _ready() -> void:
-	dialogue_system.set_repository(DataRepository)
+	dialogue_system.set_repository(_get_data_repository())
 	_load_map_data()
 	_create_terrain()
 	_create_player()
@@ -46,11 +49,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("inventory"):
 		_toggle_inventory()
 	elif event.is_action_pressed("cancel"):
-		var success = GameState.save_to_path("user://save_01.json")
+		var game_state = _get_game_state()
+		var success = game_state != null and game_state.save_to_path("user://save_01.json")
 		hud.show_message("存档成功。" if success else "存档失败。")
 
 func _load_map_data() -> void:
-	map_data = DataRepository.get_map(map_id)
+	var data_repository = _get_data_repository()
+	map_data = data_repository.get_map(map_id) if data_repository != null else {}
 	if map_data.is_empty():
 		push_error("无法读取地图配置：%s" % map_id)
 		map_data = {
@@ -108,13 +113,18 @@ func _create_camera() -> void:
 func _create_ui() -> void:
 	hud = HudScript.new()
 	hud.item_use_requested.connect(_on_item_use_requested)
+	hud.shop_buy_requested.connect(_on_shop_buy_requested)
 	add_child(hud)
-	inventory_system.set_repository(DataRepository)
+	var data_repository = _get_data_repository()
+	inventory_system.set_repository(data_repository)
+	shop_system.set_repository(data_repository)
 	dialogue_box = DialogueBoxScript.new()
 	add_child(dialogue_box)
 
 func _spawn_objects() -> void:
-	var records = spawner.get_spawn_records(map_data, GameState.map_state.resolved_objects)
+	var game_state = _get_game_state()
+	var resolved_objects = game_state.map_state.resolved_objects if game_state != null else []
+	var records = spawner.get_spawn_records(map_data, resolved_objects)
 	for record in records:
 		var interactable = MapInteractableScript.new()
 		interactable.setup(record)
@@ -125,6 +135,8 @@ func _spawn_objects() -> void:
 		add_child(interactable)
 
 func _update_nearest_interactable() -> void:
+	if player == null or hud == null:
+		return
 	var nearest = null
 	var best_distance := INF
 	for interactable in interactables:
@@ -141,32 +153,86 @@ func _interact_with(_interactable) -> void:
 
 func _transition_to_exit(record: Dictionary) -> void:
 	var target_map_id = str(record.get("target_map_id", ""))
-	var target_map = DataRepository.get_map(target_map_id)
+	var data_repository = _get_data_repository()
+	var target_map = data_repository.get_map(target_map_id) if data_repository != null else {}
 	var result = transition_system.resolve_transition(record, target_map)
 	if not bool(result.get("success", false)):
 		hud.show_message(str(result.get("message", "前路尚未开放。")))
 		return
 
-	GameState.set_current_map(str(result.get("map_id", "")), result.get("position", fallback_spawn))
-	SceneLoader.change_scene(GameState.get_current_map_scene_path())
+	var game_state = _get_game_state()
+	if game_state == null:
+		hud.show_message("前路尚未开放。")
+		return
+	game_state.set_current_map(str(result.get("map_id", "")), result.get("position", fallback_spawn))
+	var scene_loader = _get_scene_loader()
+	if scene_loader != null:
+		scene_loader.change_scene(game_state.get_current_map_scene_path())
 
 func _open_dialogue(dialogue_id: String, fallback_text: String = "此人暂时无话可说。") -> void:
 	var lines = dialogue_system.get_lines(dialogue_id)
 	if lines.is_empty():
 		lines = [{"speaker": "旁白", "text": fallback_text}]
-	dialogue_box.open(lines)
+	if dialogue_box != null:
+		dialogue_box.open(lines)
+
+func _open_shop(record: Dictionary) -> void:
+	current_shop_record = record.duplicate(true)
+	var game_state = _get_game_state()
+	var coins = game_state.party.coins if game_state != null else 0
+	var items = _build_shop_items(current_shop_record)
+	hud.show_shop(str(current_shop_record.get("name", "药铺")), coins, items)
+	if items.is_empty():
+		hud.show_message("药铺暂时没有可买之物。")
+
+func _build_shop_items(record: Dictionary) -> Array:
+	var items: Array = []
+	var raw_items = record.get("items", [])
+	if typeof(raw_items) != TYPE_ARRAY:
+		return items
+
+	var data_repository = _get_data_repository()
+	for raw_item_id in raw_items:
+		var item_id = str(raw_item_id)
+		if item_id.is_empty():
+			continue
+		var item_data = data_repository.get_item(item_id) if data_repository != null else {}
+		if item_data.is_empty():
+			items.append({
+				"id": item_id,
+				"name": "未知商品",
+				"description": "此商品暂时不能购买。",
+				"price": 0,
+				"can_buy": false,
+			})
+			continue
+
+		var price = int(item_data.get("value", 0))
+		items.append({
+			"id": item_id,
+			"name": str(item_data.get("name", "未知商品")),
+			"description": str(item_data.get("description", "")),
+			"price": price,
+			"can_buy": price > 0,
+		})
+	return items
 
 func _toggle_inventory() -> void:
 	hud.toggle_inventory(_build_inventory_items())
 
 func _build_inventory_items() -> Array:
+	var game_state = _get_game_state()
+	if game_state == null:
+		return []
+
+	var data_repository = _get_data_repository()
 	var items: Array = []
-	for raw_item_id in GameState.party.inventory.keys():
+	for raw_item_id in game_state.party.inventory.keys():
 		var item_id = str(raw_item_id)
-		var quantity = GameState.party.get_item_count(item_id)
+		var quantity = game_state.party.get_item_count(item_id)
 		if quantity <= 0:
 			continue
-		var item_data = DataRepository.get_item(item_id)
+		var item_data = data_repository.get_item(item_id) if data_repository != null else {}
 		if item_data.is_empty():
 			items.append({
 				"id": item_id,
@@ -191,9 +257,21 @@ func _refresh_inventory_if_open() -> void:
 	if hud.is_inventory_open():
 		hud.refresh_inventory(_build_inventory_items())
 
+func _refresh_shop_if_open() -> void:
+	if hud.is_shop_open():
+		var game_state = _get_game_state()
+		var coins = game_state.party.coins if game_state != null else 0
+		hud.refresh_shop(coins, _build_shop_items(current_shop_record))
+
 func _on_item_use_requested(item_id: String) -> void:
-	var result = inventory_system.use_item(GameState, item_id)
+	var result = inventory_system.use_item(_get_game_state(), item_id)
 	hud.show_message(str(result.get("message", "此物暂时不能使用。")))
+	_refresh_inventory_if_open()
+
+func _on_shop_buy_requested(item_id: String) -> void:
+	var result = shop_system.buy_item(_get_game_state(), item_id)
+	hud.show_message(str(result.get("message", "此商品暂时不能购买。")))
+	_refresh_shop_if_open()
 	_refresh_inventory_if_open()
 
 func _on_interactable_clicked(interactable) -> void:
@@ -210,12 +288,32 @@ func _on_interactable_exited(_interactable) -> void:
 	hud.set_prompt("")
 
 func _on_player_position_changed(position: Vector2) -> void:
-	GameState.set_player_position(position)
+	var game_state = _get_game_state()
+	if game_state != null:
+		game_state.set_player_position(position)
 
 func _update_quest_text() -> void:
 	pass
 
 func _read_spawn_position() -> Vector2:
-	if GameState.map_state.current_map_id == map_id:
-		return GameState.map_state.player_position
+	var game_state = _get_game_state()
+	if game_state != null and game_state.map_state.current_map_id == map_id:
+		return game_state.map_state.player_position
 	return fallback_spawn
+
+func _get_data_repository():
+	return _get_autoload("DataRepository")
+
+func _get_game_state():
+	return _get_autoload("GameState")
+
+func _get_scene_loader():
+	return _get_autoload("SceneLoader")
+
+func _get_autoload(node_name: String):
+	var loop = Engine.get_main_loop()
+	if loop == null or loop.root == null:
+		return null
+	if loop.root.has_node(node_name):
+		return loop.root.get_node(node_name)
+	return null

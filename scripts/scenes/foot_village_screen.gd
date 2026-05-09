@@ -25,6 +25,8 @@ func _interact_with(interactable) -> void:
 			_read_notice(interactable.record)
 		"exit":
 			_transition_to_exit(interactable.record)
+		"shop":
+			_open_shop(interactable.record)
 
 func _talk_to_npc(record: Dictionary) -> void:
 	match str(record.get("actor_id", "")):
