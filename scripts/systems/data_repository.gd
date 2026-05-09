@@ -6,6 +6,7 @@ const DATA_FILES := {
 	"martial_arts": "res://data/martial_arts.json",
 	"quests": "res://data/quests.json",
 	"dialogues": "res://data/dialogues.json",
+	"maps": "res://data/maps.json",
 }
 
 var content: Dictionary = {}
@@ -31,6 +32,9 @@ func get_quest(quest_id: String) -> Dictionary:
 
 func get_dialogue(dialogue_id: String) -> Dictionary:
 	return _find_by_id("dialogues", dialogue_id)
+
+func get_map(map_id: String) -> Dictionary:
+	return _find_by_id("maps", map_id)
 
 func _find_by_id(collection_name: String, record_id: String) -> Dictionary:
 	if content.is_empty():

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "mountain_pass",
+    "name": "山道",
+    "spawn_position": {"x": 160, "y": 320},
+    "objects": [
+      {
+        "id": "npc_qingshanke",
+        "type": "npc",
+        "name": "青衫客",
+        "actor_id": "qingshanke",
+        "position": {"x": 360, "y": 280},
+        "radius": 72,
+        "dialogue_id": "mountain_pass_intro",
+        "quest_id": "quest_mountain_trial"
+      },
+      {
+        "id": "enemy_bandit_gate",
+        "type": "battle_trigger",
+        "name": "山道强人",
+        "actor_id": "bandit_01",
+        "position": {"x": 720, "y": 260},
+        "radius": 56,
+        "quest_id": "quest_mountain_trial"
+      }
+    ]
+  }
+]

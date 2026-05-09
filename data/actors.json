@@ -10,6 +10,16 @@
     "martial_arts": ["basic_sword"]
   },
   {
+    "id": "qingshanke",
+    "name": "青衫客",
+    "level": 8,
+    "hp": 260,
+    "max_hp": 260,
+    "attack": 42,
+    "defense": 26,
+    "martial_arts": ["basic_sword"]
+  },
+  {
     "id": "bandit_01",
     "name": "山道强人",
     "level": 1,

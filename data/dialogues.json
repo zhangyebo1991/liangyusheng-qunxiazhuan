@@ -12,5 +12,29 @@
         "text": "晚辈谨记。"
       }
     ]
+  },
+  {
+    "id": "mountain_pass_intro",
+    "title": "山道初逢",
+    "lines": [
+      {
+        "speaker": "青衫客",
+        "text": "前方有强人拦路，若想继续赶路，先试试你的剑。"
+      },
+      {
+        "speaker": "云游少侠",
+        "text": "晚辈愿往前一试。"
+      }
+    ]
+  },
+  {
+    "id": "mountain_pass_complete",
+    "title": "试剑归来",
+    "lines": [
+      {
+        "speaker": "青衫客",
+        "text": "出剑不乱，心也不乱。此丹你收下，路上或能救急。"
+      }
+    ]
   }
 ]
