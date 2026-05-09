@@ -45,6 +45,8 @@ func get_interaction_text() -> String:
 			return "按 E 前往%s" % display_name
 		"notice":
 			return "按 E 查看%s" % display_name
+		"shop":
+			return "按 E 查看%s" % display_name
 		_:
 			return "按 E 与%s交互" % display_name
 
@@ -58,6 +60,8 @@ func _read_color() -> Color:
 			return Color("#2f6fdd")
 		"notice":
 			return Color("#c49a2c")
+		"shop":
+			return Color("#3d7f5c")
 		_:
 			return Color("#666666")
 

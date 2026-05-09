@@ -88,6 +88,15 @@
         "quest_id": "quest_deliver_letter"
       },
       {
+        "id": "shop_foot_village_pharmacy",
+        "type": "shop",
+        "name": "药铺",
+        "position": {"x": 980, "y": 320},
+        "radius": 72,
+        "shop_id": "foot_village_pharmacy",
+        "items": ["herb_small"]
+      },
+      {
         "id": "exit_to_open_road",
         "type": "exit",
         "name": "村外官道",

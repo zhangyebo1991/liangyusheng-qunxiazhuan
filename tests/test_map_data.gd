@@ -22,6 +22,18 @@ func run(assertions) -> void:
 	assertions.assert_eq(_find_object(village, "npc_porter_chen").get("actor_id", ""), "porter_chen", "村镇应配置村口脚夫")
 	assertions.assert_eq(_find_object(village, "notice_foot_village").get("type", ""), "notice", "村镇应配置告示牌")
 	assertions.assert_eq(_find_object(village, "exit_to_mountain_pass").get("target_map_id", ""), "mountain_pass", "村镇应能返回山道")
+
+	var pharmacy = _find_object(village, "shop_foot_village_pharmacy")
+	assertions.assert_eq(pharmacy.get("type", ""), "shop", "村镇应配置药铺对象")
+	assertions.assert_eq(pharmacy.get("name", ""), "药铺", "药铺对象应显示中文名称")
+	assertions.assert_eq(pharmacy.get("shop_id", ""), "foot_village_pharmacy", "药铺对象应保存商店编号")
+	var pharmacy_items = pharmacy.get("items", [])
+	assertions.assert_eq(pharmacy_items.size(), 1, "药铺第一版只应配置一个商品")
+	if pharmacy_items.size() > 0:
+		assertions.assert_eq(pharmacy_items[0], "herb_small", "药铺第一版应出售小还丹")
+	else:
+		assertions.assert_true(false, "药铺第一版应出售小还丹")
+
 	assertions.assert_eq(_find_object(village, "exit_to_open_road").get("locked_message", ""), "前路尚未开放。", "未开放出口应有提示")
 
 	assertions.assert_eq(repository.get_quest("quest_deliver_letter").get("title", ""), "送信到客栈", "应读取送信任务")
