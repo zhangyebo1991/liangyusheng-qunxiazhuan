@@ -7,6 +7,7 @@ const DialogueBoxScript = preload("res://scripts/scenes/dialogue_box.gd")
 const DialogueSystemScript = preload("res://scripts/systems/dialogue_system.gd")
 const MapObjectSpawnerScript = preload("res://scripts/systems/map_object_spawner.gd")
 const MapTransitionSystemScript = preload("res://scripts/systems/map_transition_system.gd")
+const InventorySystemScript = preload("res://scripts/systems/inventory_system.gd")
 
 var player
 var hud
@@ -14,6 +15,7 @@ var dialogue_box
 var dialogue_system = DialogueSystemScript.new()
 var spawner = MapObjectSpawnerScript.new()
 var transition_system = MapTransitionSystemScript.new()
+var inventory_system = InventorySystemScript.new()
 var map_data: Dictionary = {}
 var interactables: Array = []
 var map_id: String = ""
@@ -41,7 +43,9 @@ func _process(_delta: float) -> void:
 	_update_nearest_interactable()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("cancel"):
+	if event.is_action_pressed("inventory"):
+		_toggle_inventory()
+	elif event.is_action_pressed("cancel"):
 		var success = GameState.save_to_path("user://save_01.json")
 		hud.show_message("存档成功。" if success else "存档失败。")
 
@@ -103,7 +107,9 @@ func _create_camera() -> void:
 
 func _create_ui() -> void:
 	hud = HudScript.new()
+	hud.item_use_requested.connect(_on_item_use_requested)
 	add_child(hud)
+	inventory_system.set_repository(DataRepository)
 	dialogue_box = DialogueBoxScript.new()
 	add_child(dialogue_box)
 
@@ -149,6 +155,46 @@ func _open_dialogue(dialogue_id: String, fallback_text: String = "此人暂时�
 	if lines.is_empty():
 		lines = [{"speaker": "旁白", "text": fallback_text}]
 	dialogue_box.open(lines)
+
+func _toggle_inventory() -> void:
+	hud.toggle_inventory(_build_inventory_items())
+
+func _build_inventory_items() -> Array:
+	var items: Array = []
+	for raw_item_id in GameState.party.inventory.keys():
+		var item_id = str(raw_item_id)
+		var quantity = GameState.party.get_item_count(item_id)
+		if quantity <= 0:
+			continue
+		var item_data = DataRepository.get_item(item_id)
+		if item_data.is_empty():
+			items.append({
+				"id": item_id,
+				"name": "未知物品",
+				"type": "unknown",
+				"description": "此物品资料缺失。",
+				"quantity": quantity,
+				"usable": false,
+			})
+		else:
+			items.append({
+				"id": item_id,
+				"name": str(item_data.get("name", "未知物品")),
+				"type": str(item_data.get("type", "unknown")),
+				"description": str(item_data.get("description", "")),
+				"quantity": quantity,
+				"usable": str(item_data.get("type", "")) == "consumable",
+			})
+	return items
+
+func _refresh_inventory_if_open() -> void:
+	if hud.is_inventory_open():
+		hud.refresh_inventory(_build_inventory_items())
+
+func _on_item_use_requested(item_id: String) -> void:
+	var result = inventory_system.use_item(GameState, item_id)
+	hud.show_message(str(result.get("message", "此物暂时不能使用。")))
+	_refresh_inventory_if_open()
 
 func _on_interactable_clicked(interactable) -> void:
 	var radius = float(interactable.record.get("radius", 48.0))
