@@ -11,6 +11,7 @@ func run(assertions) -> void:
 	state.resolve_map_object("enemy_bandit_gate")
 	state.hero_hp = 70
 	state.party.add_item("herb_small", 2)
+	state.add_martial_proficiency("basic_sword", 3)
 
 	var path = "user://test_mountain_pass_save.json"
 	assertions.assert_true(state.save_to_path(path), "游戏状态应可写入存档文件")
@@ -25,6 +26,7 @@ func run(assertions) -> void:
 	assertions.assert_eq(restored.party.get_item_count("herb_small"), 3, "读档应恢复背包数量")
 	assertions.assert_eq(restored.hero_hp, 70, "读档应恢复主角气血")
 	assertions.assert_eq(restored.hero_max_hp, 120, "读档应恢复主角最大气血")
+	assertions.assert_eq(restored.get_martial_proficiency("basic_sword"), 3, "读档应恢复基础剑法熟练度")
 
 	var old_save_state = GameStateScript.new()
 	old_save_state.from_dictionary({
@@ -35,6 +37,7 @@ func run(assertions) -> void:
 	})
 	assertions.assert_eq(old_save_state.hero_hp, 120, "旧存档缺少气血时应回退为满气血")
 	assertions.assert_eq(old_save_state.hero_max_hp, 120, "旧存档缺少最大气血时应使用默认值")
+	assertions.assert_eq(old_save_state.get_martial_proficiency("basic_sword"), 0, "旧存档缺少熟练度时应回退为 0")
 
 	var invalid_hp_state = GameStateScript.new()
 	invalid_hp_state.from_dictionary({
@@ -44,8 +47,10 @@ func run(assertions) -> void:
 		"flags": {},
 		"hero_hp": 999,
 		"hero_max_hp": 100,
+		"martial_proficiency": {"basic_sword": -5}
 	})
 	assertions.assert_eq(invalid_hp_state.hero_hp, 100, "读档气血大于最大值时应钳制")
+	assertions.assert_eq(invalid_hp_state.get_martial_proficiency("basic_sword"), 0, "读档熟练度小于 0 时应钳制")
 	assertions.assert_eq(invalid_hp_state.restore_hero_hp(30), 0, "气血已满时恢复量应为 0")
 	invalid_hp_state.hero_hp = 40
 	assertions.assert_eq(invalid_hp_state.restore_hero_hp(30), 30, "气血未满时应返回实际恢复量")

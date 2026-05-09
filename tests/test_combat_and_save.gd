@@ -50,15 +50,38 @@ func run(assertions) -> void:
 	var game_state = GameStateScript.new()
 	game_state.start_new_game()
 	game_state.quest_system.start_quest("quest_mountain_trial")
-	var payload = result.to_dictionary()
-	payload["victory"] = result.winner_id == "hero_yun"
-	payload["source_object_id"] = "enemy_bandit_gate"
-	payload["quest_id"] = "quest_mountain_trial"
-	game_state.apply_battle_result(payload)
+	game_state.apply_battle_result({
+		"victory": true,
+		"hero_hp": 44,
+		"source_object_id": "enemy_bandit_gate",
+		"quest_id": "quest_mountain_trial",
+		"martial_art_id": "basic_sword",
+		"proficiency_reward": 1,
+	})
 	assertions.assert_true(game_state.is_map_object_resolved("enemy_bandit_gate"), "胜利后强人触发点应被标记为已解决")
 	assertions.assert_eq(game_state.quest_system.get_status("quest_mountain_trial"), "ready_to_complete", "胜利后山道任务应进入可交付状态")
+	assertions.assert_eq(game_state.hero_hp, 44, "胜利后应保存战斗剩余气血")
+	assertions.assert_eq(game_state.get_martial_proficiency("basic_sword"), 1, "胜利后应增加基础剑法熟练度")
+
+	var failure_state = GameStateScript.new()
+	failure_state.start_new_game()
+	failure_state.quest_system.start_quest("quest_mountain_trial")
+	failure_state.apply_battle_result({
+		"victory": false,
+		"hero_hp": 0,
+		"source_object_id": "enemy_bandit_gate",
+		"quest_id": "quest_mountain_trial",
+		"martial_art_id": "basic_sword",
+		"proficiency_reward": 1,
+	})
+	assertions.assert_true(not failure_state.is_map_object_resolved("enemy_bandit_gate"), "失败后不应清除强人触发点")
+	assertions.assert_eq(failure_state.quest_system.get_status("quest_mountain_trial"), "active", "失败后任务应保持进行中")
+	assertions.assert_eq(failure_state.hero_hp, 1, "失败后主角气血应钳制到安全值")
+	assertions.assert_eq(failure_state.get_martial_proficiency("basic_sword"), 0, "失败后不应增加熟练度")
+	assertions.assert_eq(failure_state.map_state.player_position, Vector2(160, 320), "失败后应回到山道入口")
 	repository.free()
 	game_state.free()
+	failure_state.free()
 
 	var save_system = SaveSystemScript.new()
 	var state = {

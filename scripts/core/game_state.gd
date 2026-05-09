@@ -14,6 +14,7 @@ var flags: Dictionary = {}
 var battle_context: Dictionary = {}
 var hero_hp := DEFAULT_HERO_MAX_HP
 var hero_max_hp := DEFAULT_HERO_MAX_HP
+var martial_proficiency: Dictionary = {}
 
 func start_new_game() -> void:
 	party = PartyStateScript.new()
@@ -23,6 +24,7 @@ func start_new_game() -> void:
 	map_state = MapStateScript.new()
 	hero_max_hp = DEFAULT_HERO_MAX_HP
 	hero_hp = hero_max_hp
+	martial_proficiency = {}
 	set_current_map("mountain_pass", Vector2(160, 320))
 	flags = {"current_map": "mountain_pass"}
 	battle_context = {}
@@ -76,6 +78,17 @@ func is_hero_hp_full() -> bool:
 	_normalize_hero_hp()
 	return hero_hp >= hero_max_hp
 
+func add_martial_proficiency(martial_art_id: String, amount: int) -> int:
+	if martial_art_id.is_empty() or amount <= 0:
+		return get_martial_proficiency(martial_art_id)
+	martial_proficiency[martial_art_id] = get_martial_proficiency(martial_art_id) + amount
+	return int(martial_proficiency[martial_art_id])
+
+func get_martial_proficiency(martial_art_id: String) -> int:
+	if martial_art_id.is_empty():
+		return 0
+	return max(0, int(martial_proficiency.get(martial_art_id, 0)))
+
 func set_battle_context(context: Dictionary) -> void:
 	battle_context = context.duplicate(true)
 
@@ -88,14 +101,23 @@ func peek_battle_context() -> Dictionary:
 	return battle_context.duplicate(true)
 
 func apply_battle_result(result: Dictionary) -> void:
+	if result.has("hero_hp"):
+		hero_hp = int(result.get("hero_hp", hero_hp))
+
 	if bool(result.get("victory", false)):
+		_normalize_hero_hp()
 		var object_id = str(result.get("source_object_id", ""))
 		if not object_id.is_empty():
 			resolve_map_object(object_id)
 		var quest_id = str(result.get("quest_id", ""))
 		if not quest_id.is_empty():
 			quest_system.mark_ready_to_complete(quest_id)
+		var martial_art_id = str(result.get("martial_art_id", ""))
+		var reward = int(result.get("proficiency_reward", 0))
+		if reward > 0:
+			add_martial_proficiency(martial_art_id, reward)
 	else:
+		hero_hp = max(1, hero_hp)
 		map_state.player_position = Vector2(160, 320)
 
 func save_to_path(path: String) -> bool:
@@ -117,6 +139,7 @@ func to_dictionary() -> Dictionary:
 		"flags": flags.duplicate(true),
 		"hero_hp": hero_hp,
 		"hero_max_hp": hero_max_hp,
+		"martial_proficiency": _normalized_martial_proficiency(),
 	}
 
 func from_dictionary(data: Dictionary) -> void:
@@ -133,6 +156,7 @@ func from_dictionary(data: Dictionary) -> void:
 	if hero_max_hp <= 0:
 		hero_max_hp = DEFAULT_HERO_MAX_HP
 	hero_hp = int(data.get("hero_hp", hero_max_hp))
+	martial_proficiency = _read_martial_proficiency(data.get("martial_proficiency", {}))
 	_normalize_hero_hp()
 	battle_context = {}
 
@@ -140,3 +164,27 @@ func _normalize_hero_hp() -> void:
 	if hero_max_hp <= 0:
 		hero_max_hp = DEFAULT_HERO_MAX_HP
 	hero_hp = clamp(hero_hp, 0, hero_max_hp)
+
+func _normalized_martial_proficiency() -> Dictionary:
+	var result: Dictionary = {}
+	for martial_art_id in martial_proficiency.keys():
+		var normalized_id = str(martial_art_id)
+		if normalized_id.is_empty():
+			continue
+		var amount = max(0, int(martial_proficiency[martial_art_id]))
+		if amount > 0:
+			result[normalized_id] = amount
+	return result
+
+func _read_martial_proficiency(value: Variant) -> Dictionary:
+	var result: Dictionary = {}
+	if typeof(value) != TYPE_DICTIONARY:
+		return result
+	for martial_art_id in value.keys():
+		var normalized_id = str(martial_art_id)
+		if normalized_id.is_empty():
+			continue
+		var amount = max(0, int(value[martial_art_id]))
+		if amount > 0:
+			result[normalized_id] = amount
+	return result
