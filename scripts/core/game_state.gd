@@ -5,11 +5,15 @@ const QuestSystemScript = preload("res://scripts/systems/quest_system.gd")
 const MapStateScript = preload("res://scripts/domain/map_state.gd")
 const SaveSystemScript = preload("res://scripts/systems/save_system.gd")
 
+const DEFAULT_HERO_MAX_HP := 120
+
 var party = PartyStateScript.new()
 var quest_system = QuestSystemScript.new()
 var map_state = MapStateScript.new()
 var flags: Dictionary = {}
 var battle_context: Dictionary = {}
+var hero_hp := DEFAULT_HERO_MAX_HP
+var hero_max_hp := DEFAULT_HERO_MAX_HP
 
 func start_new_game() -> void:
 	party = PartyStateScript.new()
@@ -17,6 +21,8 @@ func start_new_game() -> void:
 	party.add_item("herb_small", 1)
 	quest_system = QuestSystemScript.new()
 	map_state = MapStateScript.new()
+	hero_max_hp = DEFAULT_HERO_MAX_HP
+	hero_hp = hero_max_hp
 	set_current_map("mountain_pass", Vector2(160, 320))
 	flags = {"current_map": "mountain_pass"}
 	battle_context = {}
@@ -56,6 +62,20 @@ func resolve_map_object(object_id: String) -> void:
 func is_map_object_resolved(object_id: String) -> bool:
 	return map_state.is_object_resolved(object_id)
 
+func restore_hero_hp(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	_normalize_hero_hp()
+	if hero_hp >= hero_max_hp:
+		return 0
+	var before = hero_hp
+	hero_hp = min(hero_max_hp, hero_hp + amount)
+	return hero_hp - before
+
+func is_hero_hp_full() -> bool:
+	_normalize_hero_hp()
+	return hero_hp >= hero_max_hp
+
 func set_battle_context(context: Dictionary) -> void:
 	battle_context = context.duplicate(true)
 
@@ -89,11 +109,14 @@ func load_from_path(path: String) -> bool:
 	return true
 
 func to_dictionary() -> Dictionary:
+	_normalize_hero_hp()
 	return {
 		"party": party.to_dictionary(),
 		"quests": quest_system.to_dictionary(),
 		"map_state": map_state.to_dictionary(),
 		"flags": flags.duplicate(true),
+		"hero_hp": hero_hp,
+		"hero_max_hp": hero_max_hp,
 	}
 
 func from_dictionary(data: Dictionary) -> void:
@@ -106,4 +129,14 @@ func from_dictionary(data: Dictionary) -> void:
 	flags = data.get("flags", {}).duplicate(true)
 	if not flags.has("current_map"):
 		flags["current_map"] = map_state.current_map_id
+	hero_max_hp = int(data.get("hero_max_hp", DEFAULT_HERO_MAX_HP))
+	if hero_max_hp <= 0:
+		hero_max_hp = DEFAULT_HERO_MAX_HP
+	hero_hp = int(data.get("hero_hp", hero_max_hp))
+	_normalize_hero_hp()
 	battle_context = {}
+
+func _normalize_hero_hp() -> void:
+	if hero_max_hp <= 0:
+		hero_max_hp = DEFAULT_HERO_MAX_HP
+	hero_hp = clamp(hero_hp, 0, hero_max_hp)
