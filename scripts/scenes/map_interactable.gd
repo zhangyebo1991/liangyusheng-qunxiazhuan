@@ -21,7 +21,7 @@ func setup(next_record: Dictionary) -> void:
 	var visual = ColorRect.new()
 	visual.size = Vector2(24, 24)
 	visual.position = Vector2(-12, -12)
-	visual.color = Color("#8d3b7a") if record.get("type", "") == "npc" else Color("#8f3b2f")
+	visual.color = _read_color()
 	add_child(visual)
 
 	label = Label.new()
@@ -35,7 +35,31 @@ func setup(next_record: Dictionary) -> void:
 	body_exited.connect(_on_body_exited)
 
 func get_interaction_text() -> String:
-	return "按 E 与%s交互" % str(record.get("name", "此人"))
+	var display_name = str(record.get("name", "此处"))
+	match str(record.get("type", "")):
+		"npc":
+			return "按 E 与%s交谈" % display_name
+		"battle_trigger":
+			return "按 E 挑战%s" % display_name
+		"exit":
+			return "按 E 前往%s" % display_name
+		"notice":
+			return "按 E 查看%s" % display_name
+		_:
+			return "按 E 与%s交互" % display_name
+
+func _read_color() -> Color:
+	match str(record.get("type", "")):
+		"npc":
+			return Color("#8d3b7a")
+		"battle_trigger":
+			return Color("#8f3b2f")
+		"exit":
+			return Color("#2f6fdd")
+		"notice":
+			return Color("#c49a2c")
+		_:
+			return Color("#666666")
 
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
