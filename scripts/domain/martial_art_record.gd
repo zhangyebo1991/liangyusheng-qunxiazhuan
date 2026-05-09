@@ -7,6 +7,7 @@ var school: String = ""
 var power: int = 0
 var cost: int = 0
 var description: String = ""
+var proficiency_reward: int = 1
 
 static func from_dictionary(data: Dictionary):
 	var martial_art = new()
@@ -16,4 +17,5 @@ static func from_dictionary(data: Dictionary):
 	martial_art.power = int(data.get("power", 0))
 	martial_art.cost = int(data.get("cost", 0))
 	martial_art.description = str(data.get("description", ""))
+	martial_art.proficiency_reward = max(0, int(data.get("proficiency_reward", 1)))
 	return martial_art

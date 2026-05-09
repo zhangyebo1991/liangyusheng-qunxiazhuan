@@ -29,11 +29,12 @@ func run(assertions) -> void:
 		"name": "基础剑法",
 		"power": 12,
 		"cost": 3,
+		"proficiency_reward": 1,
 	})
 	var combat_system = CombatSystemScript.new()
 	var result = combat_system.resolve_duel(attacker, defender, martial_art)
 	assertions.assert_eq(result.damage, 26, "伤害应由攻击、武学威力和防御确定")
-	assertions.assert_eq(result.winner_id, "hero_yun", "足以击败敌人时攻击者应获胜")
+	assertions.assert_eq(result.winner_id, "hero_yun", "旧一次性结算在足以击败敌人时攻击者应获胜")
 	assertions.assert_eq(result.loser_id, "bandit_01", "失败者编号应正确")
 
 	var repository = DataRepositoryScript.new()
@@ -42,13 +43,15 @@ func run(assertions) -> void:
 	var configured_defender = ActorStateScript.from_dictionary(repository.get_actor("bandit_01"))
 	var configured_martial_art = MartialArtRecordScript.from_dictionary(repository.get_martial_art("basic_sword"))
 	var configured_result = combat_system.resolve_duel(configured_attacker, configured_defender, configured_martial_art)
-	assertions.assert_eq(configured_result.winner_id, "hero_yun", "山道试剑配置应让主角用基础剑法击退强人")
+	assertions.assert_eq(configured_result.damage, 26, "山道试剑配置仍应使用基础伤害公式")
+	assertions.assert_eq(configured_result.winner_id, "bandit_01", "山道强人不应再被基础剑法一击击败")
+	assertions.assert_eq(configured_martial_art.proficiency_reward, 1, "基础剑法应配置熟练度奖励")
 
 	var game_state = GameStateScript.new()
 	game_state.start_new_game()
 	game_state.quest_system.start_quest("quest_mountain_trial")
-	var payload = configured_result.to_dictionary()
-	payload["victory"] = configured_result.winner_id == "hero_yun"
+	var payload = result.to_dictionary()
+	payload["victory"] = result.winner_id == "hero_yun"
 	payload["source_object_id"] = "enemy_bandit_gate"
 	payload["quest_id"] = "quest_mountain_trial"
 	game_state.apply_battle_result(payload)

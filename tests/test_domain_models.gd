@@ -39,8 +39,10 @@ func run(assertions) -> void:
 		"power": 12,
 		"cost": 3,
 		"description": "入门剑招，胜在稳妥。",
+		"proficiency_reward": 1,
 	})
 	assertions.assert_eq(martial_art.power, 12, "武学应保存威力")
+	assertions.assert_eq(martial_art.proficiency_reward, 1, "武学应保存熟练度奖励")
 
 	var quest = QuestRecordScript.from_dictionary({
 		"id": "quest_first_step",

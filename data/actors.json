@@ -23,8 +23,8 @@
     "id": "bandit_01",
     "name": "山道强人",
     "level": 1,
-    "hp": 20,
-    "max_hp": 20,
+    "hp": 60,
+    "max_hp": 60,
     "attack": 12,
     "defense": 4,
     "martial_arts": ["rough_fist"]

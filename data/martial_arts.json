@@ -5,7 +5,8 @@
     "school": "江湖",
     "power": 12,
     "cost": 3,
-    "description": "入门剑招，胜在稳妥。"
+    "description": "入门剑招，胜在稳妥。",
+    "proficiency_reward": 1
   },
   {
     "id": "rough_fist",
@@ -13,6 +14,7 @@
     "school": "江湖",
     "power": 7,
     "cost": 1,
-    "description": "街头斗殴中磨出的拳脚。"
+    "description": "街头斗殴中磨出的拳脚。",
+    "proficiency_reward": 0
   }
 ]
