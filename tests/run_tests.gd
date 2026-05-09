@@ -11,6 +11,7 @@ const TestInteractionSystemScript = preload("res://tests/test_interaction_system
 const TestSaveMapStateScript = preload("res://tests/test_save_map_state.gd")
 const TestMapTransitionSystemScript = preload("res://tests/test_map_transition_system.gd")
 const TestInventorySystemScript = preload("res://tests/test_inventory_system.gd")
+const TestShopSystemScript = preload("res://tests/test_shop_system.gd")
 const TestHudInventoryScript = preload("res://tests/test_hud_inventory.gd")
 const TestBattleStateScript = preload("res://tests/test_battle_state.gd")
 const TestTurnBasedCombatSystemScript = preload("res://tests/test_turn_based_combat_system.gd")
@@ -28,6 +29,7 @@ func _initialize() -> void:
 		TestSaveMapStateScript.new(),
 		TestMapTransitionSystemScript.new(),
 		TestInventorySystemScript.new(),
+		TestShopSystemScript.new(),
 		TestHudInventoryScript.new(),
 		TestBattleStateScript.new(),
 		TestTurnBasedCombatSystemScript.new(),
