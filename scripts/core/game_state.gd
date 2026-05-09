@@ -17,8 +17,7 @@ func start_new_game() -> void:
 	party.add_item("herb_small", 1)
 	quest_system = QuestSystemScript.new()
 	map_state = MapStateScript.new()
-	map_state.current_map_id = "mountain_pass"
-	map_state.player_position = Vector2(160, 320)
+	set_current_map("mountain_pass", Vector2(160, 320))
 	flags = {"current_map": "mountain_pass"}
 	battle_context = {}
 	if is_inside_tree() and has_node("/root/EventBus"):
@@ -26,6 +25,30 @@ func start_new_game() -> void:
 
 func set_player_position(position: Vector2) -> void:
 	map_state.set_player_position(position)
+
+func set_current_map(map_id: String, position: Vector2) -> void:
+	if map_id.is_empty():
+		return
+	map_state.current_map_id = map_id
+	map_state.set_player_position(position)
+	flags["current_map"] = map_id
+
+func get_current_map_scene_path() -> String:
+	return get_scene_path_for_map(map_state.current_map_id)
+
+func get_scene_path_for_map(map_id: String) -> String:
+	match map_id:
+		"mountain_pass":
+			return "res://scenes/mountain_pass.tscn"
+		"foot_village":
+			return "res://scenes/foot_village.tscn"
+		_:
+			return "res://scenes/mountain_pass.tscn"
+
+func set_flag(flag_id: String, value: Variant = true) -> void:
+	if flag_id.is_empty():
+		return
+	flags[flag_id] = value
 
 func resolve_map_object(object_id: String) -> void:
 	map_state.mark_object_resolved(object_id)
@@ -81,4 +104,6 @@ func from_dictionary(data: Dictionary) -> void:
 	map_state = MapStateScript.new()
 	map_state.from_dictionary(data.get("map_state", {}))
 	flags = data.get("flags", {}).duplicate(true)
+	if not flags.has("current_map"):
+		flags["current_map"] = map_state.current_map_id
 	battle_context = {}
