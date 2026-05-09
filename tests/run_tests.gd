@@ -12,6 +12,7 @@ const TestSaveMapStateScript = preload("res://tests/test_save_map_state.gd")
 const TestMapTransitionSystemScript = preload("res://tests/test_map_transition_system.gd")
 const TestInventorySystemScript = preload("res://tests/test_inventory_system.gd")
 const TestHudInventoryScript = preload("res://tests/test_hud_inventory.gd")
+const TestBattleStateScript = preload("res://tests/test_battle_state.gd")
 
 func _initialize() -> void:
 	var assertions = TestAssertionsScript.new()
@@ -27,6 +28,7 @@ func _initialize() -> void:
 		TestMapTransitionSystemScript.new(),
 		TestInventorySystemScript.new(),
 		TestHudInventoryScript.new(),
+		TestBattleStateScript.new(),
 	]
 
 	for suite in suites:
