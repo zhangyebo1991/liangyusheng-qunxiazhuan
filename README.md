@@ -4,19 +4,28 @@
 
 ## 当前目标
 
-第一阶段只创建基础框架：
+当前阶段包含：
 
-- 项目配置
-- 数据加载
-- 任务、对话、战斗、存档的最小逻辑
-- 启动、主菜单、世界地图、战斗的最小场景流转
+- Godot 4.6 项目配置。
+- 数据加载、任务、对话、战斗和存档基础逻辑。
+- 启动、主菜单、山道探索和战斗场景。
+- 山道探索垂直切片：WASD 连续移动、NPC 交互、任务、战斗返回和奖励。
 
 ## 运行方式
 
 安装 Godot 4.6 后，用 Godot 打开本仓库根目录。
 
+如果项目本地 Godot 已下载，可运行：
+
+```powershell
+$godot = ".tools\godot\4.6-stable\windows-x86_64\Godot_v4.6-stable_win64_console.exe"
+& $godot --headless --path . -s tests/run_tests.gd
+& $godot --headless --path . --quit
+```
+
 如果 `godot` 命令已加入 PATH，可运行：
 
 ```powershell
 godot --headless --path . -s tests/run_tests.gd
+godot --headless --path . --quit
 ```
