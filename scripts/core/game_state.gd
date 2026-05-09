@@ -6,6 +6,7 @@ const MapStateScript = preload("res://scripts/domain/map_state.gd")
 const SaveSystemScript = preload("res://scripts/systems/save_system.gd")
 
 const DEFAULT_HERO_MAX_HP := 120
+const STARTING_COINS := 80
 
 var party = PartyStateScript.new()
 var quest_system = QuestSystemScript.new()
@@ -20,6 +21,7 @@ func start_new_game() -> void:
 	party = PartyStateScript.new()
 	party.add_member("hero_yun")
 	party.add_item("herb_small", 1)
+	party.add_coins(STARTING_COINS)
 	quest_system = QuestSystemScript.new()
 	map_state = MapStateScript.new()
 	hero_max_hp = DEFAULT_HERO_MAX_HP

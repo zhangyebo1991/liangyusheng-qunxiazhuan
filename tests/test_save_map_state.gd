@@ -5,6 +5,8 @@ const GameStateScript = preload("res://scripts/core/game_state.gd")
 func run(assertions) -> void:
 	var state = GameStateScript.new()
 	state.start_new_game()
+	assertions.assert_eq(state.party.coins, 80, "新游戏初始铜钱应为 80")
+	assertions.assert_true(state.party.spend_coins(30), "测试存档前应能消费铜钱")
 	state.set_player_position(Vector2(444, 333))
 	state.quest_system.start_quest("quest_mountain_trial")
 	state.quest_system.mark_ready_to_complete("quest_mountain_trial")
@@ -24,6 +26,7 @@ func run(assertions) -> void:
 	assertions.assert_true(restored.map_state.is_object_resolved("enemy_bandit_gate"), "读档应恢复已解决敌人对象")
 	assertions.assert_eq(restored.quest_system.get_status("quest_mountain_trial"), "ready_to_complete", "读档应恢复任务状态")
 	assertions.assert_eq(restored.party.get_item_count("herb_small"), 3, "读档应恢复背包数量")
+	assertions.assert_eq(restored.party.coins, 50, "读档应恢复铜钱余额")
 	assertions.assert_eq(restored.hero_hp, 70, "读档应恢复主角气血")
 	assertions.assert_eq(restored.hero_max_hp, 120, "读档应恢复主角最大气血")
 	assertions.assert_eq(restored.get_martial_proficiency("basic_sword"), 3, "读档应恢复基础剑法熟练度")
@@ -37,11 +40,12 @@ func run(assertions) -> void:
 	})
 	assertions.assert_eq(old_save_state.hero_hp, 120, "旧存档缺少气血时应回退为满气血")
 	assertions.assert_eq(old_save_state.hero_max_hp, 120, "旧存档缺少最大气血时应使用默认值")
+	assertions.assert_eq(old_save_state.party.coins, 0, "旧存档缺少铜钱时应回退为 0")
 	assertions.assert_eq(old_save_state.get_martial_proficiency("basic_sword"), 0, "旧存档缺少熟练度时应回退为 0")
 
 	var invalid_hp_state = GameStateScript.new()
 	invalid_hp_state.from_dictionary({
-		"party": {"members": ["hero_yun"]},
+		"party": {"members": ["hero_yun"], "coins": -5},
 		"quests": {},
 		"map_state": {},
 		"flags": {},
@@ -50,6 +54,7 @@ func run(assertions) -> void:
 		"martial_proficiency": {"basic_sword": -5}
 	})
 	assertions.assert_eq(invalid_hp_state.hero_hp, 100, "读档气血大于最大值时应钳制")
+	assertions.assert_eq(invalid_hp_state.party.coins, 0, "读档铜钱小于 0 时应钳制")
 	assertions.assert_eq(invalid_hp_state.get_martial_proficiency("basic_sword"), 0, "读档熟练度小于 0 时应钳制")
 	assertions.assert_eq(invalid_hp_state.restore_hero_hp(30), 0, "气血已满时恢复量应为 0")
 	invalid_hp_state.hero_hp = 40
@@ -75,6 +80,7 @@ func run(assertions) -> void:
 	assertions.assert_eq(restored_village.map_state.player_position, Vector2(760, 320), "读档应恢复村镇坐标")
 	assertions.assert_eq(restored_village.quest_system.get_status("quest_deliver_letter"), "completed", "读档应恢复送信任务状态")
 	assertions.assert_eq(restored_village.flags.get("clue_foot_village", ""), "掌柜提到飞红巾踪迹", "读档应恢复线索标记")
+	assertions.assert_eq(restored_village.party.coins, 80, "村镇存档应恢复新游戏初始铜钱")
 
 	state.free()
 	restored.free()
