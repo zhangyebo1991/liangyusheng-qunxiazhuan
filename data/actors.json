@@ -28,5 +28,25 @@
     "attack": 12,
     "defense": 4,
     "martial_arts": ["rough_fist"]
+  },
+  {
+    "id": "innkeeper_lu",
+    "name": "陆掌柜",
+    "level": 3,
+    "hp": 160,
+    "max_hp": 160,
+    "attack": 14,
+    "defense": 10,
+    "martial_arts": ["basic_sword"]
+  },
+  {
+    "id": "porter_chen",
+    "name": "陈脚夫",
+    "level": 2,
+    "hp": 130,
+    "max_hp": 130,
+    "attack": 10,
+    "defense": 8,
+    "martial_arts": ["rough_fist"]
   }
 ]

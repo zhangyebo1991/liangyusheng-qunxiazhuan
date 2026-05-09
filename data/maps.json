@@ -3,6 +3,10 @@
     "id": "mountain_pass",
     "name": "山道",
     "spawn_position": {"x": 160, "y": 320},
+    "spawn_points": {
+      "start": {"x": 160, "y": 320},
+      "return_from_village": {"x": 1110, "y": 320}
+    },
     "objects": [
       {
         "id": "npc_qingshanke",
@@ -22,6 +26,76 @@
         "position": {"x": 720, "y": 260},
         "radius": 56,
         "quest_id": "quest_mountain_trial"
+      },
+      {
+        "id": "exit_to_foot_village",
+        "type": "exit",
+        "name": "山脚村镇",
+        "position": {"x": 1160, "y": 320},
+        "radius": 72,
+        "target_map_id": "foot_village",
+        "target_spawn_id": "village_gate",
+        "locked_message": "前路尚未开放。"
+      }
+    ]
+  },
+  {
+    "id": "foot_village",
+    "name": "山脚村镇",
+    "spawn_position": {"x": 120, "y": 360},
+    "spawn_points": {
+      "village_gate": {"x": 120, "y": 360},
+      "return_from_mountain": {"x": 120, "y": 360},
+      "main_street": {"x": 640, "y": 340}
+    },
+    "objects": [
+      {
+        "id": "exit_to_mountain_pass",
+        "type": "exit",
+        "name": "山道",
+        "position": {"x": 64, "y": 360},
+        "radius": 72,
+        "target_map_id": "mountain_pass",
+        "target_spawn_id": "return_from_village",
+        "locked_message": "前路尚未开放。"
+      },
+      {
+        "id": "npc_porter_chen",
+        "type": "npc",
+        "name": "陈脚夫",
+        "actor_id": "porter_chen",
+        "position": {"x": 300, "y": 340},
+        "radius": 72,
+        "dialogue_id": "foot_village_porter_intro",
+        "quest_id": "quest_deliver_letter"
+      },
+      {
+        "id": "notice_foot_village",
+        "type": "notice",
+        "name": "村口告示",
+        "position": {"x": 520, "y": 260},
+        "radius": 56,
+        "dialogue_id": "foot_village_notice"
+      },
+      {
+        "id": "npc_innkeeper_lu",
+        "type": "npc",
+        "name": "陆掌柜",
+        "actor_id": "innkeeper_lu",
+        "position": {"x": 760, "y": 320},
+        "radius": 72,
+        "dialogue_id": "foot_village_innkeeper_idle",
+        "quest_id": "quest_deliver_letter"
+      },
+      {
+        "id": "exit_to_open_road",
+        "type": "exit",
+        "name": "村外官道",
+        "position": {"x": 1180, "y": 360},
+        "radius": 72,
+        "target_map_id": "",
+        "target_spawn_id": "",
+        "locked_message": "前路尚未开放。"
       }
     ]
   }

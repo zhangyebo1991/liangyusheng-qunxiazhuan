@@ -3,38 +3,74 @@
     "id": "intro_meet_master",
     "title": "初入江湖",
     "lines": [
-      {
-        "speaker": "青衫客",
-        "text": "江湖路远，先学会保命。"
-      },
-      {
-        "speaker": "云游少侠",
-        "text": "晚辈谨记。"
-      }
+      {"speaker": "青衫客", "text": "江湖路远，先学会保命。"},
+      {"speaker": "云游少侠", "text": "晚辈谨记。"}
     ]
   },
   {
     "id": "mountain_pass_intro",
     "title": "山道初逢",
     "lines": [
-      {
-        "speaker": "青衫客",
-        "text": "前方有强人拦路，若想继续赶路，先试试你的剑。"
-      },
-      {
-        "speaker": "云游少侠",
-        "text": "晚辈愿往前一试。"
-      }
+      {"speaker": "青衫客", "text": "前方有强人拦路，若想继续赶路，先试试你的剑。"},
+      {"speaker": "云游少侠", "text": "晚辈愿往前一试。"}
     ]
   },
   {
     "id": "mountain_pass_complete",
     "title": "试剑归来",
     "lines": [
-      {
-        "speaker": "青衫客",
-        "text": "出剑不乱，心也不乱。此丹你收下，路上或能救急。"
-      }
+      {"speaker": "青衫客", "text": "出剑不乱，心也不乱。此丹你收下，路上或能救急。"}
+    ]
+  },
+  {
+    "id": "foot_village_porter_intro",
+    "title": "村口托信",
+    "lines": [
+      {"speaker": "陈脚夫", "text": "少侠若往街里去，可否替我把这封信交给客栈陆掌柜？"},
+      {"speaker": "云游少侠", "text": "举手之劳，我这就送去。"}
+    ]
+  },
+  {
+    "id": "foot_village_porter_reminder",
+    "title": "托信未达",
+    "lines": [
+      {"speaker": "陈脚夫", "text": "陆掌柜就在街中客栈门前，劳烦少侠了。"}
+    ]
+  },
+  {
+    "id": "foot_village_porter_after",
+    "title": "脚夫道谢",
+    "lines": [
+      {"speaker": "陈脚夫", "text": "掌柜已知消息，多谢少侠跑这一趟。"}
+    ]
+  },
+  {
+    "id": "foot_village_innkeeper_idle",
+    "title": "客栈门前",
+    "lines": [
+      {"speaker": "陆掌柜", "text": "客房已满，若是打听消息，先问问村口脚夫。"}
+    ]
+  },
+  {
+    "id": "deliver_letter_complete",
+    "title": "书信送达",
+    "lines": [
+      {"speaker": "陆掌柜", "text": "原来山道已经通了。少侠若继续打听飞红巾踪迹，可往东边官道寻人。"},
+      {"speaker": "云游少侠", "text": "多谢掌柜指点。"}
+    ]
+  },
+  {
+    "id": "deliver_letter_after",
+    "title": "线索再问",
+    "lines": [
+      {"speaker": "陆掌柜", "text": "飞红巾的消息，仍要往东边官道打听。只是前路眼下还未开放。"}
+    ]
+  },
+  {
+    "id": "foot_village_notice",
+    "title": "村口告示",
+    "lines": [
+      {"speaker": "告示", "text": "近日山道强人出没，往来行人结伴而行。若有飞红巾消息，可报与客栈掌柜。"}
     ]
   }
 ]
