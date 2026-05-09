@@ -9,3 +9,4 @@ user://
 
 # 本地工具与引擎下载，不提交
 .tools/
+.worktrees/
