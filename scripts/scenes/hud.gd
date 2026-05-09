@@ -113,10 +113,9 @@ func _add_inventory_row(item: Dictionary) -> void:
 
 	var name = str(item.get("name", "未知物品"))
 	var quantity = int(item.get("quantity", 0))
-	var type_text = str(item.get("type", "unknown"))
 
 	var header = Label.new()
-	header.text = "%s x%d [%s]" % [name, quantity, type_text]
+	header.text = "%s x%d" % [name, quantity]
 	header.size = Vector2(400, 24)
 	row.add_child(header)
 
