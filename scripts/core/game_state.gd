@@ -3,6 +3,7 @@ extends Node
 const PartyStateScript = preload("res://scripts/domain/party_state.gd")
 const QuestSystemScript = preload("res://scripts/systems/quest_system.gd")
 const MapStateScript = preload("res://scripts/domain/map_state.gd")
+const SaveSystemScript = preload("res://scripts/systems/save_system.gd")
 
 var party = PartyStateScript.new()
 var quest_system = QuestSystemScript.new()
@@ -21,7 +22,7 @@ func start_new_game() -> void:
 	flags = {"current_map": "mountain_pass"}
 	battle_context = {}
 	if is_inside_tree() and has_node("/root/EventBus"):
-		EventBus.game_started.emit()
+		get_node("/root/EventBus").game_started.emit()
 
 func set_player_position(position: Vector2) -> void:
 	map_state.set_player_position(position)
@@ -53,6 +54,16 @@ func apply_battle_result(result: Dictionary) -> void:
 			quest_system.mark_ready_to_complete(quest_id)
 	else:
 		map_state.player_position = Vector2(160, 320)
+
+func save_to_path(path: String) -> bool:
+	return SaveSystemScript.new().save_to_path(path, to_dictionary())
+
+func load_from_path(path: String) -> bool:
+	var data = SaveSystemScript.new().load_from_path(path)
+	if data.is_empty():
+		return false
+	from_dictionary(data)
+	return true
 
 func to_dictionary() -> Dictionary:
 	return {

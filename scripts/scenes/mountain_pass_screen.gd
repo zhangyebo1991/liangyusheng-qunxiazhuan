@@ -32,6 +32,11 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	_update_nearest_interactable()
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("cancel"):
+		var success = GameState.save_to_path("user://save_01.json")
+		hud.show_message("存档成功。" if success else "存档失败。")
+
 func _create_terrain() -> void:
 	var terrain = TileMapLayer.new()
 	terrain.name = "Terrain"
