@@ -14,4 +14,4 @@ func _ready() -> void:
 
 func _start_new_game() -> void:
 	GameState.start_new_game()
-	SceneLoader.change_scene("res://scenes/world.tscn")
+	SceneLoader.change_scene("res://scenes/mountain_pass.tscn")
