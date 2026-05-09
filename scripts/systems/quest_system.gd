@@ -2,6 +2,7 @@ extends RefCounted
 
 const STATUS_NOT_STARTED := "not_started"
 const STATUS_ACTIVE := "active"
+const STATUS_READY_TO_COMPLETE := "ready_to_complete"
 const STATUS_COMPLETED := "completed"
 
 var quest_status: Dictionary = {}
@@ -14,8 +15,15 @@ func start_quest(quest_id: String) -> bool:
 	quest_status[quest_id] = STATUS_ACTIVE
 	return true
 
-func complete_quest(quest_id: String) -> bool:
+func mark_ready_to_complete(quest_id: String) -> bool:
 	if get_status(quest_id) != STATUS_ACTIVE:
+		return false
+	quest_status[quest_id] = STATUS_READY_TO_COMPLETE
+	return true
+
+func complete_quest(quest_id: String) -> bool:
+	var status = get_status(quest_id)
+	if status != STATUS_ACTIVE and status != STATUS_READY_TO_COMPLETE:
 		return false
 	quest_status[quest_id] = STATUS_COMPLETED
 	return true

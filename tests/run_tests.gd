@@ -6,6 +6,7 @@ const TestDomainModelsScript = preload("res://tests/test_domain_models.gd")
 const TestQuestAndDialogueScript = preload("res://tests/test_quest_and_dialogue.gd")
 const TestCombatAndSaveScript = preload("res://tests/test_combat_and_save.gd")
 const TestMapDataScript = preload("res://tests/test_map_data.gd")
+const TestMapStateAndFlowScript = preload("res://tests/test_map_state_and_flow.gd")
 
 func _initialize() -> void:
 	var assertions = TestAssertionsScript.new()
@@ -15,6 +16,7 @@ func _initialize() -> void:
 		TestQuestAndDialogueScript.new(),
 		TestCombatAndSaveScript.new(),
 		TestMapDataScript.new(),
+		TestMapStateAndFlowScript.new(),
 	]
 
 	for suite in suites:

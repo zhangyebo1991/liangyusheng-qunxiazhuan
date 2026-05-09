@@ -13,6 +13,11 @@ func run(assertions) -> void:
 	assertions.assert_eq(quest_system.get_status("quest_first_step"), "completed", "完成后任务应处于已完成")
 	assertions.assert_true(not quest_system.start_quest("quest_first_step"), "已完成任务不应重新开始")
 
+	var mountain_quest = QuestSystemScript.new()
+	assertions.assert_true(mountain_quest.start_quest("quest_mountain_trial"), "山道试剑应可开始")
+	assertions.assert_true(mountain_quest.mark_ready_to_complete("quest_mountain_trial"), "山道试剑应可标记为可交付")
+	assertions.assert_true(mountain_quest.complete_quest("quest_mountain_trial"), "山道试剑应可完成")
+
 	var repository = DataRepositoryScript.new()
 	repository.load_all()
 	var dialogue_system = DialogueSystemScript.new()
