@@ -27,8 +27,10 @@ func run(assertions) -> void:
 		"type": "consumable",
 		"description": "恢复少量气血。",
 		"value": 30,
+		"effects": {"heal_hp": 30},
 	})
 	assertions.assert_eq(item.name, "小还丹", "物品应保存名称")
+	assertions.assert_eq(item.effects.get("heal_hp", 0), 30, "物品应读取效果数据")
 
 	var martial_art = MartialArtRecordScript.from_dictionary({
 		"id": "basic_sword",
@@ -54,4 +56,12 @@ func run(assertions) -> void:
 	party.add_member("hero_yun")
 	party.add_item("herb_small", 2)
 	assertions.assert_eq(party.members.size(), 1, "队伍不应重复加入同一角色")
-	assertions.assert_eq(party.inventory.get("herb_small", 0), 2, "队伍背包应累计物品数量")
+	assertions.assert_eq(party.get_item_count("herb_small"), 2, "队伍背包应累计物品数量")
+	assertions.assert_true(party.has_item("herb_small", 2), "背包应能判断足够数量")
+	assertions.assert_true(party.remove_item("herb_small", 1), "背包应能扣除已有物品")
+	assertions.assert_eq(party.get_item_count("herb_small"), 1, "扣除后数量应减少")
+	assertions.assert_true(not party.remove_item("herb_small", 2), "数量不足时不应扣除物品")
+	assertions.assert_eq(party.get_item_count("herb_small"), 1, "扣除失败后数量应保持")
+	assertions.assert_true(party.remove_item("herb_small", 1), "应能扣除最后一个物品")
+	assertions.assert_eq(party.get_item_count("herb_small"), 0, "数量归零后查询应为 0")
+	assertions.assert_true(not party.inventory.has("herb_small"), "数量归零后应从背包字典移除")

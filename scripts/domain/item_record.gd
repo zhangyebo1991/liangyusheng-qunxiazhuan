@@ -6,6 +6,7 @@ var name: String = ""
 var type: String = ""
 var description: String = ""
 var value: int = 0
+var effects: Dictionary = {}
 
 static func from_dictionary(data: Dictionary):
 	var item = new()
@@ -14,4 +15,5 @@ static func from_dictionary(data: Dictionary):
 	item.type = str(data.get("type", ""))
 	item.description = str(data.get("description", ""))
 	item.value = int(data.get("value", 0))
+	item.effects = data.get("effects", {}).duplicate(true)
 	return item
