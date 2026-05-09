@@ -67,3 +67,31 @@ func run(assertions) -> void:
 	assertions.assert_true(party.remove_item("herb_small", 1), "应能扣除最后一个物品")
 	assertions.assert_eq(party.get_item_count("herb_small"), 0, "数量归零后查询应为 0")
 	assertions.assert_true(not party.inventory.has("herb_small"), "数量归零后应从背包字典移除")
+
+	assertions.assert_eq(party.coins, 0, "队伍默认铜钱应为 0")
+	assertions.assert_true(not party.can_afford(0), "金额为 0 时不应视为可支付")
+	assertions.assert_true(not party.can_afford(-1), "负数金额不应视为可支付")
+	party.add_coins(80)
+	party.add_coins(0)
+	party.add_coins(-10)
+	assertions.assert_eq(party.coins, 80, "队伍应能增加有效铜钱")
+	assertions.assert_true(party.can_afford(30), "余额足够时应可支付")
+	assertions.assert_true(party.spend_coins(30), "余额足够时应能扣钱")
+	assertions.assert_eq(party.coins, 50, "扣钱后余额应减少")
+	assertions.assert_true(not party.spend_coins(100), "余额不足时扣钱应失败")
+	assertions.assert_eq(party.coins, 50, "扣钱失败后余额应保持")
+
+	var serialized_party = party.to_dictionary()
+	assertions.assert_eq(serialized_party.get("coins", -1), 50, "队伍序列化应保存铜钱")
+
+	var restored_party = PartyStateScript.new()
+	restored_party.from_dictionary(serialized_party)
+	assertions.assert_eq(restored_party.coins, 50, "队伍反序列化应恢复铜钱")
+
+	var old_save_party = PartyStateScript.new()
+	old_save_party.from_dictionary({"members": ["hero_yun"], "inventory": {"herb_small": 1}})
+	assertions.assert_eq(old_save_party.coins, 0, "旧存档缺少铜钱时应为 0")
+
+	var invalid_coin_party = PartyStateScript.new()
+	invalid_coin_party.from_dictionary({"members": ["hero_yun"], "inventory": {}, "coins": -5})
+	assertions.assert_eq(invalid_coin_party.coins, 0, "读档铜钱小于 0 时应钳制")

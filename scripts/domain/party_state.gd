@@ -3,6 +3,7 @@ extends RefCounted
 
 var members: Array[String] = []
 var inventory: Dictionary = {}
+var coins := 0
 
 func add_member(actor_id: String) -> void:
 	if actor_id.is_empty():
@@ -41,15 +42,33 @@ func remove_item(item_id: String, amount: int = 1) -> bool:
 		inventory[item_id] = remaining
 	return true
 
+func add_coins(amount: int) -> void:
+	if amount <= 0:
+		return
+	coins += amount
+
+func can_afford(amount: int) -> bool:
+	if amount <= 0:
+		return false
+	return coins >= amount
+
+func spend_coins(amount: int) -> bool:
+	if not can_afford(amount):
+		return false
+	coins -= amount
+	return true
+
 func to_dictionary() -> Dictionary:
 	return {
 		"members": members.duplicate(),
 		"inventory": inventory.duplicate(true),
+		"coins": coins,
 	}
 
 func from_dictionary(data: Dictionary) -> void:
 	members = _to_string_array(data.get("members", []))
 	inventory = {}
+	coins = max(0, int(data.get("coins", 0)))
 	var raw_inventory = data.get("inventory", {})
 	if typeof(raw_inventory) != TYPE_DICTIONARY:
 		return
