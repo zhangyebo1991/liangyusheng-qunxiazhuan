@@ -4,6 +4,7 @@ const TestAssertionsScript = preload("res://tests/support/test_assertions.gd")
 const TestDataLoaderScript = preload("res://tests/test_data_loader.gd")
 const TestDomainModelsScript = preload("res://tests/test_domain_models.gd")
 const TestQuestAndDialogueScript = preload("res://tests/test_quest_and_dialogue.gd")
+const TestEffectSystemScript = preload("res://tests/test_effect_system.gd")
 const TestCombatAndSaveScript = preload("res://tests/test_combat_and_save.gd")
 const TestMapDataScript = preload("res://tests/test_map_data.gd")
 const TestMapStateAndFlowScript = preload("res://tests/test_map_state_and_flow.gd")
@@ -25,6 +26,7 @@ func _initialize() -> void:
 		TestDataLoaderScript.new(),
 		TestDomainModelsScript.new(),
 		TestQuestAndDialogueScript.new(),
+		TestEffectSystemScript.new(),
 		TestCombatAndSaveScript.new(),
 		TestMapDataScript.new(),
 		TestMapStateAndFlowScript.new(),

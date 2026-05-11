@@ -4,6 +4,12 @@ const STATUS_NOT_STARTED := "not_started"
 const STATUS_ACTIVE := "active"
 const STATUS_READY_TO_COMPLETE := "ready_to_complete"
 const STATUS_COMPLETED := "completed"
+const VALID_STATUSES := [
+	STATUS_NOT_STARTED,
+	STATUS_ACTIVE,
+	STATUS_READY_TO_COMPLETE,
+	STATUS_COMPLETED,
+]
 
 var quest_status: Dictionary = {}
 
@@ -27,6 +33,17 @@ func complete_quest(quest_id: String) -> bool:
 		return false
 	quest_status[quest_id] = STATUS_COMPLETED
 	return true
+
+func set_status(quest_id: String, status: String) -> bool:
+	if quest_id.is_empty():
+		return false
+	if not VALID_STATUSES.has(status):
+		return false
+	quest_status[quest_id] = status
+	return true
+
+func is_valid_status(status: String) -> bool:
+	return VALID_STATUSES.has(status)
 
 func get_status(quest_id: String) -> String:
 	return str(quest_status.get(quest_id, STATUS_NOT_STARTED))
