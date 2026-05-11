@@ -10,6 +10,7 @@ const MapTransitionSystemScript = preload("res://scripts/systems/map_transition_
 const InventorySystemScript = preload("res://scripts/systems/inventory_system.gd")
 const ShopSystemScript = preload("res://scripts/systems/shop_system.gd")
 const MapRewardSystemScript = preload("res://scripts/systems/map_reward_system.gd")
+const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
 
 var player
 var hud
@@ -20,6 +21,7 @@ var transition_system = MapTransitionSystemScript.new()
 var inventory_system = InventorySystemScript.new()
 var shop_system = ShopSystemScript.new()
 var map_reward_system = MapRewardSystemScript.new()
+var effect_system = EffectSystemScript.new()
 var current_shop_record: Dictionary = {}
 var map_data: Dictionary = {}
 var interactables: Array = []
@@ -195,6 +197,86 @@ func _claim_pickup(record: Dictionary) -> void:
 		_remove_interactable_by_id(str(record.get("id", "")))
 		_refresh_inventory_if_open()
 		_refresh_shop_if_open()
+
+func _apply_quest_complete_effects(quest_id: String) -> Dictionary:
+	var game_state = _get_game_state()
+	var data_repository = _get_data_repository()
+	if game_state == null or data_repository == null or quest_id.is_empty():
+		return {
+			"success": false,
+			"applied": 0,
+			"failed": 1,
+			"messages": [],
+			"errors": ["任务效果无法执行。"],
+			"items": [],
+			"coins": 0,
+			"flags": [],
+			"quests": [],
+			"resolved_objects": [],
+			"martial_proficiency": [],
+		}
+	var quest = data_repository.get_quest(quest_id)
+	var effects = _quest_complete_effects(quest_id, quest)
+	return effect_system.apply_effects(game_state, effects, {"source": "quest_complete", "quest_id": quest_id})
+
+func _quest_complete_effects(quest_id: String, quest: Dictionary) -> Array:
+	var effects = quest.get("complete_effects", [])
+	if typeof(effects) == TYPE_ARRAY and not effects.is_empty():
+		return effects
+
+	var result: Array = [
+		{"type": "set_quest_status", "quest_id": quest_id, "status": "completed"}
+	]
+	var reward_items = quest.get("reward_items", [])
+	if typeof(reward_items) == TYPE_ARRAY:
+		var amounts = quest.get("reward_item_amounts", {})
+		if typeof(amounts) != TYPE_DICTIONARY:
+			amounts = {}
+		for raw_item_id in reward_items:
+			var item_id = str(raw_item_id)
+			if item_id.is_empty():
+				continue
+			result.append({
+				"type": "add_item",
+				"item_id": item_id,
+				"amount": max(1, int(amounts.get(item_id, 1))),
+			})
+
+	var reward_flags = quest.get("reward_flags", {})
+	if typeof(reward_flags) == TYPE_DICTIONARY:
+		for raw_key in reward_flags.keys():
+			var key = str(raw_key)
+			if key.is_empty():
+				continue
+			result.append({
+				"type": "set_flag",
+				"key": key,
+				"value": reward_flags[raw_key],
+			})
+	return result
+
+func _build_effect_message(result: Dictionary, fallback_message: String) -> String:
+	var item_parts: Array[String] = []
+	var data_repository = _get_data_repository()
+	for item in result.get("items", []):
+		if typeof(item) != TYPE_DICTIONARY:
+			continue
+		var item_id = str(item.get("id", ""))
+		if item_id.is_empty():
+			continue
+		var item_data = data_repository.get_item(item_id) if data_repository != null else {}
+		var name = str(item_data.get("name", item_id))
+		var amount = int(item.get("amount", 1))
+		if amount > 1:
+			item_parts.append("%s x%d" % [name, amount])
+		else:
+			item_parts.append(name)
+	var coins = int(result.get("coins", 0))
+	if coins > 0:
+		item_parts.append("%d 文" % coins)
+	if item_parts.is_empty():
+		return fallback_message
+	return "获得：%s。" % "、".join(item_parts)
 
 func _remove_interactable_by_id(object_id: String) -> void:
 	if object_id.is_empty():

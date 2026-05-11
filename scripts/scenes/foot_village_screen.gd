@@ -54,19 +54,10 @@ func _talk_to_innkeeper(_record: Dictionary) -> void:
 	if status == "not_started":
 		_open_dialogue("foot_village_innkeeper_idle")
 		return
-	if status == "active":
-		GameState.quest_system.mark_ready_to_complete("quest_deliver_letter")
-		GameState.quest_system.complete_quest("quest_deliver_letter")
-		GameState.set_flag("clue_foot_village", "掌柜提到飞红巾踪迹")
-		GameState.map_state.mark_reward_claimed("quest_deliver_letter")
+	if status == "active" or status == "ready_to_complete":
+		var result = _apply_quest_complete_effects("quest_deliver_letter")
 		_open_dialogue("deliver_letter_complete")
-		hud.show_message("获得线索：飞红巾踪迹")
-	elif status == "ready_to_complete":
-		GameState.quest_system.complete_quest("quest_deliver_letter")
-		GameState.set_flag("clue_foot_village", "掌柜提到飞红巾踪迹")
-		GameState.map_state.mark_reward_claimed("quest_deliver_letter")
-		_open_dialogue("deliver_letter_complete")
-		hud.show_message("获得线索：飞红巾踪迹")
+		hud.show_message(_build_effect_message(result, "获得线索：飞红巾踪迹"))
 	else:
 		_open_dialogue("deliver_letter_after")
 	_update_quest_text()

@@ -32,12 +32,9 @@ func _talk_to_npc(record: Dictionary) -> void:
 		_open_dialogue(str(record.get("dialogue_id", "")))
 		hud.show_message("任务开始：山道试剑")
 	elif status == "ready_to_complete":
-		GameState.quest_system.complete_quest(quest_id)
-		if not GameState.map_state.is_reward_claimed(quest_id):
-			GameState.party.add_item("herb_small", 1)
-			GameState.map_state.mark_reward_claimed(quest_id)
-			hud.show_message("获得：小还丹")
+		var result = _apply_quest_complete_effects(quest_id)
 		_open_dialogue("mountain_pass_complete")
+		hud.show_message(_build_effect_message(result, "任务完成：山道试剑"))
 	else:
 		_open_dialogue(str(record.get("dialogue_id", "")))
 	_update_quest_text()

@@ -37,6 +37,17 @@ func run(assertions) -> void:
 	assertions.assert_eq(state.quest_system.get_status("quest_deliver_letter"), "completed", "送信任务效果应完成任务")
 	assertions.assert_eq(state.flags.get("clue_foot_village", ""), "掌柜提到飞红巾踪迹", "送信任务效果应写入线索")
 
+	var mountain_state = GameStateScript.new()
+	mountain_state.start_new_game()
+	mountain_state.quest_system.start_quest("quest_mountain_trial")
+	mountain_state.quest_system.mark_ready_to_complete("quest_mountain_trial")
+	var mountain_initial_herbs = mountain_state.party.get_item_count("herb_small")
+	var mountain_result = effect_system.apply_effects(mountain_state, mountain_effects)
+	assertions.assert_true(mountain_result.get("success", false), "山道试剑完成效果应可执行")
+	assertions.assert_eq(mountain_state.quest_system.get_status("quest_mountain_trial"), "completed", "山道试剑完成效果应完成任务")
+	assertions.assert_eq(mountain_state.party.get_item_count("herb_small"), mountain_initial_herbs + 1, "山道试剑完成效果应奖励小还丹")
+	mountain_state.free()
+
 	state.free()
 	repository.free()
 
