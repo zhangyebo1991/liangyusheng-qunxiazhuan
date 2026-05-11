@@ -42,6 +42,30 @@ func run(assertions) -> void:
 	assertions.assert_eq(remove_result.get("removed_items", [])[0].get("id", ""), "herb_small", "结果应记录扣除物品编号")
 	assertions.assert_eq(remove_result.get("removed_items", [])[0].get("amount", 0), 1, "结果应记录扣除物品数量")
 
+	var rumor_result = effect_system.apply_effects(state, [
+		{
+			"type": "add_rumor",
+			"rumor": {
+				"id": "rumor_road_red_thread",
+				"title": "官道红线车辙",
+				"text": "官道车辙中夹着红线。",
+				"source": "赶路书生",
+				"related_quest_id": "quest_trace_red_thread"
+			}
+		}
+	])
+	assertions.assert_true(bool(rumor_result.get("success", false)), "add_rumor 应写入江湖记事")
+	assertions.assert_true(state.journal_state.active_rumors.has("rumor_road_red_thread"), "add_rumor 应加入可追查传闻")
+	assertions.assert_eq(rumor_result.get("rumors", [])[0].get("id", ""), "rumor_road_red_thread", "效果结果应记录传闻编号")
+
+	var trigger_rumor = effect_system.apply_effects(state, [
+		{"type": "trigger_rumor", "rumor_id": "rumor_road_red_thread"}
+	])
+	assertions.assert_true(bool(trigger_rumor.get("success", false)), "trigger_rumor 应归档已有传闻")
+	assertions.assert_true(not state.journal_state.active_rumors.has("rumor_road_red_thread"), "trigger_rumor 后传闻不应留在可追查列表")
+	assertions.assert_true(state.journal_state.triggered_rumors.has("rumor_road_red_thread"), "trigger_rumor 后传闻应进入已触发列表")
+	assertions.assert_eq(trigger_rumor.get("triggered_rumors", [])[0], "rumor_road_red_thread", "效果结果应记录归档传闻编号")
+
 	var missing_remove = effect_system.apply_effects(state, [
 		{"type": "remove_item", "item_id": "herb_small", "amount": 99}
 	])
@@ -67,5 +91,13 @@ func run(assertions) -> void:
 	var invalid_status = effect_system.apply_effects(state, [{"type": "set_quest_status", "quest_id": "quest_mountain_trial", "status": "done"}])
 	assertions.assert_true(not invalid_status.get("success", true), "非法任务状态应失败")
 	assertions.assert_eq(invalid_status.get("errors", [])[0], "任务状态无效：done", "非法任务状态应返回中文错误")
+
+	var invalid_rumor = effect_system.apply_effects(state, [{"type": "add_rumor", "rumor": {"id": "", "text": "无编号。"}}])
+	assertions.assert_true(not invalid_rumor.get("success", true), "add_rumor 缺少编号时应失败")
+	assertions.assert_eq(invalid_rumor.get("errors", [])[0], "传闻编号缺失。", "add_rumor 缺少编号应返回中文错误")
+
+	var missing_rumor_trigger = effect_system.apply_effects(state, [{"type": "trigger_rumor", "rumor_id": "missing_rumor"}])
+	assertions.assert_true(not missing_rumor_trigger.get("success", true), "trigger_rumor 不存在传闻时应失败")
+	assertions.assert_eq(missing_rumor_trigger.get("errors", [])[0], "传闻尚未记录：missing_rumor", "trigger_rumor 不存在传闻应返回中文错误")
 
 	state.free()

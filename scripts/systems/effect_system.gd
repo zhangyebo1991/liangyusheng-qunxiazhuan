@@ -1,5 +1,7 @@
 extends RefCounted
 
+const JournalSystemScript = preload("res://scripts/systems/journal_system.gd")
+
 const VALID_QUEST_STATUSES := [
 	"not_started",
 	"active",
@@ -50,6 +52,10 @@ func apply_effect(game_state, effect: Variant, _context: Dictionary = {}) -> Dic
 			_apply_resolve_map_object(result, game_state, effect)
 		"add_martial_proficiency":
 			_apply_add_martial_proficiency(result, game_state, effect)
+		"add_rumor":
+			_apply_add_rumor(result, game_state, effect, _context)
+		"trigger_rumor":
+			_apply_trigger_rumor(result, game_state, effect)
 		_:
 			_add_error(result, "未知效果类型：%s" % effect_type)
 	result["success"] = int(result.get("applied", 0)) > 0 and int(result.get("failed", 0)) == 0
@@ -157,6 +163,43 @@ func _apply_add_martial_proficiency(result: Dictionary, game_state, effect: Dict
 	martial.append({"id": martial_art_id, "amount": amount, "current": current})
 	_mark_applied(result, "武学熟练度提升：%s +%d" % [martial_art_id, amount])
 
+func _apply_add_rumor(result: Dictionary, game_state, effect: Dictionary, context: Dictionary) -> void:
+	var journal_state = _get_journal_state(game_state)
+	if journal_state == null:
+		_add_error(result, "江湖记事状态缺失。")
+		return
+	var journal_system = JournalSystemScript.new()
+	var rumor_result = journal_system.add_rumor(journal_state, effect.get("rumor", {}), context)
+	if not bool(rumor_result.get("success", false)):
+		_add_error(result, str(rumor_result.get("message", "传闻记录失败。")))
+		return
+	var rumor_id = str(rumor_result.get("rumor_id", ""))
+	if not rumor_id.is_empty():
+		var rumors: Array = result["rumors"]
+		rumors.append({"id": rumor_id, "duplicate": bool(rumor_result.get("duplicate", false))})
+	_mark_applied(result, str(rumor_result.get("message", "传闻已记入江湖记事。")))
+
+func _apply_trigger_rumor(result: Dictionary, game_state, effect: Dictionary) -> void:
+	var journal_state = _get_journal_state(game_state)
+	if journal_state == null:
+		_add_error(result, "江湖记事状态缺失。")
+		return
+	var journal_system = JournalSystemScript.new()
+	var rumor_result = journal_system.trigger_rumor(journal_state, str(effect.get("rumor_id", "")))
+	if not bool(rumor_result.get("success", false)):
+		_add_error(result, str(rumor_result.get("message", "传闻归档失败。")))
+		return
+	var rumor_id = str(rumor_result.get("rumor_id", ""))
+	if not rumor_id.is_empty():
+		var triggered: Array = result["triggered_rumors"]
+		triggered.append(rumor_id)
+	_mark_applied(result, str(rumor_result.get("message", "传闻已移入已触发列表。")))
+
+func _get_journal_state(game_state):
+	if game_state == null:
+		return null
+	return game_state.get("journal_state")
+
 func _empty_result() -> Dictionary:
 	return {
 		"success": false,
@@ -171,6 +214,8 @@ func _empty_result() -> Dictionary:
 		"quests": [],
 		"resolved_objects": [],
 		"martial_proficiency": [],
+		"rumors": [],
+		"triggered_rumors": [],
 	}
 
 func _mark_applied(result: Dictionary, message: String) -> void:
@@ -188,7 +233,7 @@ func _merge_result(target: Dictionary, source: Dictionary) -> void:
 	target["applied"] = int(target.get("applied", 0)) + int(source.get("applied", 0))
 	target["failed"] = int(target.get("failed", 0)) + int(source.get("failed", 0))
 	target["coins"] = int(target.get("coins", 0)) + int(source.get("coins", 0))
-	for key in ["messages", "errors", "items", "removed_items", "flags", "quests", "resolved_objects", "martial_proficiency"]:
+	for key in ["messages", "errors", "items", "removed_items", "flags", "quests", "resolved_objects", "martial_proficiency", "rumors", "triggered_rumors"]:
 		var target_values: Array = target[key]
 		for value in source.get(key, []):
 			target_values.append(value)
