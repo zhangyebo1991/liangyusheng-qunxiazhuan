@@ -38,6 +38,10 @@
 
 任务奖励与效果数据化切片使用 `EffectSystem` 统一执行内容数据声明的结果。`data/quests.json` 的 `complete_effects` 描述任务完成效果，`data/maps.json` 的拾取对象 `effects` 描述拾取结果，战斗胜利回流可通过 `victory_effects` 或兼容字段生成效果。`EffectSystem` 支持添加物品、添加铜钱、设置 flag、设置任务状态、标记地图对象已解决和增加武学熟练度。场景脚本只负责触发和展示消息，不直接硬写奖励、线索或任务状态。
 
+## 剧情事件与分支对话基础切片
+
+剧情事件与分支对话切片使用 `ConditionSystem` 判断内容条件，使用 `EventSystem` 在条件满足后执行 `EffectSystem` 效果。`data/dialogues.json` 的 `options` 描述玩家可选分支、条件、效果和后续对白，`data/maps.json` 只声明 NPC 的 `dialogue_id`。`DialogueBox` 只展示对白和选项，`MapScreenBase` 负责把选项交给系统层执行，不在地图脚本里硬写奖励、flag 或背包变化。
+
 ## 验证命令
 
 ```powershell
