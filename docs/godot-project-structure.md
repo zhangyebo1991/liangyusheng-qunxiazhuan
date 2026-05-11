@@ -34,6 +34,10 @@
 
 村外官道切片让 `data/maps.json` 声明地图场景路径、出口条件和拾取奖励。`GameState` 通过地图数据读取场景路径，`MapTransitionSystem` 校验任务状态后开放出口，`MapObjectSpawner` 根据任务状态和已解决对象过滤生成对象。`MapRewardSystem` 是拾取奖励发放入口，官道路边包裹领取后写入 `MapState.resolved_objects`，读档后不再生成。
 
+## 任务奖励与效果数据化基础切片
+
+任务奖励与效果数据化切片使用 `EffectSystem` 统一执行内容数据声明的结果。`data/quests.json` 的 `complete_effects` 描述任务完成效果，`data/maps.json` 的拾取对象 `effects` 描述拾取结果，战斗胜利回流可通过 `victory_effects` 或兼容字段生成效果。`EffectSystem` 支持添加物品、添加铜钱、设置 flag、设置任务状态、标记地图对象已解决和增加武学熟练度。场景脚本只负责触发和展示消息，不直接硬写奖励、线索或任务状态。
+
 ## 验证命令
 
 ```powershell
