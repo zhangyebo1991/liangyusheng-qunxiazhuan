@@ -2,6 +2,7 @@
   {
     "id": "mountain_pass",
     "name": "山道",
+    "scene_path": "res://scenes/mountain_pass.tscn",
     "spawn_position": {"x": 160, "y": 320},
     "spawn_points": {
       "start": {"x": 160, "y": 320},
@@ -42,6 +43,7 @@
   {
     "id": "foot_village",
     "name": "山脚村镇",
+    "scene_path": "res://scenes/foot_village.tscn",
     "spawn_position": {"x": 120, "y": 360},
     "spawn_points": {
       "village_gate": {"x": 120, "y": 360},
@@ -97,14 +99,45 @@
         "items": ["herb_small"]
       },
       {
-        "id": "exit_to_open_road",
+        "id": "exit_to_road_outskirts",
         "type": "exit",
         "name": "村外官道",
         "position": {"x": 1180, "y": 360},
         "radius": 72,
-        "target_map_id": "",
-        "target_spawn_id": "",
-        "locked_message": "前路尚未开放。"
+        "target_map_id": "road_outskirts",
+        "target_spawn_id": "from_foot_village",
+        "required_quest_id": "quest_deliver_letter",
+        "required_quest_status": "completed",
+        "locked_message": "脚夫说前路不太平，先把书信送到客栈再说。"
+      }
+    ]
+  },
+  {
+    "id": "road_outskirts",
+    "name": "村外官道",
+    "scene_path": "res://scenes/road_outskirts.tscn",
+    "spawn_position": {"x": 120, "y": 360},
+    "spawn_points": {
+      "from_foot_village": {"x": 120, "y": 360}
+    },
+    "objects": [
+      {
+        "id": "pickup_roadside_bundle",
+        "type": "pickup",
+        "name": "路边包裹",
+        "position": {"x": 620, "y": 340},
+        "radius": 56,
+        "reward_items": ["herb_small"],
+        "reward_item_amounts": {"herb_small": 1},
+        "reward_coins": 20
+      },
+      {
+        "id": "notice_road_outskirts_sign",
+        "type": "notice",
+        "name": "官道路牌",
+        "position": {"x": 260, "y": 300},
+        "radius": 56,
+        "dialogue_id": ""
       }
     ]
   }

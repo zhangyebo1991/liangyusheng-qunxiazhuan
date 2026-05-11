@@ -4,9 +4,11 @@ const PartyStateScript = preload("res://scripts/domain/party_state.gd")
 const QuestSystemScript = preload("res://scripts/systems/quest_system.gd")
 const MapStateScript = preload("res://scripts/domain/map_state.gd")
 const SaveSystemScript = preload("res://scripts/systems/save_system.gd")
+const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
 
 const DEFAULT_HERO_MAX_HP := 120
 const STARTING_COINS := 80
+const DEFAULT_MAP_SCENE_PATH := "res://scenes/mountain_pass.tscn"
 
 var party = PartyStateScript.new()
 var quest_system = QuestSystemScript.new()
@@ -47,13 +49,15 @@ func get_current_map_scene_path() -> String:
 	return get_scene_path_for_map(map_state.current_map_id)
 
 func get_scene_path_for_map(map_id: String) -> String:
-	match map_id:
-		"mountain_pass":
-			return "res://scenes/mountain_pass.tscn"
-		"foot_village":
-			return "res://scenes/foot_village.tscn"
-		_:
-			return "res://scenes/mountain_pass.tscn"
+	var map_data = _get_map_data(map_id)
+	if map_data.is_empty():
+		push_error("地图编号不存在：%s" % map_id)
+		return DEFAULT_MAP_SCENE_PATH
+	var scene_path = str(map_data.get("scene_path", ""))
+	if scene_path.is_empty():
+		push_error("地图缺少场景路径：%s" % map_id)
+		return DEFAULT_MAP_SCENE_PATH
+	return scene_path
 
 func set_flag(flag_id: String, value: Variant = true) -> void:
 	if flag_id.is_empty():
@@ -190,3 +194,13 @@ func _read_martial_proficiency(value: Variant) -> Dictionary:
 		if amount > 0:
 			result[normalized_id] = amount
 	return result
+
+func _get_map_data(map_id: String) -> Dictionary:
+	if map_id.is_empty():
+		return {}
+	if is_inside_tree() and has_node("/root/DataRepository"):
+		return get_node("/root/DataRepository").get_map(map_id)
+	var repository = DataRepositoryScript.new()
+	var map_data = repository.get_map(map_id)
+	repository.free()
+	return map_data

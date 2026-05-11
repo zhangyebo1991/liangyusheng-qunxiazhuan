@@ -69,7 +69,12 @@ func run(assertions) -> void:
 	village_state.quest_system.complete_quest("quest_deliver_letter")
 	village_state.set_flag("clue_foot_village", "掌柜提到飞红巾踪迹")
 	assertions.assert_eq(village_state.get_current_map_scene_path(), "res://scenes/foot_village.tscn", "村镇地图应映射到村镇场景")
+	village_state.set_current_map("road_outskirts", Vector2(120, 360))
+	assertions.assert_eq(village_state.get_current_map_scene_path(), "res://scenes/road_outskirts.tscn", "官道地图应从地图数据映射到官道场景")
+	village_state.resolve_map_object("pickup_roadside_bundle")
+	assertions.assert_true(village_state.is_map_object_resolved("pickup_roadside_bundle"), "拾取包裹后应记录为已解决对象")
 	assertions.assert_eq(village_state.get_scene_path_for_map("missing_map"), "res://scenes/mountain_pass.tscn", "未知地图应回退山道场景")
+	village_state.set_current_map("foot_village", Vector2(760, 320))
 
 	var village_path = "user://test_foot_village_save.json"
 	assertions.assert_true(village_state.save_to_path(village_path), "村镇状态应可写入存档文件")
@@ -81,6 +86,7 @@ func run(assertions) -> void:
 	assertions.assert_eq(restored_village.quest_system.get_status("quest_deliver_letter"), "completed", "读档应恢复送信任务状态")
 	assertions.assert_eq(restored_village.flags.get("clue_foot_village", ""), "掌柜提到飞红巾踪迹", "读档应恢复线索标记")
 	assertions.assert_eq(restored_village.party.coins, 80, "村镇存档应恢复新游戏初始铜钱")
+	assertions.assert_true(restored_village.is_map_object_resolved("pickup_roadside_bundle"), "读档应恢复已拾取包裹状态")
 
 	state.free()
 	restored.free()
