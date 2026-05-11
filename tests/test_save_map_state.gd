@@ -14,6 +14,15 @@ func run(assertions) -> void:
 	state.hero_hp = 70
 	state.party.add_item("herb_small", 2)
 	state.add_martial_proficiency("basic_sword", 3)
+	state.journal_state.tracked_quest_ids = ["quest_mountain_trial"]
+	state.journal_state.active_rumors["rumor_road_red_thread"] = {
+		"id": "rumor_road_red_thread",
+		"title": "官道红线车辙",
+		"text": "官道车辙中夹着红线。",
+		"source": "赶路书生",
+		"related_quest_id": "quest_trace_red_thread",
+		"discovered_at_map_id": "road_outskirts",
+	}
 
 	var path = "user://test_mountain_pass_save.json"
 	assertions.assert_true(state.save_to_path(path), "游戏状态应可写入存档文件")
@@ -30,6 +39,10 @@ func run(assertions) -> void:
 	assertions.assert_eq(restored.hero_hp, 70, "读档应恢复主角气血")
 	assertions.assert_eq(restored.hero_max_hp, 120, "读档应恢复主角最大气血")
 	assertions.assert_eq(restored.get_martial_proficiency("basic_sword"), 3, "读档应恢复基础剑法熟练度")
+	assertions.assert_eq(restored.journal_state.tracked_quest_ids.size(), 1, "读档应恢复追踪任务数量")
+	assertions.assert_eq(restored.journal_state.tracked_quest_ids[0], "quest_mountain_trial", "读档应恢复追踪任务编号")
+	assertions.assert_true(restored.journal_state.active_rumors.has("rumor_road_red_thread"), "读档应恢复可追查传闻")
+	assertions.assert_eq(restored.journal_state.active_rumors.get("rumor_road_red_thread", {}).get("source", ""), "赶路书生", "读档应恢复传闻来源")
 
 	var old_save_state = GameStateScript.new()
 	old_save_state.from_dictionary({
@@ -42,6 +55,8 @@ func run(assertions) -> void:
 	assertions.assert_eq(old_save_state.hero_max_hp, 120, "旧存档缺少最大气血时应使用默认值")
 	assertions.assert_eq(old_save_state.party.coins, 0, "旧存档缺少铜钱时应回退为 0")
 	assertions.assert_eq(old_save_state.get_martial_proficiency("basic_sword"), 0, "旧存档缺少熟练度时应回退为 0")
+	assertions.assert_eq(old_save_state.journal_state.tracked_quest_ids.size(), 0, "旧存档缺少江湖记事时追踪任务应为空")
+	assertions.assert_eq(old_save_state.journal_state.active_rumors.size(), 0, "旧存档缺少江湖记事时可追查传闻应为空")
 
 	var invalid_hp_state = GameStateScript.new()
 	invalid_hp_state.from_dictionary({
@@ -56,6 +71,7 @@ func run(assertions) -> void:
 	assertions.assert_eq(invalid_hp_state.hero_hp, 100, "读档气血大于最大值时应钳制")
 	assertions.assert_eq(invalid_hp_state.party.coins, 0, "读档铜钱小于 0 时应钳制")
 	assertions.assert_eq(invalid_hp_state.get_martial_proficiency("basic_sword"), 0, "读档熟练度小于 0 时应钳制")
+	assertions.assert_eq(invalid_hp_state.journal_state.tracked_quest_ids.size(), 0, "坏存档缺少江湖记事时应安全初始化")
 	assertions.assert_eq(invalid_hp_state.restore_hero_hp(30), 0, "气血已满时恢复量应为 0")
 	invalid_hp_state.hero_hp = 40
 	assertions.assert_eq(invalid_hp_state.restore_hero_hp(30), 30, "气血未满时应返回实际恢复量")

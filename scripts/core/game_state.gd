@@ -3,6 +3,7 @@ extends Node
 const PartyStateScript = preload("res://scripts/domain/party_state.gd")
 const QuestSystemScript = preload("res://scripts/systems/quest_system.gd")
 const MapStateScript = preload("res://scripts/domain/map_state.gd")
+const JournalStateScript = preload("res://scripts/domain/journal_state.gd")
 const SaveSystemScript = preload("res://scripts/systems/save_system.gd")
 const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
 const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
@@ -14,6 +15,7 @@ const DEFAULT_MAP_SCENE_PATH := "res://scenes/mountain_pass.tscn"
 var party = PartyStateScript.new()
 var quest_system = QuestSystemScript.new()
 var map_state = MapStateScript.new()
+var journal_state = JournalStateScript.new()
 var flags: Dictionary = {}
 var battle_context: Dictionary = {}
 var hero_hp := DEFAULT_HERO_MAX_HP
@@ -27,6 +29,7 @@ func start_new_game() -> void:
 	party.add_coins(STARTING_COINS)
 	quest_system = QuestSystemScript.new()
 	map_state = MapStateScript.new()
+	journal_state = JournalStateScript.new()
 	hero_max_hp = DEFAULT_HERO_MAX_HP
 	hero_hp = hero_max_hp
 	martial_proficiency = {}
@@ -153,6 +156,7 @@ func to_dictionary() -> Dictionary:
 		"party": party.to_dictionary(),
 		"quests": quest_system.to_dictionary(),
 		"map_state": map_state.to_dictionary(),
+		"journal_state": journal_state.to_dictionary(),
 		"flags": flags.duplicate(true),
 		"hero_hp": hero_hp,
 		"hero_max_hp": hero_max_hp,
@@ -166,6 +170,8 @@ func from_dictionary(data: Dictionary) -> void:
 	quest_system.from_dictionary(data.get("quests", {}))
 	map_state = MapStateScript.new()
 	map_state.from_dictionary(data.get("map_state", {}))
+	journal_state = JournalStateScript.new()
+	journal_state.from_dictionary(data.get("journal_state", {}))
 	flags = data.get("flags", {}).duplicate(true)
 	if not flags.has("current_map"):
 		flags["current_map"] = map_state.current_map_id
