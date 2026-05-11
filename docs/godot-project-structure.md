@@ -42,6 +42,10 @@
 
 剧情事件与分支对话切片使用 `ConditionSystem` 判断内容条件，使用 `EventSystem` 在条件满足后执行 `EffectSystem` 效果。`data/dialogues.json` 的 `options` 描述玩家可选分支、条件、效果和后续对白，`data/maps.json` 只声明 NPC 的 `dialogue_id`。`DialogueBox` 只展示对白和选项，`MapScreenBase` 负责把选项交给系统层执行，不在地图脚本里硬写奖励、flag 或背包变化。
 
+## 江湖记事基础切片
+
+江湖记事切片使用 `JournalState` 保存追踪任务、可追查传闻和已触发传闻，使用 `JournalSystem` 统一处理传闻记录、传闻归档和任务追踪上限。地图中按 `J` 或点击 HUD“记事”按钮打开独立页面。HUD 只显示最多 3 个追踪任务，记事页面负责展示任务列表和传闻列表，不直接修改任务、传闻或存档状态。
+
 ## 验证命令
 
 ```powershell
