@@ -9,6 +9,7 @@ const MapObjectSpawnerScript = preload("res://scripts/systems/map_object_spawner
 const MapTransitionSystemScript = preload("res://scripts/systems/map_transition_system.gd")
 const InventorySystemScript = preload("res://scripts/systems/inventory_system.gd")
 const ShopSystemScript = preload("res://scripts/systems/shop_system.gd")
+const MapRewardSystemScript = preload("res://scripts/systems/map_reward_system.gd")
 
 var player
 var hud
@@ -18,6 +19,7 @@ var spawner = MapObjectSpawnerScript.new()
 var transition_system = MapTransitionSystemScript.new()
 var inventory_system = InventorySystemScript.new()
 var shop_system = ShopSystemScript.new()
+var map_reward_system = MapRewardSystemScript.new()
 var current_shop_record: Dictionary = {}
 var map_data: Dictionary = {}
 var interactables: Array = []
@@ -118,6 +120,7 @@ func _create_ui() -> void:
 	var data_repository = _get_data_repository()
 	inventory_system.set_repository(data_repository)
 	shop_system.set_repository(data_repository)
+	map_reward_system.set_repository(data_repository)
 	dialogue_box = DialogueBoxScript.new()
 	add_child(dialogue_box)
 
@@ -184,6 +187,28 @@ func _open_shop(record: Dictionary) -> void:
 	hud.show_shop(str(current_shop_record.get("name", "药铺")), coins, items)
 	if items.is_empty():
 		hud.show_message("药铺暂时没有可买之物。")
+
+func _claim_pickup(record: Dictionary) -> void:
+	var result = map_reward_system.claim_pickup(_get_game_state(), record)
+	hud.show_message(str(result.get("message", "这里什么也没有。")))
+	if bool(result.get("success", false)):
+		_remove_interactable_by_id(str(record.get("id", "")))
+		_refresh_inventory_if_open()
+		_refresh_shop_if_open()
+
+func _remove_interactable_by_id(object_id: String) -> void:
+	if object_id.is_empty():
+		return
+	for index in range(interactables.size() - 1, -1, -1):
+		var interactable = interactables[index]
+		if str(interactable.record.get("id", "")) != object_id:
+			continue
+		interactables.remove_at(index)
+		if player != null and player.current_interactable == interactable:
+			player.set_current_interactable(null)
+		if interactable.get_parent() != null:
+			interactable.get_parent().remove_child(interactable)
+		interactable.queue_free()
 
 func _build_shop_items(record: Dictionary) -> Array:
 	var items: Array = []

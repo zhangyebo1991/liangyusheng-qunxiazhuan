@@ -74,3 +74,14 @@ func run(assertions) -> void:
 	})
 	assertions.assert_eq(shop_interactable.get_interaction_text(), "按 E 查看药铺", "药铺应显示查看提示")
 	shop_interactable.free()
+
+	var pickup_interactable = MapInteractableScript.new()
+	pickup_interactable.setup({
+		"id": "pickup_roadside_bundle",
+		"type": "pickup",
+		"name": "路边包裹",
+		"position": {"x": 620, "y": 340},
+		"radius": 56,
+	})
+	assertions.assert_eq(pickup_interactable.get_interaction_text(), "按 E 查看包裹", "包裹应显示查看提示")
+	pickup_interactable.free()
