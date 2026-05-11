@@ -30,6 +30,10 @@
 
 回合战斗切片使用 `BattleState` 保存战斗运行时状态，`CombatSystem` 处理玩家攻击、敌人反击、战斗中用药、暂退和胜负。战斗界面只显示双方气血、按钮和日志，不直接计算伤害或扣除背包。胜利后 `GameState` 负责清除地图对象、推进任务，并记录 `basic_sword` 熟练度。
 
+## 村外官道与地图规则基础切片
+
+村外官道切片让 `data/maps.json` 声明地图场景路径、出口条件和拾取奖励。`GameState` 通过地图数据读取场景路径，`MapTransitionSystem` 校验任务状态后开放出口，`MapObjectSpawner` 根据任务状态和已解决对象过滤生成对象。`MapRewardSystem` 是拾取奖励发放入口，官道路边包裹领取后写入 `MapState.resolved_objects`，读档后不再生成。
+
 ## 验证命令
 
 ```powershell
