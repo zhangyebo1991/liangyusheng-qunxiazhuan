@@ -62,10 +62,10 @@ $godot = ".tools\godot\4.6-stable\windows-x86_64\Godot_v4.6-stable_win64_console
 Expected full-suite success line:
 
 ```text
-测试通过：29 个测试套件
+测试通过：28 个测试套件
 ```
 
-The suite count is 25 before this plan. It becomes 29 after registering four new test files.
+The suite count is 24 before this plan. It becomes 28 after registering four new test files.
 
 ---
 
@@ -1697,7 +1697,7 @@ $godot = ".tools\godot\4.6-stable\windows-x86_64\Godot_v4.6-stable_win64_console
 Expected:
 
 ```text
-测试通过：29 个测试套件
+测试通过：28 个测试套件
 ```
 
 - [ ] **Step 4: Verify scenes load headlessly**
