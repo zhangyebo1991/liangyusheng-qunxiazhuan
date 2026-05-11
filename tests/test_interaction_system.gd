@@ -3,6 +3,7 @@ extends RefCounted
 const InteractionSystemScript = preload("res://scripts/systems/interaction_system.gd")
 const MapObjectSpawnerScript = preload("res://scripts/systems/map_object_spawner.gd")
 const MapInteractableScript = preload("res://scripts/scenes/map_interactable.gd")
+const GameStateScript = preload("res://scripts/core/game_state.gd")
 
 func run(assertions) -> void:
 	var interaction_system = InteractionSystemScript.new()
@@ -30,6 +31,38 @@ func run(assertions) -> void:
 
 	assertions.assert_eq(records.size(), 1, "已解决对象不应进入生成列表")
 	assertions.assert_eq(records[0].get("id", ""), "npc_qingshanke", "未解决 NPC 应进入生成列表")
+
+	var conditional_state = GameStateScript.new()
+	conditional_state.start_new_game()
+	var conditional_records_locked = spawner.get_spawn_records({
+		"objects": [
+			{
+				"id": "pickup_locked_bundle",
+				"type": "pickup",
+				"required_quest_id": "quest_deliver_letter",
+				"required_quest_status": "completed",
+				"position": {"x": 620, "y": 340}
+			}
+		]
+	}, [], conditional_state)
+	assertions.assert_eq(conditional_records_locked.size(), 0, "任务条件不满足时对象不应生成")
+
+	conditional_state.quest_system.start_quest("quest_deliver_letter")
+	conditional_state.quest_system.mark_ready_to_complete("quest_deliver_letter")
+	conditional_state.quest_system.complete_quest("quest_deliver_letter")
+	var conditional_records_unlocked = spawner.get_spawn_records({
+		"objects": [
+			{
+				"id": "pickup_locked_bundle",
+				"type": "pickup",
+				"required_quest_id": "quest_deliver_letter",
+				"required_quest_status": "completed",
+				"position": {"x": 620, "y": 340}
+			}
+		]
+	}, [], conditional_state)
+	assertions.assert_eq(conditional_records_unlocked.size(), 1, "任务条件满足时对象应生成")
+	conditional_state.free()
 
 	var shop_interactable = MapInteractableScript.new()
 	shop_interactable.setup({

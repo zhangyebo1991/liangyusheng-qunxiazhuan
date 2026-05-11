@@ -1,6 +1,7 @@
 extends RefCounted
 
 const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
+const GameStateScript = preload("res://scripts/core/game_state.gd")
 const MapTransitionSystemScript = preload("res://scripts/systems/map_transition_system.gd")
 
 func run(assertions) -> void:
@@ -10,6 +11,7 @@ func run(assertions) -> void:
 
 	var mountain = repository.get_map("mountain_pass")
 	var village = repository.get_map("foot_village")
+	var road = repository.get_map("road_outskirts")
 	var mountain_exit = _find_object(mountain, "exit_to_foot_village")
 	var result = transition_system.resolve_transition(mountain_exit, village)
 	assertions.assert_true(result.get("success", false), "山道出口应能切到村镇")
@@ -21,6 +23,23 @@ func run(assertions) -> void:
 	assertions.assert_true(back.get("success", false), "村镇出口应能切回山道")
 	assertions.assert_eq(back.get("map_id", ""), "mountain_pass", "返回结果应包含山道地图")
 	assertions.assert_eq(back.get("position", Vector2.ZERO), Vector2(1110, 320), "返回结果应使用山道返回点")
+
+	var road_exit = _find_object(village, "exit_to_road_outskirts")
+	var locked_state = GameStateScript.new()
+	locked_state.start_new_game()
+	var locked_road = transition_system.resolve_transition(road_exit, road, locked_state)
+	assertions.assert_true(not locked_road.get("success", true), "送信任务未完成时官道出口应锁定")
+	assertions.assert_eq(locked_road.get("message", ""), "脚夫说前路不太平，先把书信送到客栈再说。", "官道锁定时应返回配置提示")
+
+	var unlocked_state = GameStateScript.new()
+	unlocked_state.start_new_game()
+	unlocked_state.quest_system.start_quest("quest_deliver_letter")
+	unlocked_state.quest_system.mark_ready_to_complete("quest_deliver_letter")
+	unlocked_state.quest_system.complete_quest("quest_deliver_letter")
+	var unlocked_road = transition_system.resolve_transition(road_exit, road, unlocked_state)
+	assertions.assert_true(unlocked_road.get("success", false), "送信任务完成后官道出口应开放")
+	assertions.assert_eq(unlocked_road.get("map_id", ""), "road_outskirts", "官道出口应切换到村外官道")
+	assertions.assert_eq(unlocked_road.get("position", Vector2.ZERO), Vector2(120, 360), "官道出口应使用村口进入出生点")
 
 	var missing_spawn = transition_system.resolve_transition({
 		"target_map_id": "foot_village",
@@ -45,6 +64,8 @@ func run(assertions) -> void:
 	assertions.assert_true(not locked.get("success", true), "空目标地图应返回失败")
 	assertions.assert_eq(locked.get("message", ""), "前路尚未开放。", "空目标地图应返回锁定提示")
 
+	locked_state.free()
+	unlocked_state.free()
 	repository.free()
 
 func _find_object(map_data: Dictionary, object_id: String) -> Dictionary:

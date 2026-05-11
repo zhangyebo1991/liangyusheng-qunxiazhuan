@@ -124,7 +124,7 @@ func _create_ui() -> void:
 func _spawn_objects() -> void:
 	var game_state = _get_game_state()
 	var resolved_objects = game_state.map_state.resolved_objects if game_state != null else []
-	var records = spawner.get_spawn_records(map_data, resolved_objects)
+	var records = spawner.get_spawn_records(map_data, resolved_objects, game_state)
 	for record in records:
 		var interactable = MapInteractableScript.new()
 		interactable.setup(record)
@@ -155,12 +155,12 @@ func _transition_to_exit(record: Dictionary) -> void:
 	var target_map_id = str(record.get("target_map_id", ""))
 	var data_repository = _get_data_repository()
 	var target_map = data_repository.get_map(target_map_id) if data_repository != null else {}
-	var result = transition_system.resolve_transition(record, target_map)
+	var game_state = _get_game_state()
+	var result = transition_system.resolve_transition(record, target_map, game_state)
 	if not bool(result.get("success", false)):
 		hud.show_message(str(result.get("message", "前路尚未开放。")))
 		return
 
-	var game_state = _get_game_state()
 	if game_state == null:
 		hud.show_message("前路尚未开放。")
 		return
