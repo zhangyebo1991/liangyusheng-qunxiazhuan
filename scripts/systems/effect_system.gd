@@ -38,6 +38,8 @@ func apply_effect(game_state, effect: Variant, _context: Dictionary = {}) -> Dic
 	match effect_type:
 		"add_item":
 			_apply_add_item(result, game_state, effect)
+		"remove_item":
+			_apply_remove_item(result, game_state, effect)
 		"add_coins":
 			_apply_add_coins(result, game_state, effect)
 		"set_flag":
@@ -69,6 +71,25 @@ func _apply_add_item(result: Dictionary, game_state, effect: Dictionary) -> void
 	var items: Array = result["items"]
 	items.append({"id": item_id, "amount": amount})
 	_mark_applied(result, "获得物品：%s x%d" % [item_id, amount])
+
+func _apply_remove_item(result: Dictionary, game_state, effect: Dictionary) -> void:
+	var item_id = str(effect.get("item_id", ""))
+	var amount = int(effect.get("amount", 1))
+	if item_id.is_empty():
+		_add_error(result, "扣除物品效果缺少物品编号。")
+		return
+	if amount <= 0:
+		_add_error(result, "扣除物品效果数量必须大于 0。")
+		return
+	if game_state.party == null:
+		_add_error(result, "队伍状态缺失。")
+		return
+	if not game_state.party.remove_item(item_id, amount):
+		_add_error(result, "背包中没有足够物品：%s x%d" % [item_id, amount])
+		return
+	var removed_items: Array = result["removed_items"]
+	removed_items.append({"id": item_id, "amount": amount})
+	_mark_applied(result, "失去物品：%s x%d" % [item_id, amount])
 
 func _apply_add_coins(result: Dictionary, game_state, effect: Dictionary) -> void:
 	var amount = int(effect.get("amount", 0))
@@ -144,6 +165,7 @@ func _empty_result() -> Dictionary:
 		"messages": [],
 		"errors": [],
 		"items": [],
+		"removed_items": [],
 		"coins": 0,
 		"flags": [],
 		"quests": [],
@@ -166,7 +188,7 @@ func _merge_result(target: Dictionary, source: Dictionary) -> void:
 	target["applied"] = int(target.get("applied", 0)) + int(source.get("applied", 0))
 	target["failed"] = int(target.get("failed", 0)) + int(source.get("failed", 0))
 	target["coins"] = int(target.get("coins", 0)) + int(source.get("coins", 0))
-	for key in ["messages", "errors", "items", "flags", "quests", "resolved_objects", "martial_proficiency"]:
+	for key in ["messages", "errors", "items", "removed_items", "flags", "quests", "resolved_objects", "martial_proficiency"]:
 		var target_values: Array = target[key]
 		for value in source.get(key, []):
 			target_values.append(value)

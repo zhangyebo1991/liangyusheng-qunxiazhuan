@@ -34,6 +34,20 @@ func run(assertions) -> void:
 	assertions.assert_eq(result.get("items", [])[0].get("id", ""), "herb_small", "结果应记录物品编号")
 	assertions.assert_eq(result.get("coins", 0), 15, "结果应记录铜钱总数")
 
+	var remove_result = effect_system.apply_effects(state, [
+		{"type": "remove_item", "item_id": "herb_small", "amount": 1}
+	])
+	assertions.assert_true(bool(remove_result.get("success", false)), "remove_item 应成功扣除已有物品")
+	assertions.assert_eq(state.party.get_item_count("herb_small"), initial_herbs + 1, "remove_item 应扣除指定数量")
+	assertions.assert_eq(remove_result.get("removed_items", [])[0].get("id", ""), "herb_small", "结果应记录扣除物品编号")
+	assertions.assert_eq(remove_result.get("removed_items", [])[0].get("amount", 0), 1, "结果应记录扣除物品数量")
+
+	var missing_remove = effect_system.apply_effects(state, [
+		{"type": "remove_item", "item_id": "herb_small", "amount": 99}
+	])
+	assertions.assert_true(not bool(missing_remove.get("success", true)), "remove_item 物品不足时应失败")
+	assertions.assert_eq(missing_remove.get("errors", [])[0], "背包中没有足够物品：herb_small x99", "remove_item 物品不足应返回中文错误")
+
 	var missing_list = effect_system.apply_effects(state, {"type": "add_coins", "amount": 1})
 	assertions.assert_true(not missing_list.get("success", true), "非数组效果列表应失败")
 	assertions.assert_eq(missing_list.get("failed", 0), 1, "非数组效果列表应记录一次失败")
