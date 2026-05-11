@@ -21,6 +21,11 @@ func run(assertions) -> void:
 	assertions.assert_eq(_find_option(options, "give_medicine").get("next_dialogue_id", ""), "road_scholar_thanks", "赠药选项应跳转感谢对白")
 	assertions.assert_true(not repository.get_dialogue("road_scholar_rumor").is_empty(), "传闻后续对白应存在")
 	assertions.assert_true(not repository.get_dialogue("road_scholar_thanks").is_empty(), "感谢后续对白应存在")
+	var rumor_dialogue = repository.get_dialogue("road_scholar_rumor")
+	var rumor = rumor_dialogue.get("rumor", {})
+	assertions.assert_eq(rumor.get("id", ""), "rumor_road_red_thread", "官道传闻对白应配置传闻编号")
+	assertions.assert_eq(rumor.get("related_quest_id", ""), "quest_trace_red_thread", "官道传闻应声明相关任务编号")
+	assertions.assert_true(not str(rumor.get("text", "")).is_empty(), "官道传闻应配置正文")
 
 	var state = GameStateScript.new()
 	state.start_new_game()

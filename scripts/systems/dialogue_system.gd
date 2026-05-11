@@ -35,7 +35,14 @@ func build_dialogue_state(dialogue_id: String, game_state) -> Dictionary:
 		"title": str(dialogue.get("title", "")),
 		"lines": lines.duplicate(true),
 		"options": _build_options(dialogue, game_state),
+		"rumor": _build_rumor(dialogue),
 	}
+
+func _build_rumor(dialogue: Dictionary) -> Dictionary:
+	var rumor = dialogue.get("rumor", {})
+	if typeof(rumor) != TYPE_DICTIONARY:
+		return {}
+	return rumor.duplicate(true)
 
 func _build_options(dialogue: Dictionary, game_state) -> Array:
 	var raw_options = dialogue.get("options", [])

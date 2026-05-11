@@ -33,7 +33,14 @@ func run(assertions) -> void:
 				"next_dialogue_id": "branch_give",
 				"unavailable_text": "背包中没有小还丹。"
 			}
-		]
+		],
+		"rumor": {
+			"id": "rumor_branch_test",
+			"title": "分支测试传闻",
+			"text": "这是分支测试传闻。",
+			"source": "测试者",
+			"related_quest_id": "quest_branch_test"
+		}
 	}
 
 	var state = GameStateScript.new()
@@ -52,6 +59,7 @@ func run(assertions) -> void:
 
 	var dialogue_state = dialogue_system.build_dialogue_state("branch_test", state)
 	assertions.assert_eq(dialogue_state.get("title", ""), "分支测试", "对话状态应包含标题")
+	assertions.assert_eq(dialogue_state.get("rumor", {}).get("id", ""), "rumor_branch_test", "对话状态应包含传闻数据")
 	assertions.assert_eq(dialogue_state.get("lines", []).size(), 1, "对话状态应包含对白行")
 	assertions.assert_eq(dialogue_state.get("options", []).size(), 2, "对话状态应包含选项")
 	assertions.assert_true(bool(dialogue_state.get("options", [])[0].get("available", false)), "无条件选项应可用")

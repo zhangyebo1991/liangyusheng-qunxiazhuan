@@ -115,7 +115,14 @@
     "title": "车辙传闻",
     "lines": [
       {"speaker": "赶路书生", "text": "昨夜有马队沿官道急行，车辙深处夹着红线，像是飞红巾一脉留下的记号。"}
-    ]
+    ],
+    "rumor": {
+      "id": "rumor_road_red_thread",
+      "title": "官道红线车辙",
+      "text": "官道车辙中夹着红线，疑似飞红巾一脉留下的记号。",
+      "source": "赶路书生",
+      "related_quest_id": "quest_trace_red_thread"
+    }
   },
   {
     "id": "road_scholar_thanks",
