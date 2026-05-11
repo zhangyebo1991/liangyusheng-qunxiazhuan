@@ -6,6 +6,30 @@ func run(assertions) -> void:
 	var hud = HudScript.new()
 	hud._ready()
 
+	assertions.assert_true(hud.has_signal("journal_requested"), "HUD 应提供记事请求信号")
+	assertions.assert_true(hud.has_method("set_tracked_tasks"), "HUD 应提供追踪任务刷新方法")
+	if not hud.has_signal("journal_requested") or not hud.has_method("set_tracked_tasks"):
+		hud.free()
+		return
+
+	var journal_requests: Array[int] = []
+	hud.journal_requested.connect(func(): journal_requests.append(1))
+	assertions.assert_eq(hud.journal_button.text, "记事", "HUD 应显示记事按钮")
+	hud.journal_button.pressed.emit()
+	assertions.assert_eq(journal_requests.size(), 1, "点击记事按钮应发出请求信号")
+
+	hud.set_tracked_tasks([
+		{"title": "山道试剑", "status_text": "进行中"},
+		{"title": "送信到客栈", "status_text": "已完成"},
+		{"title": "追查红线车辙", "status_text": "未开始"},
+		{"title": "第四任务", "status_text": "未开始"}
+	])
+	assertions.assert_eq(hud.tracked_task_list.get_child_count(), 3, "HUD 最多显示 3 个追踪任务")
+	assertions.assert_eq(hud.tracked_task_list.get_child(0).text, "山道试剑：进行中", "追踪任务应显示标题和状态")
+
+	hud.set_tracked_tasks([])
+	assertions.assert_eq(hud.tracked_task_list.get_child_count(), 0, "空追踪任务应清空 HUD 追踪区")
+
 	hud.show_inventory([{
 		"id": "herb_small",
 		"name": "小还丹",

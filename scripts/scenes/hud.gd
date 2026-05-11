@@ -2,10 +2,13 @@ extends CanvasLayer
 
 signal item_use_requested(item_id: String)
 signal shop_buy_requested(item_id: String)
+signal journal_requested
 
 var quest_label: Label
 var prompt_label: Label
 var message_label: Label
+var journal_button: Button
+var tracked_task_list: VBoxContainer
 var inventory_panel: Panel
 var inventory_list: VBoxContainer
 var inventory_empty_label: Label
@@ -33,6 +36,18 @@ func _ready() -> void:
 	message_label.size = Vector2(800, 32)
 	add_child(message_label)
 
+	journal_button = Button.new()
+	journal_button.text = "记事"
+	journal_button.position = Vector2(1120, 20)
+	journal_button.size = Vector2(96, 36)
+	journal_button.pressed.connect(func(): journal_requested.emit())
+	add_child(journal_button)
+
+	tracked_task_list = VBoxContainer.new()
+	tracked_task_list.position = Vector2(24, 56)
+	tracked_task_list.size = Vector2(520, 96)
+	add_child(tracked_task_list)
+
 	_create_inventory_panel()
 	_create_shop_panel()
 
@@ -48,6 +63,20 @@ func set_prompt(text: String) -> void:
 
 func show_message(text: String) -> void:
 	message_label.text = text
+
+func set_tracked_tasks(tasks: Array) -> void:
+	for child in tracked_task_list.get_children():
+		tracked_task_list.remove_child(child)
+		child.queue_free()
+	var count = min(tasks.size(), 3)
+	for index in range(count):
+		var task = tasks[index]
+		if typeof(task) != TYPE_DICTIONARY:
+			continue
+		var label = Label.new()
+		label.text = "%s：%s" % [str(task.get("title", "未知任务")), str(task.get("status_text", ""))]
+		label.size = Vector2(520, 28)
+		tracked_task_list.add_child(label)
 
 func show_inventory(items: Array) -> void:
 	inventory_is_open = true
