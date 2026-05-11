@@ -10,6 +10,7 @@ const TestEffectSystemScript = preload("res://tests/test_effect_system.gd")
 const TestEffectDataScript = preload("res://tests/test_effect_data.gd")
 const TestConditionSystemScript = preload("res://tests/test_condition_system.gd")
 const TestEventSystemScript = preload("res://tests/test_event_system.gd")
+const TestStoryEventDataScript = preload("res://tests/test_story_event_data.gd")
 const TestCombatAndSaveScript = preload("res://tests/test_combat_and_save.gd")
 const TestMapDataScript = preload("res://tests/test_map_data.gd")
 const TestMapStateAndFlowScript = preload("res://tests/test_map_state_and_flow.gd")
@@ -37,6 +38,7 @@ func _initialize() -> void:
 		TestEffectDataScript.new(),
 		TestConditionSystemScript.new(),
 		TestEventSystemScript.new(),
+		TestStoryEventDataScript.new(),
 		TestCombatAndSaveScript.new(),
 		TestMapDataScript.new(),
 		TestMapStateAndFlowScript.new(),

@@ -143,6 +143,14 @@
         "position": {"x": 260, "y": 300},
         "radius": 56,
         "dialogue_id": ""
+      },
+      {
+        "id": "npc_road_scholar",
+        "type": "npc",
+        "name": "赶路书生",
+        "position": {"x": 900, "y": 300},
+        "radius": 72,
+        "dialogue_id": "road_scholar_intro"
       }
     ]
   }

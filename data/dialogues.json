@@ -72,5 +72,56 @@
     "lines": [
       {"speaker": "告示", "text": "近日山道强人出没，往来行人结伴而行。若有飞红巾消息，可报与客栈掌柜。"}
     ]
+  },
+  {
+    "id": "road_scholar_intro",
+    "title": "官道书生",
+    "lines": [
+      {"speaker": "赶路书生", "text": "少侠若往东去，还请多留意路旁车辙。"}
+    ],
+    "options": [
+      {
+        "id": "ask_road_unrest",
+        "text": "询问路上异动",
+        "conditions": [
+          {"type": "quest_status", "quest_id": "quest_deliver_letter", "status": "completed"},
+          {"type": "not", "condition": {"type": "flag_equals", "key": "clue_road_unrest", "value": true}}
+        ],
+        "effects": [
+          {"type": "set_flag", "key": "clue_road_unrest", "value": true}
+        ],
+        "next_dialogue_id": "road_scholar_rumor",
+        "unavailable_text": "先处理完村中托信，再来细问。"
+      },
+      {
+        "id": "give_medicine",
+        "text": "赠予小还丹",
+        "conditions": [
+          {"type": "has_item", "item_id": "herb_small", "amount": 1},
+          {"type": "not", "condition": {"type": "flag_equals", "key": "helped_road_scholar", "value": true}}
+        ],
+        "effects": [
+          {"type": "remove_item", "item_id": "herb_small", "amount": 1},
+          {"type": "add_coins", "amount": 30},
+          {"type": "set_flag", "key": "helped_road_scholar", "value": true}
+        ],
+        "next_dialogue_id": "road_scholar_thanks",
+        "unavailable_text": "背包中没有小还丹。"
+      }
+    ]
+  },
+  {
+    "id": "road_scholar_rumor",
+    "title": "车辙传闻",
+    "lines": [
+      {"speaker": "赶路书生", "text": "昨夜有马队沿官道急行，车辙深处夹着红线，像是飞红巾一脉留下的记号。"}
+    ]
+  },
+  {
+    "id": "road_scholar_thanks",
+    "title": "赠药相谢",
+    "lines": [
+      {"speaker": "赶路书生", "text": "多谢少侠相助。这些盘缠请收下，路上也好有个照应。"}
+    ]
   }
 ]
