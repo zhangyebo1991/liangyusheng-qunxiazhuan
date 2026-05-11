@@ -129,7 +129,12 @@
         "radius": 56,
         "reward_items": ["herb_small"],
         "reward_item_amounts": {"herb_small": 1},
-        "reward_coins": 20
+        "reward_coins": 20,
+        "effects": [
+          {"type": "add_item", "item_id": "herb_small", "amount": 1},
+          {"type": "add_coins", "amount": 20},
+          {"type": "resolve_map_object", "object_id": "pickup_roadside_bundle"}
+        ]
       },
       {
         "id": "notice_road_outskirts_sign",

@@ -13,7 +13,11 @@
     "start_dialogue": "mountain_pass_intro",
     "complete_dialogue": "mountain_pass_complete",
     "reward_items": ["herb_small"],
-    "reward_item_amounts": {"herb_small": 1}
+    "reward_item_amounts": {"herb_small": 1},
+    "complete_effects": [
+      {"type": "set_quest_status", "quest_id": "quest_mountain_trial", "status": "completed"},
+      {"type": "add_item", "item_id": "herb_small", "amount": 1}
+    ]
   },
   {
     "id": "quest_deliver_letter",
@@ -21,6 +25,10 @@
     "description": "替村口脚夫把书信送到客栈陆掌柜手中。",
     "start_dialogue": "foot_village_porter_intro",
     "complete_dialogue": "deliver_letter_complete",
-    "reward_flags": {"clue_foot_village": "掌柜提到飞红巾踪迹"}
+    "reward_flags": {"clue_foot_village": "掌柜提到飞红巾踪迹"},
+    "complete_effects": [
+      {"type": "set_quest_status", "quest_id": "quest_deliver_letter", "status": "completed"},
+      {"type": "set_flag", "key": "clue_foot_village", "value": "掌柜提到飞红巾踪迹"}
+    ]
   }
 ]
