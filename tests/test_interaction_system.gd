@@ -64,6 +64,25 @@ func run(assertions) -> void:
 	assertions.assert_eq(conditional_records_unlocked.size(), 1, "任务条件满足时对象应生成")
 	conditional_state.free()
 
+	var locked_exit_state = GameStateScript.new()
+	locked_exit_state.start_new_game()
+	var locked_exit_records = spawner.get_spawn_records({
+		"objects": [
+			{
+				"id": "exit_to_road_outskirts",
+				"type": "exit",
+				"name": "村外官道",
+				"required_quest_id": "quest_deliver_letter",
+				"required_quest_status": "completed",
+				"position": {"x": 1180, "y": 360}
+			}
+		]
+	}, [], locked_exit_state)
+	assertions.assert_eq(locked_exit_records.size(), 1, "带解锁条件的出口在锁定时仍应生成")
+	if locked_exit_records.size() > 0:
+		assertions.assert_eq(locked_exit_records[0].get("id", ""), "exit_to_road_outskirts", "锁定出口应保留在地图中显示")
+	locked_exit_state.free()
+
 	var shop_interactable = MapInteractableScript.new()
 	shop_interactable.setup({
 		"id": "shop_foot_village_pharmacy",

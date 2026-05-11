@@ -20,6 +20,8 @@ func read_position(object: Dictionary) -> Vector2:
 	return Vector2(float(position.get("x", 0.0)), float(position.get("y", 0.0)))
 
 func _meets_required_quest(record: Dictionary, game_state) -> bool:
+	if str(record.get("type", "")) == "exit":
+		return true
 	var quest_id = str(record.get("required_quest_id", ""))
 	var required_status = str(record.get("required_quest_status", ""))
 	if quest_id.is_empty() and required_status.is_empty():
