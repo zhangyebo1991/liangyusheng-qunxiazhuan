@@ -12,6 +12,8 @@ const ShopSystemScript = preload("res://scripts/systems/shop_system.gd")
 const MapRewardSystemScript = preload("res://scripts/systems/map_reward_system.gd")
 const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
 const EventSystemScript = preload("res://scripts/systems/event_system.gd")
+const JournalSystemScript = preload("res://scripts/systems/journal_system.gd")
+const JournalPanelScript = preload("res://scripts/scenes/journal_panel.gd")
 
 var player
 var hud
@@ -24,6 +26,10 @@ var shop_system = ShopSystemScript.new()
 var map_reward_system = MapRewardSystemScript.new()
 var effect_system = EffectSystemScript.new()
 var event_system = EventSystemScript.new()
+var journal_system = JournalSystemScript.new()
+var journal_panel
+var journal_is_open := false
+var active_dialogue_state: Dictionary = {}
 var current_shop_record: Dictionary = {}
 var map_data: Dictionary = {}
 var interactables: Array = []
@@ -52,6 +58,14 @@ func _process(_delta: float) -> void:
 	_update_nearest_interactable()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("journal"):
+		if journal_is_open:
+			_close_journal()
+		else:
+			_open_journal()
+		return
+	if journal_is_open:
+		return
 	if event.is_action_pressed("inventory"):
 		_toggle_inventory()
 	elif event.is_action_pressed("cancel"):
@@ -120,6 +134,7 @@ func _create_ui() -> void:
 	hud = HudScript.new()
 	hud.item_use_requested.connect(_on_item_use_requested)
 	hud.shop_buy_requested.connect(_on_shop_buy_requested)
+	hud.journal_requested.connect(_open_journal)
 	add_child(hud)
 	var data_repository = _get_data_repository()
 	inventory_system.set_repository(data_repository)
@@ -128,7 +143,14 @@ func _create_ui() -> void:
 	dialogue_box = DialogueBoxScript.new()
 	if dialogue_box.has_signal("option_selected"):
 		dialogue_box.option_selected.connect(_on_dialogue_option_selected)
+	if dialogue_box.has_signal("closed"):
+		dialogue_box.closed.connect(_on_dialogue_closed)
 	add_child(dialogue_box)
+	journal_panel = JournalPanelScript.new()
+	journal_panel.quest_tracking_toggled.connect(_toggle_tracked_quest)
+	journal_panel.closed.connect(_on_journal_closed)
+	add_child(journal_panel)
+	_refresh_tracked_tasks()
 
 func _spawn_objects() -> void:
 	var game_state = _get_game_state()
@@ -182,6 +204,7 @@ func _open_dialogue(dialogue_id: String, fallback_text: String = "此人暂时�
 	var dialogue_state = dialogue_system.build_dialogue_state(dialogue_id, _get_game_state())
 	if dialogue_state.get("lines", []).is_empty():
 		dialogue_state["lines"] = [{"speaker": "旁白", "text": fallback_text}]
+	active_dialogue_state = dialogue_state.duplicate(true)
 	if dialogue_box != null:
 		if dialogue_box.has_method("open_dialogue_state"):
 			dialogue_box.open_dialogue_state(dialogue_state)
@@ -204,15 +227,96 @@ func _on_dialogue_option_selected(option: Dictionary) -> void:
 		hud.show_message(_first_event_failure(result))
 		return
 
+	var effect_result = result.get("effect_result", {})
+	_mark_triggered_rumors_from_effect_result(effect_result)
 	var next_dialogue_id = str(option.get("next_dialogue_id", ""))
 	if not next_dialogue_id.is_empty():
 		_open_dialogue(next_dialogue_id)
 	else:
-		var effect_result = result.get("effect_result", {})
 		hud.show_message(_build_effect_message(effect_result, "已处理。"))
 	_refresh_inventory_if_open()
 	_refresh_shop_if_open()
 	_update_quest_text()
+	_refresh_tracked_tasks()
+
+func _on_dialogue_closed() -> void:
+	_record_dialogue_rumor(active_dialogue_state)
+	active_dialogue_state = {}
+
+func _record_dialogue_rumor(dialogue_state: Dictionary) -> void:
+	var rumor = dialogue_state.get("rumor", {})
+	if typeof(rumor) != TYPE_DICTIONARY or rumor.is_empty():
+		return
+	var game_state = _get_game_state()
+	if game_state == null:
+		return
+	var result = journal_system.add_rumor(game_state.journal_state, rumor, {"map_id": map_id})
+	if hud != null and bool(result.get("success", false)) and not bool(result.get("duplicate", false)):
+		hud.show_message(str(result.get("message", "传闻已记入江湖记事。")))
+
+func _open_journal() -> void:
+	if journal_panel == null:
+		return
+	journal_is_open = true
+	journal_panel.open(_build_journal_view_model())
+
+func _close_journal() -> void:
+	if journal_panel == null:
+		return
+	journal_is_open = false
+	journal_panel.close()
+
+func _on_journal_closed() -> void:
+	journal_is_open = false
+
+func _toggle_tracked_quest(quest_id: String) -> void:
+	var game_state = _get_game_state()
+	if game_state == null:
+		return
+	var result = journal_system.toggle_tracked_quest(game_state.journal_state, quest_id)
+	if journal_panel != null:
+		journal_panel.open(_build_journal_view_model())
+		journal_panel.show_message(str(result.get("message", "")))
+	if hud != null and not bool(result.get("success", false)):
+		hud.show_message(str(result.get("message", "任务追踪失败。")))
+	_refresh_tracked_tasks()
+
+func _build_journal_view_model() -> Dictionary:
+	var game_state = _get_game_state()
+	var data_repository = _get_data_repository()
+	if game_state == null:
+		return {"tasks": [], "active_rumors": [], "triggered_rumors": []}
+	var rumors = journal_system.build_rumor_entries(game_state.journal_state)
+	return {
+		"tasks": journal_system.build_task_entries(game_state, data_repository),
+		"active_rumors": rumors.get("active", []),
+		"triggered_rumors": rumors.get("triggered", []),
+	}
+
+func _refresh_tracked_tasks() -> void:
+	if hud == null:
+		return
+	var game_state = _get_game_state()
+	var data_repository = _get_data_repository()
+	if game_state == null:
+		hud.set_tracked_tasks([])
+		return
+	hud.set_tracked_tasks(journal_system.build_tracked_task_entries(game_state, data_repository))
+
+func _mark_triggered_rumors_from_effect_result(effect_result: Dictionary) -> void:
+	if not bool(effect_result.get("success", false)):
+		return
+	var game_state = _get_game_state()
+	if game_state == null or game_state.journal_state == null:
+		return
+	for quest in effect_result.get("quests", []):
+		if typeof(quest) != TYPE_DICTIONARY:
+			continue
+		var quest_id = str(quest.get("id", ""))
+		var status = str(quest.get("status", ""))
+		if quest_id.is_empty() or status == "not_started":
+			continue
+		journal_system.mark_rumors_triggered_for_quest(game_state.journal_state, quest_id)
 
 func _first_event_failure(result: Dictionary) -> String:
 	var messages = result.get("messages", [])
@@ -239,6 +343,7 @@ func _claim_pickup(record: Dictionary) -> void:
 		_remove_interactable_by_id(str(record.get("id", "")))
 		_refresh_inventory_if_open()
 		_refresh_shop_if_open()
+		_refresh_tracked_tasks()
 
 func _apply_quest_complete_effects(quest_id: String) -> Dictionary:
 	var game_state = _get_game_state()
@@ -259,7 +364,10 @@ func _apply_quest_complete_effects(quest_id: String) -> Dictionary:
 		}
 	var quest = data_repository.get_quest(quest_id)
 	var effects = _quest_complete_effects(quest_id, quest)
-	return effect_system.apply_effects(game_state, effects, {"source": "quest_complete", "quest_id": quest_id})
+	var result = effect_system.apply_effects(game_state, effects, {"source": "quest_complete", "quest_id": quest_id})
+	_mark_triggered_rumors_from_effect_result(result)
+	_refresh_tracked_tasks()
+	return result
 
 func _quest_complete_effects(quest_id: String, quest: Dictionary) -> Array:
 	var effects = quest.get("complete_effects", [])

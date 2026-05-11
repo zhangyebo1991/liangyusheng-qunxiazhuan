@@ -14,6 +14,8 @@ func run(assertions) -> void:
 	var screen = MapScreenBaseScript.new()
 	screen.hud = HudScript.new()
 	screen.hud._ready()
+	if _has_property(screen, "journal_panel"):
+		screen.journal_panel = null
 	screen.map_reward_system.set_repository(repository)
 
 	var pickup_record = {
@@ -59,3 +61,9 @@ func run(assertions) -> void:
 
 	screen.hud.free()
 	screen.free()
+
+func _has_property(target, property_name: String) -> bool:
+	for property in target.get_property_list():
+		if str(property.get("name", "")) == property_name:
+			return true
+	return false
