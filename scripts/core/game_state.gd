@@ -5,6 +5,7 @@ const QuestSystemScript = preload("res://scripts/systems/quest_system.gd")
 const MapStateScript = preload("res://scripts/domain/map_state.gd")
 const SaveSystemScript = preload("res://scripts/systems/save_system.gd")
 const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
+const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
 
 const DEFAULT_HERO_MAX_HP := 120
 const STARTING_COINS := 80
@@ -112,19 +113,29 @@ func apply_battle_result(result: Dictionary) -> void:
 
 	if bool(result.get("victory", false)):
 		_normalize_hero_hp()
-		var object_id = str(result.get("source_object_id", ""))
-		if not object_id.is_empty():
-			resolve_map_object(object_id)
-		var quest_id = str(result.get("quest_id", ""))
-		if not quest_id.is_empty():
-			quest_system.mark_ready_to_complete(quest_id)
-		var martial_art_id = str(result.get("martial_art_id", ""))
-		var reward = int(result.get("proficiency_reward", 0))
-		if reward > 0:
-			add_martial_proficiency(martial_art_id, reward)
+		var effect_system = EffectSystemScript.new()
+		effect_system.apply_effects(self, _battle_victory_effects(result), result)
 	else:
 		hero_hp = max(1, hero_hp)
 		map_state.player_position = Vector2(160, 320)
+
+func _battle_victory_effects(result: Dictionary) -> Array:
+	var explicit_effects = result.get("victory_effects", [])
+	if typeof(explicit_effects) == TYPE_ARRAY and not explicit_effects.is_empty():
+		return explicit_effects
+
+	var effects: Array = []
+	var object_id = str(result.get("source_object_id", ""))
+	if not object_id.is_empty():
+		effects.append({"type": "resolve_map_object", "object_id": object_id})
+	var quest_id = str(result.get("quest_id", ""))
+	if not quest_id.is_empty():
+		effects.append({"type": "set_quest_status", "quest_id": quest_id, "status": "ready_to_complete"})
+	var martial_art_id = str(result.get("martial_art_id", ""))
+	var reward = int(result.get("proficiency_reward", 0))
+	if not martial_art_id.is_empty() and reward > 0:
+		effects.append({"type": "add_martial_proficiency", "martial_art_id": martial_art_id, "amount": reward})
+	return effects
 
 func save_to_path(path: String) -> bool:
 	return SaveSystemScript.new().save_to_path(path, to_dictionary())

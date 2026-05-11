@@ -63,6 +63,24 @@ func run(assertions) -> void:
 	assertions.assert_eq(game_state.hero_hp, 44, "胜利后应保存战斗剩余气血")
 	assertions.assert_eq(game_state.get_martial_proficiency("basic_sword"), 1, "胜利后应增加基础剑法熟练度")
 
+	var effect_state = GameStateScript.new()
+	effect_state.start_new_game()
+	effect_state.quest_system.start_quest("quest_mountain_trial")
+	effect_state.apply_battle_result({
+		"victory": true,
+		"hero_hp": 50,
+		"victory_effects": [
+			{"type": "resolve_map_object", "object_id": "enemy_bandit_gate"},
+			{"type": "set_quest_status", "quest_id": "quest_mountain_trial", "status": "ready_to_complete"},
+			{"type": "add_martial_proficiency", "martial_art_id": "basic_sword", "amount": 2}
+		]
+	})
+	assertions.assert_true(effect_state.is_map_object_resolved("enemy_bandit_gate"), "victory_effects 应标记强人触发点")
+	assertions.assert_eq(effect_state.quest_system.get_status("quest_mountain_trial"), "ready_to_complete", "victory_effects 应推进任务状态")
+	assertions.assert_eq(effect_state.hero_hp, 50, "victory_effects 不应覆盖胜利后气血")
+	assertions.assert_eq(effect_state.get_martial_proficiency("basic_sword"), 2, "victory_effects 应增加武学熟练度")
+	effect_state.free()
+
 	var failure_state = GameStateScript.new()
 	failure_state.start_new_game()
 	failure_state.quest_system.start_quest("quest_mountain_trial")
