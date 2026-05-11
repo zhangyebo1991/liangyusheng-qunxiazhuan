@@ -11,6 +11,7 @@ const InventorySystemScript = preload("res://scripts/systems/inventory_system.gd
 const ShopSystemScript = preload("res://scripts/systems/shop_system.gd")
 const MapRewardSystemScript = preload("res://scripts/systems/map_reward_system.gd")
 const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
+const EventSystemScript = preload("res://scripts/systems/event_system.gd")
 
 var player
 var hud
@@ -22,6 +23,7 @@ var inventory_system = InventorySystemScript.new()
 var shop_system = ShopSystemScript.new()
 var map_reward_system = MapRewardSystemScript.new()
 var effect_system = EffectSystemScript.new()
+var event_system = EventSystemScript.new()
 var current_shop_record: Dictionary = {}
 var map_data: Dictionary = {}
 var interactables: Array = []
@@ -124,6 +126,8 @@ func _create_ui() -> void:
 	shop_system.set_repository(data_repository)
 	map_reward_system.set_repository(data_repository)
 	dialogue_box = DialogueBoxScript.new()
+	if dialogue_box.has_signal("option_selected"):
+		dialogue_box.option_selected.connect(_on_dialogue_option_selected)
 	add_child(dialogue_box)
 
 func _spawn_objects() -> void:
@@ -175,11 +179,49 @@ func _transition_to_exit(record: Dictionary) -> void:
 		scene_loader.change_scene(game_state.get_current_map_scene_path())
 
 func _open_dialogue(dialogue_id: String, fallback_text: String = "此人暂时无话可说。") -> void:
-	var lines = dialogue_system.get_lines(dialogue_id)
-	if lines.is_empty():
-		lines = [{"speaker": "旁白", "text": fallback_text}]
+	var dialogue_state = dialogue_system.build_dialogue_state(dialogue_id, _get_game_state())
+	if dialogue_state.get("lines", []).is_empty():
+		dialogue_state["lines"] = [{"speaker": "旁白", "text": fallback_text}]
 	if dialogue_box != null:
-		dialogue_box.open(lines)
+		if dialogue_box.has_method("open_dialogue_state"):
+			dialogue_box.open_dialogue_state(dialogue_state)
+		else:
+			dialogue_box.open(dialogue_state.get("lines", []))
+
+func _on_dialogue_option_selected(option: Dictionary) -> void:
+	if not bool(option.get("available", true)):
+		hud.show_message(str(option.get("unavailable_reason", "条件尚未满足。")))
+		return
+	var event_data = {
+		"conditions": option.get("conditions", []),
+		"effects": option.get("effects", []),
+	}
+	var result = event_system.apply_event(_get_game_state(), event_data, {
+		"source": "dialogue_option",
+		"option_id": str(option.get("id", "")),
+	})
+	if not bool(result.get("success", false)):
+		hud.show_message(_first_event_failure(result))
+		return
+
+	var next_dialogue_id = str(option.get("next_dialogue_id", ""))
+	if not next_dialogue_id.is_empty():
+		_open_dialogue(next_dialogue_id)
+	else:
+		var effect_result = result.get("effect_result", {})
+		hud.show_message(_build_effect_message(effect_result, "已处理。"))
+	_refresh_inventory_if_open()
+	_refresh_shop_if_open()
+	_update_quest_text()
+
+func _first_event_failure(result: Dictionary) -> String:
+	var messages = result.get("messages", [])
+	if typeof(messages) == TYPE_ARRAY and not messages.is_empty():
+		return str(messages[0])
+	var errors = result.get("errors", [])
+	if typeof(errors) == TYPE_ARRAY and not errors.is_empty():
+		return str(errors[0])
+	return "条件尚未满足。"
 
 func _open_shop(record: Dictionary) -> void:
 	current_shop_record = record.duplicate(true)

@@ -38,5 +38,24 @@ func run(assertions) -> void:
 	assertions.assert_true(game_state.is_map_object_resolved("pickup_roadside_bundle"), "地图场景拾取后应标记对象已解决")
 	assertions.assert_eq(screen.interactables.size(), 0, "地图场景拾取成功后应移除交互对象")
 
+	screen.dialogue_box = null
+	screen.event_system.effect_system = screen.effect_system
+	game_state.party.add_item("herb_small", 1)
+	var before_branch_coins = game_state.party.coins
+	screen._on_dialogue_option_selected({
+		"id": "give_medicine",
+		"text": "赠予小还丹",
+		"available": true,
+		"effects": [
+			{"type": "remove_item", "item_id": "herb_small", "amount": 1},
+			{"type": "add_coins", "amount": 30},
+			{"type": "set_flag", "key": "helped_road_scholar", "value": true}
+		],
+		"next_dialogue_id": ""
+	})
+	assertions.assert_eq(game_state.party.coins, before_branch_coins + 30, "地图场景分支选项应执行事件铜钱效果")
+	assertions.assert_eq(game_state.flags.get("helped_road_scholar", false), true, "地图场景分支选项应写入 flag")
+	assertions.assert_eq(screen.hud.message_label.text, "获得：30 文。", "地图场景分支选项应显示效果消息")
+
 	screen.hud.free()
 	screen.free()

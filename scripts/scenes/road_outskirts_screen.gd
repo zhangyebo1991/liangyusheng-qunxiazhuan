@@ -17,6 +17,8 @@ func _interact_with(interactable) -> void:
 	if interactable == null:
 		return
 	match str(interactable.record.get("type", "")):
+		"npc":
+			_open_dialogue(str(interactable.record.get("dialogue_id", "")))
 		"pickup":
 			_claim_pickup(interactable.record)
 		"notice":
