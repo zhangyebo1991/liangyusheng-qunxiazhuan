@@ -44,8 +44,14 @@ func run(assertions) -> void:
 	screen.journal_panel = JournalPanelScript.new()
 	screen.journal_panel._ready()
 
+	screen._toggle_tracked_quest("quest_deliver_letter")
+	assertions.assert_true(not game_state.journal_state.tracked_quest_ids.has("quest_deliver_letter"), "地图场景不应追踪已完成任务")
+	assertions.assert_eq(screen.hud.message_label.text, "已完成任务不能追踪。", "尝试追踪已完成任务应显示提示")
+
+	game_state.journal_state.tracked_quest_ids = ["quest_deliver_letter"]
 	screen._refresh_tracked_tasks()
 	assertions.assert_eq(screen.hud.tracked_task_list.get_child_count(), 0, "没有追踪任务时 HUD 追踪区应为空")
+	assertions.assert_true(not game_state.journal_state.tracked_quest_ids.has("quest_deliver_letter"), "刷新 HUD 时应清理旧的已完成任务追踪")
 
 	screen._toggle_tracked_quest("quest_mountain_trial")
 	assertions.assert_eq(game_state.journal_state.tracked_quest_ids.size(), 1, "地图场景应能切换任务追踪")

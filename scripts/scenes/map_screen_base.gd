@@ -273,6 +273,16 @@ func _toggle_tracked_quest(quest_id: String) -> void:
 	var game_state = _get_game_state()
 	if game_state == null:
 		return
+	if _get_quest_status(quest_id) == "completed":
+		game_state.journal_state.tracked_quest_ids.erase(quest_id)
+		var message = "已完成任务不能追踪。"
+		if journal_panel != null:
+			journal_panel.open(_build_journal_view_model())
+			journal_panel.show_message(message)
+		if hud != null:
+			hud.show_message(message)
+		_refresh_tracked_tasks()
+		return
 	var result = journal_system.toggle_tracked_quest(game_state.journal_state, quest_id)
 	if journal_panel != null:
 		journal_panel.open(_build_journal_view_model())
@@ -286,6 +296,7 @@ func _build_journal_view_model() -> Dictionary:
 	var data_repository = _get_data_repository()
 	if game_state == null:
 		return {"tasks": [], "active_rumors": [], "triggered_rumors": []}
+	journal_system.prune_completed_tracked_quests(game_state.journal_state, game_state)
 	var rumors = journal_system.build_rumor_entries(game_state.journal_state)
 	return {
 		"tasks": journal_system.build_task_entries(game_state, data_repository),
@@ -301,6 +312,7 @@ func _refresh_tracked_tasks() -> void:
 	if game_state == null:
 		hud.set_tracked_tasks([])
 		return
+	journal_system.prune_completed_tracked_quests(game_state.journal_state, game_state)
 	hud.set_tracked_tasks(journal_system.build_tracked_task_entries(game_state, data_repository))
 
 func _mark_triggered_rumors_from_effect_result(effect_result: Dictionary) -> void:
@@ -566,6 +578,12 @@ func _get_game_state():
 
 func _get_scene_loader():
 	return _get_autoload("SceneLoader")
+
+func _get_quest_status(quest_id: String) -> String:
+	var game_state = _get_game_state()
+	if game_state == null or game_state.quest_system == null:
+		return "not_started"
+	return str(game_state.quest_system.get_status(quest_id))
 
 func _get_autoload(node_name: String):
 	var loop = Engine.get_main_loop()

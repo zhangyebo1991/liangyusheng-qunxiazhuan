@@ -85,14 +85,15 @@ func run(assertions) -> void:
 	state.journal_state = journal
 	state.quest_system.start_quest("quest_mountain_trial")
 	state.quest_system.set_status("quest_deliver_letter", "completed")
-	journal.tracked_quest_ids = ["quest_mountain_trial", "quest_trace_red_thread"]
+	journal.tracked_quest_ids = ["quest_mountain_trial", "quest_deliver_letter", "quest_trace_red_thread"]
 	var repository = StubRepository.new()
 	var tasks = system.build_task_entries(state, repository)
-	assertions.assert_eq(tasks.size(), 3, "任务条目应包含已有状态任务和追踪任务")
+	assertions.assert_eq(tasks.size(), 2, "任务条目不应包含已完成任务")
 	assertions.assert_eq(tasks[0].get("title", ""), "山道试剑", "任务条目应读取任务标题")
 	assertions.assert_true(bool(tasks[0].get("tracked", false)), "任务条目应标记追踪状态")
+	assertions.assert_true(not _has_task(tasks, "quest_deliver_letter"), "已完成任务不应出现在可追踪任务列表")
 	var tracked = system.build_tracked_task_entries(state, repository)
-	assertions.assert_eq(tracked.size(), 2, "追踪任务条目应按追踪列表生成")
+	assertions.assert_eq(tracked.size(), 2, "追踪任务条目应跳过已完成任务")
 	assertions.assert_eq(tracked[0].get("status_text", ""), "进行中", "任务状态应转成中文")
 
 	var rumor_entries = system.build_rumor_entries(journal)
@@ -100,3 +101,9 @@ func run(assertions) -> void:
 	assertions.assert_true(rumor_entries.get("triggered", []).size() >= 2, "已触发传闻列表应包含归档传闻")
 
 	repository.free()
+
+func _has_task(tasks: Array, quest_id: String) -> bool:
+	for task in tasks:
+		if typeof(task) == TYPE_DICTIONARY and str(task.get("id", "")) == quest_id:
+			return true
+	return false

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const MAX_TRACKED_QUESTS := 3
+const STATUS_COMPLETED := "completed"
 
 func add_rumor(journal_state, rumor_data: Variant, context: Dictionary = {}) -> Dictionary:
 	if journal_state == null:
@@ -76,6 +77,19 @@ func is_quest_tracked(journal_state, quest_id: String) -> bool:
 		return false
 	return journal_state.tracked_quest_ids.has(str(quest_id))
 
+func prune_completed_tracked_quests(journal_state, game_state) -> Array:
+	var removed: Array = []
+	if journal_state == null:
+		return removed
+	for raw_quest_id in journal_state.tracked_quest_ids.duplicate():
+		var quest_id = str(raw_quest_id)
+		if _get_quest_status(game_state, quest_id) != STATUS_COMPLETED:
+			continue
+		journal_state.tracked_quest_ids.erase(quest_id)
+		removed.append(quest_id)
+	journal_state.normalize()
+	return removed
+
 func build_task_entries(game_state, repository) -> Array:
 	var quest_system = _get_object_property(game_state, "quest_system")
 	var journal_state = _get_object_property(game_state, "journal_state")
@@ -92,6 +106,8 @@ func build_task_entries(game_state, repository) -> Array:
 				quest_ids.append(quest_id)
 	var result: Array = []
 	for quest_id in quest_ids:
+		if _get_quest_status(game_state, quest_id) == STATUS_COMPLETED:
+			continue
 		result.append(_build_task_entry(game_state, repository, quest_id))
 	return result
 
@@ -101,7 +117,10 @@ func build_tracked_task_entries(game_state, repository) -> Array:
 	if journal_state == null:
 		return result
 	for raw_quest_id in journal_state.tracked_quest_ids:
-		result.append(_build_task_entry(game_state, repository, str(raw_quest_id)))
+		var quest_id = str(raw_quest_id)
+		if _get_quest_status(game_state, quest_id) == STATUS_COMPLETED:
+			continue
+		result.append(_build_task_entry(game_state, repository, quest_id))
 	return result
 
 func build_rumor_entries(journal_state) -> Dictionary:
@@ -114,10 +133,9 @@ func build_rumor_entries(journal_state) -> Dictionary:
 	}
 
 func _build_task_entry(game_state, repository, quest_id: String) -> Dictionary:
-	var quest_system = _get_object_property(game_state, "quest_system")
 	var journal_state = _get_object_property(game_state, "journal_state")
 	var quest = repository.get_quest(quest_id) if repository != null and repository.has_method("get_quest") else {}
-	var status = quest_system.get_status(quest_id) if quest_system != null else "not_started"
+	var status = _get_quest_status(game_state, quest_id)
 	return {
 		"id": quest_id,
 		"title": str(quest.get("title", quest_id)),
@@ -162,6 +180,12 @@ func _get_object_property(target, property_name: String) -> Variant:
 	if target == null:
 		return null
 	return target.get(property_name)
+
+func _get_quest_status(game_state, quest_id: String) -> String:
+	var quest_system = _get_object_property(game_state, "quest_system")
+	if quest_system == null or not quest_system.has_method("get_status"):
+		return "not_started"
+	return str(quest_system.get_status(quest_id))
 
 func _success(message: String, extra: Dictionary = {}) -> Dictionary:
 	var result = {
