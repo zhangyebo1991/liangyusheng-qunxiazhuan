@@ -5,6 +5,7 @@ const TacticalCombatSystemScript = preload("res://scripts/systems/tactical_comba
 const TacticalBattleStateScript = preload("res://scripts/domain/tactical_battle_state.gd")
 const BattleGridScript = preload("res://scripts/scenes/battle_grid.gd")
 const TerrainSystemScript = preload("res://scripts/systems/terrain_system.gd")
+const TacticalUnitSpriteScript = preload("res://scripts/scenes/tactical_unit_sprite.gd")
 const TACTICAL_CELL_SIZE := 64
 const TACTICAL_GRID_OFFSET := Vector2(64, 48)
 
@@ -32,6 +33,7 @@ var selected_tactical_action_id: String = "attack"
 var cell_buttons: Dictionary = {}
 var cell_visuals: Dictionary = {}
 var selected_unit_id: String = ""
+var _unit_sprites: Dictionary = {}  # unit_id → TacticalUnitSpriteScript 实例（挂在 battle_grid 下）
 
 func _ready() -> void:
 	context = GameState.peek_battle_context()
@@ -166,6 +168,23 @@ func _create_tactical_ui() -> void:
 	add_child(retreat_button)
 
 	_create_tactical_grid()
+	_build_unit_sprites()
+
+func _build_unit_sprites() -> void:
+	# 为 tactical_battle_state.units 中每个单位创建一个 TacticalUnitSprite，
+	# 挂在 battle_grid 下使其与地形 tile 共享坐标系。
+	for s in _unit_sprites.values():
+		if is_instance_valid(s):
+			s.queue_free()
+	_unit_sprites.clear()
+	if battle_grid == null or tactical_battle_state == null:
+		return
+	for unit in tactical_battle_state.units:
+		var sprite = TacticalUnitSpriteScript.new()
+		battle_grid.add_child(sprite)
+		sprite.setup(str(unit.unit_id), str(unit.sprite_tile_id), int(unit.max_hp))
+		sprite.position = battle_grid.grid_to_pixel(Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0))))
+		_unit_sprites[str(unit.unit_id)] = sprite
 
 func _create_tactical_grid() -> void:
 	cell_buttons.clear()
@@ -265,6 +284,34 @@ func _refresh_tactical() -> void:
 	_refresh_tactical_action_buttons(current)
 	end_action_button.disabled = tactical_battle_state.is_finished or not _is_player_action()
 	retreat_button.disabled = tactical_battle_state.is_finished
+	_sync_unit_sprites()
+
+func _sync_unit_sprites() -> void:
+	if battle_grid == null or tactical_battle_state == null:
+		return
+	var current_id := str(tactical_battle_state.current_unit_id)
+	var alive_ids := {}
+	for unit in tactical_battle_state.units:
+		var uid := str(unit.unit_id)
+		var sprite = _unit_sprites.get(uid)
+		if sprite == null or not is_instance_valid(sprite):
+			sprite = TacticalUnitSpriteScript.new()
+			battle_grid.add_child(sprite)
+			sprite.setup(uid, str(unit.sprite_tile_id), int(unit.max_hp))
+			_unit_sprites[uid] = sprite
+		sprite.position = battle_grid.grid_to_pixel(Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0))))
+		sprite.set_hp(int(unit.hp), int(unit.max_hp))
+		sprite.set_current_actor(uid == current_id and not tactical_battle_state.is_finished)
+		sprite.set_selected(uid == selected_unit_id)
+		sprite.visible = unit.is_alive()
+		alive_ids[uid] = true
+	# 清理已不存在的单位精灵
+	for k in _unit_sprites.keys():
+		if not alive_ids.has(k):
+			var s = _unit_sprites[k]
+			if is_instance_valid(s):
+				s.queue_free()
+			_unit_sprites.erase(k)
 
 func _on_attack_pressed() -> void:
 	combat_system.resolve_player_attack(battle_state, GameState, "basic_sword")
