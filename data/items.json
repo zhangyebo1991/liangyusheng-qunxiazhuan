@@ -16,5 +16,15 @@
     "description": "寻常江湖人常用的长剑。",
     "value": 120,
     "effects": {}
+  },
+  {
+    "id": "herb_focus",
+    "name": "凝神丹",
+    "type": "consumable",
+    "description": "服后心神归一，恢复内力。",
+    "value": 12,
+    "effects": {
+      "restore_mp": 10
+    }
   }
 ]

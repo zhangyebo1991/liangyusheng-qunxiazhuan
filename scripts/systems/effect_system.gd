@@ -52,6 +52,8 @@ func apply_effect(game_state, effect: Variant, _context: Dictionary = {}) -> Dic
 			_apply_resolve_map_object(result, game_state, effect)
 		"add_martial_proficiency":
 			_apply_add_martial_proficiency(result, game_state, effect)
+		"restore_mp":
+			_apply_restore_mp(result, game_state, effect)
 		"add_rumor":
 			_apply_add_rumor(result, game_state, effect, _context)
 		"trigger_rumor":
@@ -194,6 +196,17 @@ func _apply_trigger_rumor(result: Dictionary, game_state, effect: Dictionary) ->
 		var triggered: Array = result["triggered_rumors"]
 		triggered.append(rumor_id)
 	_mark_applied(result, str(rumor_result.get("message", "传闻已移入已触发列表。")))
+
+func _apply_restore_mp(result: Dictionary, game_state, effect: Dictionary) -> void:
+	var amount = int(effect.get("amount", 0))
+	if amount <= 0:
+		_add_error(result, "内力恢复数量必须大于 0。")
+		return
+	if not game_state.has_method("restore_hero_mp"):
+		_add_error(result, "游戏状态不支持内力恢复。")
+		return
+	var restored = game_state.restore_hero_mp(amount)
+	_mark_applied(result, "恢复内力：%d" % restored)
 
 func _get_journal_state(game_state):
 	if game_state == null:
