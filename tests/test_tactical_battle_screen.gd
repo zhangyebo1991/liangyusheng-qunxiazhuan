@@ -39,9 +39,10 @@ func run(assertions) -> void:
 	assertions.assert_true(_has_property(screen, "status_label"), "战斗界面应暴露战棋状态文本")
 	assertions.assert_true(_has_property(screen, "end_action_button"), "战斗界面应暴露结束行动按钮")
 	assertions.assert_true(_has_property(screen, "cell_buttons"), "战斗界面应暴露格子按钮字典")
+	assertions.assert_true(_has_property(screen, "cell_visuals"), "战斗界面应暴露可见格子字典")
 	assertions.assert_true(_has_property(screen, "tactical_combat_system"), "战斗界面应暴露战棋系统")
 	assertions.assert_true(screen.has_method("_refresh_tactical"), "战斗界面应提供战棋刷新方法")
-	if not _has_property(screen, "is_tactical_mode") or not screen.has_method("_refresh_tactical"):
+	if not _has_property(screen, "is_tactical_mode") or not _has_property(screen, "cell_visuals") or not screen.has_method("_refresh_tactical"):
 		screen.free()
 		return
 
@@ -52,7 +53,14 @@ func run(assertions) -> void:
 	assertions.assert_true(screen.end_action_button != null, "战棋模式应创建结束行动按钮")
 	assertions.assert_eq(screen.tactical_battle_state.units.size(), 3, "战棋场景应创建 3 个单位")
 	assertions.assert_true(screen.cell_buttons.size() >= 35, "7x5 战场应创建至少 35 个格子按钮")
+	assertions.assert_true(screen.cell_visuals.size() >= 35, "7x5 战场应创建至少 35 个可见格子")
 	assertions.assert_true(screen.item_button == null or not screen.item_button.visible, "战棋模式不应显示小还丹按钮")
+	assertions.assert_eq(screen.cell_visuals.get("0:0").size, Vector2(64, 64), "可见战棋格子应使用 64x64 方格")
+	var cell_style = screen.cell_visuals.get("0:0").get_theme_stylebox("panel")
+	assertions.assert_true(cell_style != null, "可见战棋格子应有面板样式")
+	if cell_style != null:
+		assertions.assert_true(cell_style.bg_color.a > 0.0, "可见战棋格子应绘制半透明底色")
+		assertions.assert_true(cell_style.border_color.a > 0.0, "可见战棋格子应绘制边框")
 	assertions.assert_eq(screen.cell_buttons.get("0:0").size, Vector2(64, 64), "战棋格子应使用 64x64 方格按钮")
 	assertions.assert_true(screen.cell_buttons.get("0:0").flat, "战棋格子按钮应使用扁平样式避免默认黑块")
 	var origin_cell = screen._cell_to_screen({"q": 0, "r": 0})

@@ -24,6 +24,7 @@ var status_label: Label
 var unit_panel: VBoxContainer
 var end_action_button: Button
 var cell_buttons: Dictionary = {}
+var cell_visuals: Dictionary = {}
 var selected_unit_id: String = ""
 
 func _ready() -> void:
@@ -142,18 +143,29 @@ func _create_tactical_ui() -> void:
 
 func _create_tactical_grid() -> void:
 	cell_buttons.clear()
+	cell_visuals.clear()
 	for q in range(tactical_battle_state.battlefield_width):
 		for r in range(tactical_battle_state.battlefield_height):
+			var cell = {"q": q, "r": r}
+			var cell_key = _cell_key(cell)
+			var visual = Panel.new()
+			visual.size = Vector2(TACTICAL_CELL_SIZE, TACTICAL_CELL_SIZE)
+			visual.position = _cell_to_screen(cell)
+			visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_apply_tactical_cell_visual_style(visual, "idle")
+			grid_layer.add_child(visual)
+			cell_visuals[cell_key] = visual
+
 			var button = Button.new()
 			button.text = ""
 			button.size = Vector2(TACTICAL_CELL_SIZE, TACTICAL_CELL_SIZE)
-			button.position = _cell_to_screen({"q": q, "r": r})
+			button.position = _cell_to_screen(cell)
 			button.flat = true
 			button.focus_mode = Control.FOCUS_NONE
 			_apply_tactical_cell_style(button)
 			button.pressed.connect(_on_tactical_cell_pressed.bind(q, r))
 			grid_layer.add_child(button)
-			cell_buttons[_cell_key({"q": q, "r": r})] = button
+			cell_buttons[cell_key] = button
 
 func _refresh_tactical() -> void:
 	if tactical_battle_state == null:
@@ -185,6 +197,8 @@ func _refresh_tactical() -> void:
 		var button = cell_buttons[key]
 		button.text = ""
 		button.disabled = true
+		if cell_visuals.has(key):
+			_apply_tactical_cell_visual_style(cell_visuals[key], "idle")
 	for unit in tactical_battle_state.units:
 		var unit_key = _cell_key(unit.cell)
 		if cell_buttons.has(unit_key):
@@ -193,10 +207,14 @@ func _refresh_tactical() -> void:
 		var move_key = _cell_key(cell)
 		if cell_buttons.has(move_key):
 			cell_buttons[move_key].disabled = false
+		if cell_visuals.has(move_key):
+			_apply_tactical_cell_visual_style(cell_visuals[move_key], "move")
 	for target in attackable:
 		var target_key = _cell_key(target.cell)
 		if cell_buttons.has(target_key):
 			cell_buttons[target_key].disabled = false
+		if cell_visuals.has(target_key):
+			_apply_tactical_cell_visual_style(cell_visuals[target_key], "attack")
 
 	output.text = "\n".join(PackedStringArray(tactical_battle_state.log))
 	end_action_button.disabled = tactical_battle_state.is_finished or not _is_player_action()
@@ -311,6 +329,18 @@ func _apply_tactical_cell_style(button: Button) -> void:
 	button.add_theme_color_override("font_hover_color", Color.WHITE)
 	button.add_theme_color_override("font_pressed_color", Color.WHITE)
 	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.88))
+
+func _apply_tactical_cell_visual_style(panel: Panel, state: String) -> void:
+	var fill = Color(0.20, 0.26, 0.20, 0.22)
+	var border = Color(0.82, 0.90, 0.72, 0.38)
+	match state:
+		"move":
+			fill = Color(0.20, 0.48, 0.74, 0.28)
+			border = Color(0.42, 0.70, 1.00, 0.75)
+		"attack":
+			fill = Color(0.72, 0.24, 0.20, 0.30)
+			border = Color(1.00, 0.42, 0.36, 0.82)
+	panel.add_theme_stylebox_override("panel", _make_tactical_cell_style(fill, border))
 
 func _make_tactical_cell_style(fill: Color, border: Color) -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
