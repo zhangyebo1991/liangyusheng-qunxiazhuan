@@ -12,6 +12,7 @@ const ChargeBarScript = preload("res://scripts/scenes/charge_bar.gd")
 const BattlePanelObjectiveScript = preload("res://scripts/scenes/battle_panel_objective.gd")
 const BattlePanelTerrainScript = preload("res://scripts/scenes/battle_panel_terrain.gd")
 const BattlePanelActorScript = preload("res://scripts/scenes/battle_panel_actor.gd")
+const BattleLogScript = preload("res://scripts/scenes/battle_log.gd")
 const TACTICAL_CELL_SIZE := 64
 const TACTICAL_GRID_OFFSET := Vector2(64, 48)
 
@@ -50,6 +51,7 @@ var charge_bar = null  # Task 13 顶部集气进度条（ChargeBarScript 实例�
 var panel_objective = null  # Task 14 左上「战斗目标 + 战场信息」
 var panel_terrain = null  # Task 14 左下「地形信息」
 var panel_actor = null  # Task 15 右上「主角信息卡」
+var battle_log = null  # Task 16 右下「战斗日志」
 var _terrain_system = null  # Task 14 共享给 hover/Tab 切换查地形数据
 var _last_hover_cell: Vector2i = Vector2i(-1, -1)  # Task 14 鼠标 hover 去重
 
@@ -221,6 +223,13 @@ func _create_tactical_ui() -> void:
 	panel_actor.custom_minimum_size = Vector2(200, 240)
 	add_child(panel_actor)
 	EventBus.hero_mp_changed.connect(_on_hero_mp_changed_for_actor_panel)
+	# Task 16: 右下战斗日志面板。
+	battle_log = BattleLogScript.new()
+	battle_log.position = Vector2(1072, 460)
+	battle_log.size = Vector2(200, 252)
+	battle_log.custom_minimum_size = Vector2(200, 252)
+	add_child(battle_log)
+	EventBus.tactical_log_appended.connect(_on_tactical_log_appended)
 	_refresh_terrain_panels_for_current_actor()
 	_refresh_actor_panel()
 
@@ -759,3 +768,8 @@ func _pick_actor_panel_unit():
 
 func _on_hero_mp_changed_for_actor_panel(_cur_mp: int, _max_mp: int) -> void:
 	_refresh_actor_panel()
+
+# Task 16: tactical_combat_system._log 触发的事件，转发到右下战斗日志面板。
+func _on_tactical_log_appended(line: String) -> void:
+	if battle_log != null:
+		battle_log.append(line)

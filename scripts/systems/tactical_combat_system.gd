@@ -40,12 +40,12 @@ func create_battle(game_state, context: Dictionary, data_source = null):
 		if _is_valid_start_cell(battle, unit.cell) and not _is_cell_occupied(battle, unit.cell):
 			battle.add_unit(unit)
 		else:
-			battle.append_log("%s站位无效。" % unit.display_name)
+			_log(battle, "%s站位无效。" % unit.display_name)
 
 	if not battle.has_living_team(TacticalBattleStateScript.TEAM_PLAYER):
-		battle.append_log("玩家单位缺失。")
+		_log(battle, "玩家单位缺失。")
 	if not battle.has_living_team(TacticalBattleStateScript.TEAM_ENEMY):
-		battle.append_log("敌方单位缺失。")
+		_log(battle, "敌方单位缺失。")
 		battle.finish(true)
 	return battle
 
@@ -85,7 +85,7 @@ func begin_unit_action(battle, unit_id: String) -> Dictionary:
 	battle.current_unit_id = unit_id
 	battle.is_action_phase = true
 	unit.charge = TacticalBattleStateScript.CHARGE_LIMIT
-	battle.append_log("%s可以行动。" % unit.display_name)
+	_log(battle, "%s可以行动。" % unit.display_name)
 	return {"success": true, "message": "%s可以行动。" % unit.display_name}
 
 func get_movable_cells(battle, unit_id: String) -> Array:
@@ -110,7 +110,7 @@ func move_unit(battle, unit_id: String, cell: Dictionary) -> Dictionary:
 	if not _contains_cell(get_movable_cells(battle, unit_id), cell):
 		return {"success": false, "message": "不能移动到此处。"}
 	unit.cell = _read_cell(cell)
-	battle.append_log("%s移动到%s,%s。" % [unit.display_name, unit.cell.get("q", 0), unit.cell.get("r", 0)])
+	_log(battle, "%s移动到%s,%s。" % [unit.display_name, unit.cell.get("q", 0), unit.cell.get("r", 0)])
 	return {"success": true, "message": "已经移动。"}
 
 func get_attackable_units(battle, unit_id: String) -> Array:
@@ -166,9 +166,9 @@ func use_martial_art(battle, attacker_id: String, defender_id: String, martial_a
 	var damage = maxi(1, attacker.attack + martial_art.tactical_damage_bonus - defender.defense)
 	attacker.mp = max(0, attacker.mp - martial_art.tactical_mp_cost)
 	defender.hp = max(0, defender.hp - damage)
-	battle.append_log("%s使出%s攻击%s，造成%d点伤害。" % [attacker.display_name, martial_art.name, defender.display_name, damage])
+	_log(battle, "%s使出%s攻击%s，造成%d点伤害。" % [attacker.display_name, martial_art.name, defender.display_name, damage])
 	if defender.hp <= 0:
-		battle.append_log("%s被击败。" % defender.display_name)
+		_log(battle, "%s被击败。" % defender.display_name)
 	check_battle_finished(battle)
 	return {"success": true, "message": "已经出招。", "damage": damage}
 
@@ -186,9 +186,9 @@ func attack_unit(battle, attacker_id: String, defender_id: String) -> Dictionary
 
 	var damage = maxi(1, attacker.attack - defender.defense)
 	defender.hp = max(0, defender.hp - damage)
-	battle.append_log("%s攻击%s，造成%d点伤害。" % [attacker.display_name, defender.display_name, damage])
+	_log(battle, "%s攻击%s，造成%d点伤害。" % [attacker.display_name, defender.display_name, damage])
 	if defender.hp <= 0:
-		battle.append_log("%s被击败。" % defender.display_name)
+		_log(battle, "%s被击败。" % defender.display_name)
 	check_battle_finished(battle)
 	return {"success": true, "message": "已经攻击。", "damage": damage}
 
@@ -243,12 +243,12 @@ func _resolve_sword_aura_swirl(battle, attacker, target_cells: Array) -> Diction
 			continue
 		defender.hp = max(0, defender.hp - damage_each)
 		hits.append(defender.unit_id)
-		battle.append_log("%s使出剑气漩袭击%s，造成%d点伤害。" % [attacker.display_name, defender.display_name, damage_each])
+		_log(battle, "%s使出剑气漩袭击%s，造成%d点伤害。" % [attacker.display_name, defender.display_name, damage_each])
 		if defender.hp <= 0:
-			battle.append_log("%s被击败。" % defender.display_name)
+			_log(battle, "%s被击败。" % defender.display_name)
 	attacker.mp = max(0, attacker.mp - mp_cost)
 	if hits.is_empty():
-		battle.append_log("%s剑气漩起，未击中目标。" % attacker.display_name)
+		_log(battle, "%s剑气漩起，未击中目标。" % attacker.display_name)
 	check_battle_finished(battle)
 	return {"success": true, "message": "剑气漩已发动。", "damage": damage_each, "hits": hits}
 
@@ -263,11 +263,11 @@ func _resolve_basic_attack(battle, attacker, target_cells: Array) -> Dictionary:
 		var damage = maxi(1, attacker.attack - defender.defense)
 		defender.hp = max(0, defender.hp - damage)
 		hits.append(defender.unit_id)
-		battle.append_log("%s攻击%s，造成%d点伤害。" % [attacker.display_name, defender.display_name, damage])
+		_log(battle, "%s攻击%s，造成%d点伤害。" % [attacker.display_name, defender.display_name, damage])
 		if defender.hp <= 0:
-			battle.append_log("%s被击败。" % defender.display_name)
+			_log(battle, "%s被击败。" % defender.display_name)
 	if target_cells.is_empty():
-		battle.append_log("%s挥剑落空。" % attacker.display_name)
+		_log(battle, "%s挥剑落空。" % attacker.display_name)
 	check_battle_finished(battle)
 	return {"success": true, "message": "普攻已结算。", "hits": hits}
 
@@ -317,7 +317,7 @@ func resolve_retreat(battle) -> Dictionary:
 	if battle == null:
 		return {"success": false, "message": "战斗尚未准备好。"}
 	if not battle.is_finished:
-		battle.append_log("暂退数步。")
+		_log(battle, "暂退数步。")
 		battle.finish(false)
 	return {"success": true, "message": "暂退数步。"}
 
@@ -325,10 +325,10 @@ func check_battle_finished(battle) -> void:
 	if battle == null or battle.is_finished:
 		return
 	if not battle.has_living_team(TacticalBattleStateScript.TEAM_PLAYER):
-		battle.append_log("气血不支，暂退数步。")
+		_log(battle, "气血不支，暂退数步。")
 		battle.finish(false)
 	elif not battle.has_living_team(TacticalBattleStateScript.TEAM_ENEMY):
-		battle.append_log("敌人尽数败退。")
+		_log(battle, "敌人尽数败退。")
 		battle.finish(true)
 
 # 兜底地形矩阵：传入合法 6 行 × 8 列字符串数组则原样深拷贝；
@@ -458,3 +458,17 @@ func _best_enemy_move_cell(battle, unit, target) -> Dictionary:
 			best = cell
 			best_distance = distance
 	return best.duplicate(true)
+
+# Task 16: 写入 battle.log 的同时通过 EventBus 推送给 UI 战斗日志面板。
+# 与 _emit_action_resolved 相同：通过 SceneTree.root 取 EventBus 节点，
+# 离线工具脚本无 autoload 时静默跳过。
+func _log(battle, msg: String) -> void:
+	if battle != null:
+		battle.append_log(msg)
+	var loop = Engine.get_main_loop()
+	if loop == null or not (loop is SceneTree):
+		return
+	var bus = (loop as SceneTree).root.get_node_or_null("EventBus")
+	if bus == null:
+		return
+	bus.tactical_log_appended.emit(msg)
