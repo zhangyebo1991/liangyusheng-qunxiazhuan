@@ -48,7 +48,32 @@
     "id": "foot_village_innkeeper_idle",
     "title": "客栈门前",
     "lines": [
-      {"speaker": "陆掌柜", "text": "客房已满，若是打听消息，先问问村口脚夫。"}
+      {"speaker": "陆掌柜", "text": "客房已满，若是打听消息，先问问村口脚夫。"},
+      {"speaker": "陆掌柜", "text": "少侠若内力不济，街中药铺有凝神丹可备。"}
+    ],
+    "options": [
+      {
+        "id": "rest_5_coins",
+        "text": "歇息一晚（5 文）",
+        "conditions": [
+          {"type": "coins_at_least", "amount": 5}
+        ],
+        "effects": [
+          {"type": "rest_at_inn", "inn_id": "foot_village_inn", "cost": 5}
+        ],
+        "unavailable_text": "盘缠不够 5 文。"
+      },
+      {
+        "id": "rest_no_coin",
+        "text": "盘缠不足，将就一晚",
+        "conditions": [
+          {"type": "not", "condition": {"type": "coins_at_least", "amount": 5}}
+        ],
+        "effects": [
+          {"type": "rest_at_inn", "inn_id": "foot_village_inn", "cost": 0}
+        ],
+        "unavailable_text": "已经凑够店钱，请改选付费休息。"
+      }
     ]
   },
   {

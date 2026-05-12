@@ -54,6 +54,8 @@ func apply_effect(game_state, effect: Variant, _context: Dictionary = {}) -> Dic
 			_apply_add_martial_proficiency(result, game_state, effect)
 		"restore_mp":
 			_apply_restore_mp(result, game_state, effect)
+		"rest_at_inn":
+			_apply_rest_at_inn(result, game_state, effect)
 		"add_rumor":
 			_apply_add_rumor(result, game_state, effect, _context)
 		"trigger_rumor":
@@ -207,6 +209,43 @@ func _apply_restore_mp(result: Dictionary, game_state, effect: Dictionary) -> vo
 		return
 	var restored = game_state.restore_hero_mp(amount)
 	_mark_applied(result, "恢复内力：%d" % restored)
+
+func _apply_rest_at_inn(result: Dictionary, game_state, effect: Dictionary) -> void:
+	var inn_id = str(effect.get("inn_id", ""))
+	if inn_id.is_empty():
+		_add_error(result, "客栈休息缺少客栈编号。")
+		return
+	if game_state.party == null:
+		_add_error(result, "队伍状态缺失。")
+		return
+	# 防御：不允许在战斗中休息
+	if typeof(game_state.battle_context) == TYPE_DICTIONARY and not game_state.battle_context.is_empty():
+		_add_error(result, "战斗中不能休息。")
+		return
+	var cost = int(effect.get("cost", 0))
+	if cost > 0:
+		if int(game_state.party.coins) < cost:
+			_add_error(result, "铜钱不足无法支付客栈费用。")
+			return
+		game_state.party.spend_coins(cost)
+		result["coins"] = int(result.get("coins", 0)) - cost
+
+	# 全满恢复
+	if game_state.has_method("restore_hero_hp"):
+		var hp_missing = max(0, game_state.hero_max_hp - game_state.hero_hp)
+		if hp_missing > 0:
+			game_state.restore_hero_hp(hp_missing)
+	if game_state.has_method("restore_hero_mp"):
+		var mp_missing = max(0, game_state.hero_max_mp - game_state.hero_cur_mp)
+		if mp_missing > 0:
+			game_state.restore_hero_mp(mp_missing)
+	# 绑定客栈
+	if game_state.has_method("bind_inn"):
+		game_state.bind_inn(inn_id)
+	# 信号
+	if game_state.is_inside_tree() and game_state.has_node("/root/EventBus"):
+		game_state.get_node("/root/EventBus").inn_rested.emit(inn_id)
+	_mark_applied(result, "在客栈歇息一晚。")
 
 func _get_journal_state(game_state):
 	if game_state == null:
