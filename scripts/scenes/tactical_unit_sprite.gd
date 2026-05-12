@@ -3,6 +3,9 @@ extends Node2D
 # 战棋单位精灵：像素 sprite + 头顶 HP 条 + 选中下方括号 + 当前行动倒三角
 # 由 battle_screen 在 battle_grid 节点下创建，position 由 battle_grid.grid_to_pixel(cell) 决定。
 
+# Task 19: 滑动动画完成后 emit；battle_screen 用 CONNECT_ONE_SHOT 接它再 commit move。
+signal animation_finished
+
 const HP_BAR_WIDTH := 28
 const HP_BAR_HEIGHT := 4
 const TILES_DIR := "res://assets/kenney_tiny-battle/Tiles/"
@@ -86,3 +89,11 @@ func _draw() -> void:
 			Vector2(0, -26),
 			Vector2(-6, -34),
 		]), Color(0.45, 0.32, 0.05), 1.0)
+
+# Task 19: 用 Tween 平滑滑到目标 position；动画完毕 emit animation_finished。
+# duration 至少 0.01s，避免 0 时长 Tween 被 Godot 视为非法。
+func animate_to(target_position: Vector2, duration: float) -> void:
+	var dur: float = max(0.01, duration)
+	var tween := create_tween()
+	tween.tween_property(self, "position", target_position, dur)
+	tween.tween_callback(func() -> void: animation_finished.emit())
