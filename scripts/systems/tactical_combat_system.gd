@@ -203,18 +203,26 @@ func end_unit_action(battle, unit_id: String) -> Dictionary:
 	return {"success": true, "message": "行动结束。"}
 
 # 战棋行动统一入口（Task 5 起逐步替代直接调 attack_unit / use_martial_art 的 UI 路径）。
-# action_id 取自招式编号（如 "sword_aura_swirl"）；target_cells 为 Array[Vector2i]，
-# 由 tactical_range_system 的范围算法生成。
-# 当前仅实现剑气漩分支；其他 action_id（普攻 attack 等）由后续 Task 7 扩展。
+# action_id 取自招式编号（如 "sword_aura_swirl"）；普攻约定为 "attack"。
+# target_cells 为 Array[Vector2i]，由 tactical_range_system 的范围算法生成；
+# Task 7 起允许空数组（空放）：行动仍被接受、招式仍扣 MP，行动结束后通过
+# EventBus.tactical_action_resolved(unit_id, action_id, target_cells) 通知 UI。
 func resolve_action(battle, unit_id: String, action_id: String, target_cells: Array) -> Dictionary:
 	if battle == null:
 		return {"success": false, "message": "战斗尚未准备好。"}
 	var unit = battle.get_unit(unit_id)
 	if unit == null or not unit.is_alive():
 		return {"success": false, "message": "行动单位不存在。"}
+	var result: Dictionary = {}
 	if action_id == "sword_aura_swirl":
-		return _resolve_sword_aura_swirl(battle, unit, target_cells)
-	return {"success": false, "message": "未知行动。"}
+		result = _resolve_sword_aura_swirl(battle, unit, target_cells)
+	elif action_id == "attack":
+		result = _resolve_basic_attack(battle, unit, target_cells)
+	else:
+		return {"success": false, "message": "未知行动。"}
+	if bool(result.get("success", false)):
+		_emit_action_resolved(unit_id, action_id, target_cells)
+	return result
 
 func _resolve_sword_aura_swirl(battle, attacker, target_cells: Array) -> Dictionary:
 	var skill_data = repository.get_martial_art("sword_aura_swirl") if repository != null else {}
@@ -244,6 +252,25 @@ func _resolve_sword_aura_swirl(battle, attacker, target_cells: Array) -> Diction
 	check_battle_finished(battle)
 	return {"success": true, "message": "剑气漩已发动。", "damage": damage_each, "hits": hits}
 
+# 普攻：单格选中。target_cells 为 1 格则尝试命中该格敌人；为空（空放）也接受，
+# 不扣资源、不造成伤害，仅推进行动结束。
+func _resolve_basic_attack(battle, attacker, target_cells: Array) -> Dictionary:
+	var hits: Array = []
+	for cell_v in target_cells:
+		var defender = _find_unit_at_cell_v(battle, cell_v)
+		if defender == null or defender.team == attacker.team or not defender.is_alive():
+			continue
+		var damage = maxi(1, attacker.attack - defender.defense)
+		defender.hp = max(0, defender.hp - damage)
+		hits.append(defender.unit_id)
+		battle.append_log("%s攻击%s，造成%d点伤害。" % [attacker.display_name, defender.display_name, damage])
+		if defender.hp <= 0:
+			battle.append_log("%s被击败。" % defender.display_name)
+	if target_cells.is_empty():
+		battle.append_log("%s挥剑落空。" % attacker.display_name)
+	check_battle_finished(battle)
+	return {"success": true, "message": "普攻已结算。", "hits": hits}
+
 # target_cells 元素为 Vector2i(x=q, y=r)；与 unit.cell {q,r} 对齐查找。
 func _find_unit_at_cell_v(battle, cell_v):
 	if typeof(cell_v) != TYPE_VECTOR2I:
@@ -256,6 +283,17 @@ func _find_unit_at_cell_v(battle, cell_v):
 		if int(unit.cell.get("q", 0)) == q and int(unit.cell.get("r", 0)) == r:
 			return unit
 	return null
+
+# 通知 UI 行动已结算（驱动飞字、动画、行动栏复位等）。
+# 单元测试中 SceneTree 自动加载 EventBus；离线工具脚本里若无 autoload 则静默跳过。
+func _emit_action_resolved(unit_id: String, action_id: String, target_cells: Array) -> void:
+	var loop = Engine.get_main_loop()
+	if loop == null or not (loop is SceneTree):
+		return
+	var bus = (loop as SceneTree).root.get_node_or_null("EventBus")
+	if bus == null:
+		return
+	bus.tactical_action_resolved.emit(unit_id, action_id, target_cells)
 
 func resolve_enemy_action(battle, unit_id: String) -> Dictionary:
 	var unit = battle.get_unit(unit_id) if battle != null else null
