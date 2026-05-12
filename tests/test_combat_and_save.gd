@@ -138,6 +138,18 @@ func run(assertions) -> void:
 	assertions.assert_eq(tactical_state.quest_system.get_status("quest_mountain_trial"), "ready_to_complete", "战棋胜利后山道任务应进入可交付状态")
 	assertions.assert_eq(tactical_state.hero_hp, 72, "战棋胜利后应保存主角剩余气血")
 	assertions.assert_eq(tactical_state.get_martial_proficiency("basic_sword"), 1, "战棋胜利后应增加基础剑法熟练度")
+
+	# 战斗结束携带 hero_final_mp 应回写到 hero_cur_mp
+	var battle_end_state = GameStateScript.new()
+	battle_end_state.start_new_game()
+	battle_end_state.apply_battle_result({
+		"victory": true,
+		"hero_hp": 80,
+		"hero_final_mp": 12,
+	})
+	assertions.assert_eq(battle_end_state.hero_cur_mp, 12, "胜利后 hero_cur_mp 应被回写为 12")
+	battle_end_state.free()
+
 	repository.free()
 	game_state.free()
 	failure_state.free()

@@ -61,6 +61,7 @@ func to_result_dictionary() -> Dictionary:
 	return {
 		"victory": victory,
 		"hero_hp": hero_hp,
+		"hero_final_mp": _get_hero_final_mp(),
 		"source_map_id": source_map_id,
 		"source_object_id": source_object_id,
 		"quest_id": quest_id,
@@ -68,6 +69,12 @@ func to_result_dictionary() -> Dictionary:
 		"proficiency_reward": max(0, proficiency_reward),
 		"log": log.duplicate(),
 	}
+
+func _get_hero_final_mp() -> int:
+	for unit in units:
+		if unit.team == TEAM_PLAYER and unit.actor_id == "hero_yun":
+			return int(unit.mp)
+	return -1
 
 func to_dictionary() -> Dictionary:
 	var serialized_units: Array = []

@@ -168,6 +168,10 @@ func peek_battle_context() -> Dictionary:
 	return battle_context.duplicate(true)
 
 func apply_battle_result(result: Dictionary) -> void:
+	if result.has("hero_final_mp"):
+		var final_mp = int(result.get("hero_final_mp", -1))
+		if final_mp >= 0:
+			set_hero_cur_mp(final_mp)
 	if result.has("hero_hp"):
 		hero_hp = int(result.get("hero_hp", hero_hp))
 

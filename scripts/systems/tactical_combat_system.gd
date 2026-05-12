@@ -251,7 +251,10 @@ func _build_unit(raw_unit: Dictionary, game_state, source):
 		unit_data["max_hp"] = max(1, int(game_state.hero_max_hp))
 		unit_data["hp"] = clamp(int(game_state.hero_hp), 1, int(unit_data["max_hp"]))
 		unit_data["max_mp"] = max(0, int(game_state.hero_max_mp))
-		unit_data["mp"] = int(unit_data["max_mp"])
+		if actor_id == "hero_yun":
+			unit_data["mp"] = clamp(int(game_state.hero_cur_mp), 0, int(unit_data["max_mp"]))
+		else:
+			unit_data["mp"] = int(unit_data["max_mp"])
 	var unit = TacticalUnitStateScript.new()
 	unit.from_dictionary(unit_data)
 	return unit
