@@ -143,6 +143,13 @@
         "required_quest_status": "completed",
         "locked_message": "脚夫说前路不太平，先把书信送到客栈再说。"
       }
+    ],
+    "inns": [
+      {
+        "id": "foot_village_inn",
+        "map_id": "foot_village",
+        "spawn_position": {"x": 760, "y": 320}
+      }
     ]
   },
   {

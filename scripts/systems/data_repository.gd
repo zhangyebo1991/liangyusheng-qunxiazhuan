@@ -36,6 +36,44 @@ func get_dialogue(dialogue_id: String) -> Dictionary:
 func get_map(map_id: String) -> Dictionary:
 	return _find_by_id("maps", map_id)
 
+func get_inn(inn_id: String) -> Dictionary:
+	if inn_id.is_empty():
+		return {}
+	if content.is_empty():
+		load_all()
+	for map_data in content.get("maps", []):
+		if typeof(map_data) != TYPE_DICTIONARY:
+			continue
+		var inns = map_data.get("inns", [])
+		if typeof(inns) != TYPE_ARRAY:
+			continue
+		for inn in inns:
+			if typeof(inn) != TYPE_DICTIONARY:
+				continue
+			if str(inn.get("id", "")) == inn_id:
+				var copy = inn.duplicate(true)
+				if not copy.has("map_id"):
+					copy["map_id"] = str(map_data.get("id", ""))
+				return copy
+	return {}
+
+func get_inn_for_map(map_id: String) -> Dictionary:
+	if map_id.is_empty():
+		return {}
+	var map_data = get_map(map_id)
+	if map_data.is_empty():
+		return {}
+	var inns = map_data.get("inns", [])
+	if typeof(inns) != TYPE_ARRAY or inns.is_empty():
+		return {}
+	for inn in inns:
+		if typeof(inn) == TYPE_DICTIONARY:
+			var copy = inn.duplicate(true)
+			if not copy.has("map_id"):
+				copy["map_id"] = map_id
+			return copy
+	return {}
+
 func _find_by_id(collection_name: String, record_id: String) -> Dictionary:
 	if content.is_empty():
 		load_all()
