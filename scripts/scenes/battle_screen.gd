@@ -7,6 +7,7 @@ const BattleGridScript = preload("res://scripts/scenes/battle_grid.gd")
 const TerrainSystemScript = preload("res://scripts/systems/terrain_system.gd")
 const TacticalUnitSpriteScript = preload("res://scripts/scenes/tactical_unit_sprite.gd")
 const TacticalRangeSystemScript = preload("res://scripts/systems/tactical_range_system.gd")
+const BattleActionBarScript = preload("res://scripts/scenes/battle_action_bar.gd")
 const TACTICAL_CELL_SIZE := 64
 const TACTICAL_GRID_OFFSET := Vector2(64, 48)
 
@@ -178,6 +179,11 @@ func _create_tactical_ui() -> void:
 
 	_create_tactical_grid()
 	_build_unit_sprites()
+	# Task 12: 底部 7 图标行动栏（与旧按钮并存，旧按钮 Task 20 再清）。
+	action_bar = BattleActionBarScript.new()
+	action_bar.position = Vector2(180, 660)
+	add_child(action_bar)
+	action_bar.action_selected.connect(_on_action_bar_selected)
 
 func _build_unit_sprites() -> void:
 	# 为 tactical_battle_state.units 中每个单位创建一个 TacticalUnitSprite，
@@ -543,3 +549,32 @@ func _unit_view_for_range(unit) -> Dictionary:
 		"position": pos,
 		"move": int(unit.move_range),
 	}
+
+# Task 12: 行动栏 7 图标按钮派发：
+# move/attack 切 range_mode 高亮；skill/item/wait/view/system 走简易降级回退。
+func _on_action_bar_selected(action_id: String) -> void:
+	if tactical_battle_state == null:
+		return
+	var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+	if unit == null:
+		return
+	var view := _unit_view_for_range(unit)
+	match action_id:
+		"move":
+			var cells := tactical_range_system.get_move_range(view, tactical_battle_state.terrain_grid, _enemy_positions())
+			_set_range_mode(RangeMode.MOVE, cells)
+		"attack":
+			var cells := tactical_range_system.get_attack_range_simple(view)
+			_set_range_mode(RangeMode.ATTACK, cells)
+		"skill":
+			# 退化版：先把范围切回 NONE，等 Task 17/18 接技能菜单。
+			_set_range_mode(RangeMode.NONE, [])
+		"item", "view", "system":
+			_set_range_mode(RangeMode.NONE, [])
+		"wait":
+			# 待机 = 立即结束当前角色行动（与旧"结束行动"按钮等价的简化版）。
+			_set_range_mode(RangeMode.NONE, [])
+			if tactical_battle_state.is_action_phase:
+				tactical_combat_system.end_unit_action(tactical_battle_state, tactical_battle_state.current_unit_id)
+				_refresh_tactical()
+				_return_if_tactical_finished()
