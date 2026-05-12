@@ -11,6 +11,7 @@ const BattleActionBarScript = preload("res://scripts/scenes/battle_action_bar.gd
 const ChargeBarScript = preload("res://scripts/scenes/charge_bar.gd")
 const BattlePanelObjectiveScript = preload("res://scripts/scenes/battle_panel_objective.gd")
 const BattlePanelTerrainScript = preload("res://scripts/scenes/battle_panel_terrain.gd")
+const BattlePanelActorScript = preload("res://scripts/scenes/battle_panel_actor.gd")
 const TACTICAL_CELL_SIZE := 64
 const TACTICAL_GRID_OFFSET := Vector2(64, 48)
 
@@ -48,6 +49,7 @@ var action_bar = null  # Task 12 底部行动栏（BattleActionBarScript 实例�
 var charge_bar = null  # Task 13 顶部集气进度条（ChargeBarScript 实例）
 var panel_objective = null  # Task 14 左上「战斗目标 + 战场信息」
 var panel_terrain = null  # Task 14 左下「地形信息」
+var panel_actor = null  # Task 15 右上「主角信息卡」
 var _terrain_system = null  # Task 14 共享给 hover/Tab 切换查地形数据
 var _last_hover_cell: Vector2i = Vector2i(-1, -1)  # Task 14 鼠标 hover 去重
 
@@ -212,7 +214,15 @@ func _create_tactical_ui() -> void:
 	panel_terrain.size = Vector2(200, 252)
 	panel_terrain.custom_minimum_size = Vector2(200, 252)
 	add_child(panel_terrain)
+	# Task 15: 右上主角信息卡。
+	panel_actor = BattlePanelActorScript.new()
+	panel_actor.position = Vector2(1072, 8)
+	panel_actor.size = Vector2(200, 240)
+	panel_actor.custom_minimum_size = Vector2(200, 240)
+	add_child(panel_actor)
+	EventBus.hero_mp_changed.connect(_on_hero_mp_changed_for_actor_panel)
 	_refresh_terrain_panels_for_current_actor()
+	_refresh_actor_panel()
 
 func _build_unit_sprites() -> void:
 	# 为 tactical_battle_state.units 中每个单位创建一个 TacticalUnitSprite，
@@ -329,6 +339,7 @@ func _refresh_tactical() -> void:
 	end_action_button.disabled = tactical_battle_state.is_finished or not _is_player_action()
 	retreat_button.disabled = tactical_battle_state.is_finished
 	_sync_unit_sprites()
+	_refresh_actor_panel()
 
 func _sync_unit_sprites() -> void:
 	if battle_grid == null or tactical_battle_state == null:
@@ -727,3 +738,24 @@ func _focus_next_distinct_terrain() -> void:
 			_last_hover_cell = Vector2i(c, r)
 			_show_terrain_at(_last_hover_cell)
 			return
+
+# Task 15: 在右上主角信息卡上同步显示「当前正在行动的角色」状态；
+# 若无行动单位则回退到首位玩家单位（一般是主角云游少侠）。
+func _refresh_actor_panel() -> void:
+	if panel_actor == null or tactical_battle_state == null:
+		return
+	var unit = _pick_actor_panel_unit()
+	panel_actor.set_actor(unit)
+
+func _pick_actor_panel_unit():
+	var current = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+	if current != null and current.team == TacticalBattleStateScript.TEAM_PLAYER:
+		return current
+	for unit in tactical_battle_state.units:
+		if unit.team == TacticalBattleStateScript.TEAM_PLAYER and unit.is_alive():
+			return unit
+	# 全队覆灭兜底：返回 current 或 null。
+	return current
+
+func _on_hero_mp_changed_for_actor_panel(_cur_mp: int, _max_mp: int) -> void:
+	_refresh_actor_panel()
