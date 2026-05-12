@@ -3,6 +3,8 @@ extends Control
 const CombatSystemScript = preload("res://scripts/systems/combat_system.gd")
 const TacticalCombatSystemScript = preload("res://scripts/systems/tactical_combat_system.gd")
 const TacticalBattleStateScript = preload("res://scripts/domain/tactical_battle_state.gd")
+const TACTICAL_CELL_SIZE := 64
+const TACTICAL_GRID_OFFSET := Vector2(64, 48)
 
 var title_label: Label
 var hero_hp_label: Label
@@ -144,8 +146,11 @@ func _create_tactical_grid() -> void:
 		for r in range(tactical_battle_state.battlefield_height):
 			var button = Button.new()
 			button.text = ""
-			button.size = Vector2(58, 34)
+			button.size = Vector2(TACTICAL_CELL_SIZE, TACTICAL_CELL_SIZE)
 			button.position = _cell_to_screen({"q": q, "r": r})
+			button.flat = true
+			button.focus_mode = Control.FOCUS_NONE
+			_apply_tactical_cell_style(button)
 			button.pressed.connect(_on_tactical_cell_pressed.bind(q, r))
 			grid_layer.add_child(button)
 			cell_buttons[_cell_key({"q": q, "r": r})] = button
@@ -293,10 +298,35 @@ func _unit_at_cell(cell: Dictionary):
 			return unit
 	return null
 
+func _apply_tactical_cell_style(button: Button) -> void:
+	var idle = _make_tactical_cell_style(Color(0.18, 0.24, 0.18, 0.10), Color(0.72, 0.84, 0.62, 0.25))
+	var active = _make_tactical_cell_style(Color(0.22, 0.48, 0.74, 0.24), Color(0.36, 0.66, 0.95, 0.70))
+	var pressed = _make_tactical_cell_style(Color(0.28, 0.58, 0.84, 0.36), Color(0.62, 0.82, 1.0, 0.85))
+	button.add_theme_stylebox_override("normal", active)
+	button.add_theme_stylebox_override("hover", pressed)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("disabled", idle)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_color_override("font_pressed_color", Color.WHITE)
+	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.88))
+
+func _make_tactical_cell_style(fill: Color, border: Color) -> StyleBoxFlat:
+	var style = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(1)
+	style.corner_radius_top_left = 0
+	style.corner_radius_top_right = 0
+	style.corner_radius_bottom_right = 0
+	style.corner_radius_bottom_left = 0
+	return style
+
 func _cell_to_screen(cell: Dictionary) -> Vector2:
 	var q = int(cell.get("q", 0))
 	var r = int(cell.get("r", 0))
-	return Vector2((q - r) * 34 + 240, (q + r) * 22)
+	return TACTICAL_GRID_OFFSET + Vector2(q * TACTICAL_CELL_SIZE, r * TACTICAL_CELL_SIZE)
 
 func _cell_key(cell: Dictionary) -> String:
 	return "%d:%d" % [int(cell.get("q", 0)), int(cell.get("r", 0))]

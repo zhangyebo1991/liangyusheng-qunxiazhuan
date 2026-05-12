@@ -53,6 +53,11 @@ func run(assertions) -> void:
 	assertions.assert_eq(screen.tactical_battle_state.units.size(), 3, "战棋场景应创建 3 个单位")
 	assertions.assert_true(screen.cell_buttons.size() >= 35, "7x5 战场应创建至少 35 个格子按钮")
 	assertions.assert_true(screen.item_button == null or not screen.item_button.visible, "战棋模式不应显示小还丹按钮")
+	assertions.assert_eq(screen.cell_buttons.get("0:0").size, Vector2(64, 64), "战棋格子应使用 64x64 方格按钮")
+	assertions.assert_true(screen.cell_buttons.get("0:0").flat, "战棋格子按钮应使用扁平样式避免默认黑块")
+	var origin_cell = screen._cell_to_screen({"q": 0, "r": 0})
+	assertions.assert_eq(screen._cell_to_screen({"q": 1, "r": 0}) - origin_cell, Vector2(64, 0), "方格战棋 q 轴应水平递增")
+	assertions.assert_eq(screen._cell_to_screen({"q": 0, "r": 1}) - origin_cell, Vector2(0, 64), "方格战棋 r 轴应垂直递增")
 
 	screen.tactical_combat_system.advance_charge(screen.tactical_battle_state, 5.0)
 	screen._refresh_tactical()
