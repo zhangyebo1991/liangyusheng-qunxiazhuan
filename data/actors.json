@@ -30,6 +30,16 @@
     "martial_arts": ["rough_fist"]
   },
   {
+    "id": "bandit_lackey_01",
+    "name": "山道喽啰",
+    "level": 1,
+    "hp": 38,
+    "max_hp": 38,
+    "attack": 10,
+    "defense": 3,
+    "martial_arts": ["rough_fist"]
+  },
+  {
     "id": "innkeeper_lu",
     "name": "陆掌柜",
     "level": 3,

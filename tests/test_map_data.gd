@@ -14,6 +14,18 @@ func run(assertions) -> void:
 	assertions.assert_eq(mountain.get("spawn_position", {}).get("x", 0), 160, "山道出生点横坐标应正确")
 	assertions.assert_true(mountain.get("spawn_points", {}).has("return_from_village"), "山道应包含村镇返回出生点")
 	assertions.assert_eq(_find_object(mountain, "exit_to_foot_village").get("target_map_id", ""), "foot_village", "山道出口应指向山脚村镇")
+	var bandit_gate = _find_object(mountain, "enemy_bandit_gate")
+	assertions.assert_eq(bandit_gate.get("battle_mode", ""), "tactical", "山道强人应配置战棋战斗模式")
+	assertions.assert_eq(bandit_gate.get("battlefield", {}).get("width", 0), 7, "山道战棋战场宽度应为 7")
+	assertions.assert_eq(bandit_gate.get("battlefield", {}).get("height", 0), 5, "山道战棋战场高度应为 5")
+	assertions.assert_eq(bandit_gate.get("time_mode", ""), "pause_on_action", "山道战棋应配置行动暂停集气")
+	var bandit_units = bandit_gate.get("units", [])
+	assertions.assert_eq(bandit_units.size(), 3, "山道战棋应配置主角与 2 名敌人")
+	if bandit_units.size() >= 3:
+		assertions.assert_eq(bandit_units[2].get("actor_id", ""), "bandit_lackey_01", "第三个战棋单位应为山道喽啰")
+	else:
+		assertions.assert_true(false, "山道战棋应包含山道喽啰单位")
+	assertions.assert_eq(repository.get_actor("bandit_lackey_01").get("name", ""), "山道喽啰", "应读取山道喽啰角色")
 
 	var village = repository.get_map("foot_village")
 	assertions.assert_eq(village.get("name", ""), "山脚村镇", "应按编号读取山脚村镇")

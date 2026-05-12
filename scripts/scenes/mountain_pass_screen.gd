@@ -44,16 +44,16 @@ func _start_battle(record: Dictionary) -> void:
 	if GameState.quest_system.get_status(quest_id) == "not_started":
 		hud.show_message("先与青衫客交谈。")
 		return
-	GameState.set_battle_context({
-		"enemy_id": str(record.get("actor_id", "")),
-		"source_map_id": "mountain_pass",
-		"source_object_id": str(record.get("id", "")),
-		"quest_id": quest_id,
-		"return_position": {
-			"x": player.global_position.x,
-			"y": player.global_position.y,
-		},
-	})
+	var context = record.duplicate(true)
+	context["enemy_id"] = str(record.get("actor_id", ""))
+	context["source_map_id"] = "mountain_pass"
+	context["source_object_id"] = str(record.get("id", ""))
+	context["quest_id"] = quest_id
+	context["return_position"] = {
+		"x": player.global_position.x,
+		"y": player.global_position.y,
+	}
+	GameState.set_battle_context(context)
 	SceneLoader.change_scene("res://scenes/battle.tscn")
 
 func _update_quest_text() -> void:

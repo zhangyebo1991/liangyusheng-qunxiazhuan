@@ -26,7 +26,40 @@
         "actor_id": "bandit_01",
         "position": {"x": 720, "y": 260},
         "radius": 56,
-        "quest_id": "quest_mountain_trial"
+        "quest_id": "quest_mountain_trial",
+        "battle_mode": "tactical",
+        "encounter_id": "mountain_bandit_tutorial",
+        "battlefield": {"width": 7, "height": 5},
+        "time_mode": "pause_on_action",
+        "units": [
+          {
+            "unit_id": "hero",
+            "actor_id": "hero_yun",
+            "team": "player",
+            "start_cell": {"q": 1, "r": 2},
+            "move_range": 3,
+            "attack_range": 1,
+            "charge_speed": 240
+          },
+          {
+            "unit_id": "bandit",
+            "actor_id": "bandit_01",
+            "team": "enemy",
+            "start_cell": {"q": 5, "r": 2},
+            "move_range": 3,
+            "attack_range": 1,
+            "charge_speed": 220
+          },
+          {
+            "unit_id": "bandit_lackey",
+            "actor_id": "bandit_lackey_01",
+            "team": "enemy",
+            "start_cell": {"q": 5, "r": 3},
+            "move_range": 3,
+            "attack_range": 1,
+            "charge_speed": 260
+          }
+        ]
       },
       {
         "id": "exit_to_foot_village",
