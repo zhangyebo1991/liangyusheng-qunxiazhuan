@@ -9,6 +9,8 @@ const TacticalUnitSpriteScript = preload("res://scripts/scenes/tactical_unit_spr
 const TacticalRangeSystemScript = preload("res://scripts/systems/tactical_range_system.gd")
 const BattleActionBarScript = preload("res://scripts/scenes/battle_action_bar.gd")
 const ChargeBarScript = preload("res://scripts/scenes/charge_bar.gd")
+const BattlePanelObjectiveScript = preload("res://scripts/scenes/battle_panel_objective.gd")
+const BattlePanelTerrainScript = preload("res://scripts/scenes/battle_panel_terrain.gd")
 const TACTICAL_CELL_SIZE := 64
 const TACTICAL_GRID_OFFSET := Vector2(64, 48)
 
@@ -44,6 +46,10 @@ var range_mode: int = RangeMode.NONE
 var range_cells: Array = []  # Array[Vector2i]
 var action_bar = null  # Task 12 底部行动栏（BattleActionBarScript 实例）
 var charge_bar = null  # Task 13 顶部集气进度条（ChargeBarScript 实例）
+var panel_objective = null  # Task 14 左上「战斗目标 + 战场信息」
+var panel_terrain = null  # Task 14 左下「地形信息」
+var _terrain_system = null  # Task 14 共享给 hover/Tab 切换查地形数据
+var _last_hover_cell: Vector2i = Vector2i(-1, -1)  # Task 14 鼠标 hover 去重
 
 func _ready() -> void:
 	context = GameState.peek_battle_context()
@@ -72,6 +78,7 @@ func _process(delta: float) -> void:
 			_refresh_tactical()
 			_return_if_tactical_finished()
 	_refresh_charge_bar()
+	_poll_terrain_hover()
 
 func _create_ui() -> void:
 	title_label = Label.new()
@@ -143,6 +150,7 @@ func _create_tactical_ui() -> void:
 	if tactical_battle_state != null:
 		battle_grid.setup(tactical_battle_state.terrain_grid, terrain_system)
 	tactical_range_system.set_terrain_system(terrain_system)
+	_terrain_system = terrain_system
 
 	unit_panel = VBoxContainer.new()
 	unit_panel.position = Vector2(820, 56)
@@ -193,6 +201,18 @@ func _create_tactical_ui() -> void:
 	charge_bar.bar_width = 800
 	add_child(charge_bar)
 	_refresh_charge_bar()
+	# Task 14: 左上战斗目标 + 战场信息；左下地形信息。
+	panel_objective = BattlePanelObjectiveScript.new()
+	panel_objective.position = Vector2(8, 8)
+	panel_objective.size = Vector2(200, 180)
+	panel_objective.custom_minimum_size = Vector2(200, 180)
+	add_child(panel_objective)
+	panel_terrain = BattlePanelTerrainScript.new()
+	panel_terrain.position = Vector2(8, 460)
+	panel_terrain.size = Vector2(200, 252)
+	panel_terrain.custom_minimum_size = Vector2(200, 252)
+	add_child(panel_terrain)
+	_refresh_terrain_panels_for_current_actor()
 
 func _build_unit_sprites() -> void:
 	# 为 tactical_battle_state.units 中每个单位创建一个 TacticalUnitSprite，
@@ -606,3 +626,104 @@ func _refresh_charge_bar() -> void:
 			"is_action": tactical_battle_state.is_action_phase and str(unit.unit_id) == current_id,
 		})
 	charge_bar.set_units(dicts)
+
+# Task 14: 鼠标悬停某战棋格 → 刷新左下地形面板 + 左上战场信息面板。
+# 通过 Engine 输入位置反推 grid cell，去重避免每帧重复刷新。
+func _poll_terrain_hover() -> void:
+	if battle_grid == null or _terrain_system == null or panel_terrain == null:
+		return
+	if tactical_battle_state == null or typeof(tactical_battle_state.terrain_grid) != TYPE_ARRAY:
+		return
+	var cell := _mouse_to_grid_cell()
+	if cell == _last_hover_cell:
+		return
+	_last_hover_cell = cell
+	if cell.x < 0:
+		_refresh_terrain_panels_for_current_actor()
+		return
+	_show_terrain_at(cell)
+
+func _mouse_to_grid_cell() -> Vector2i:
+	# battle_grid 是 Node2D，position 是其全局原点；TILE_SIZE = 32（见 battle_grid.gd）。
+	var local: Vector2 = get_global_mouse_position() - battle_grid.global_position
+	var tile_size := 32
+	var c := int(floor(local.x / tile_size))
+	var r := int(floor(local.y / tile_size))
+	var rows: int = tactical_battle_state.terrain_grid.size()
+	var cols := 0
+	if rows > 0 and typeof(tactical_battle_state.terrain_grid[0]) == TYPE_ARRAY:
+		cols = tactical_battle_state.terrain_grid[0].size()
+	if r < 0 or r >= rows or c < 0 or c >= cols:
+		return Vector2i(-1, -1)
+	return Vector2i(c, r)
+
+func _show_terrain_at(cell: Vector2i) -> void:
+	var terrain_id := _terrain_at(cell)
+	var data: Dictionary = _terrain_system.get_terrain(terrain_id)
+	if panel_terrain != null:
+		panel_terrain.set_terrain(data)
+	if panel_objective != null:
+		var fallback := terrain_id if not terrain_id.is_empty() else "—"
+		var name_text := str(data.get("name", fallback))
+		var ev := int(data.get("evasion_bonus", 0))
+		var mc := int(data.get("move_cost", 1))
+		var sign_str := "+" if ev >= 0 else ""
+		var effect := "闪避 %s%d%% / 移动消耗 %d" % [sign_str, ev, mc]
+		panel_objective.set_hovered_terrain(name_text, effect)
+
+func _terrain_at(cell: Vector2i) -> String:
+	if tactical_battle_state == null:
+		return ""
+	var grid: Array = tactical_battle_state.terrain_grid
+	if cell.y < 0 or cell.y >= grid.size():
+		return ""
+	var row = grid[cell.y]
+	if typeof(row) != TYPE_ARRAY or cell.x < 0 or cell.x >= row.size():
+		return ""
+	return str(row[cell.x])
+
+# Task 14: 当无 hover 时回退到「当前 actor 所在格地形」。
+func _refresh_terrain_panels_for_current_actor() -> void:
+	if tactical_battle_state == null or _terrain_system == null:
+		return
+	var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+	if unit == null:
+		return
+	var cell := Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0)))
+	_show_terrain_at(cell)
+
+# Task 14: Tab 键 = 在地图上跳到下一个不同地形格作为聚焦光标（用 hover 同样的展示路径）。
+func _input(event: InputEvent) -> void:
+	if not is_tactical_mode:
+		return
+	if event is InputEventKey and event.pressed and event.keycode == KEY_TAB:
+		_focus_next_distinct_terrain()
+		accept_event()
+
+func _focus_next_distinct_terrain() -> void:
+	if tactical_battle_state == null:
+		return
+	var grid: Array = tactical_battle_state.terrain_grid
+	if grid.is_empty():
+		return
+	var cur_terrain := ""
+	if _last_hover_cell.x >= 0:
+		cur_terrain = _terrain_at(_last_hover_cell)
+	var rows: int = grid.size()
+	var cols: int = 0
+	if typeof(grid[0]) == TYPE_ARRAY:
+		cols = grid[0].size()
+	if rows == 0 or cols == 0:
+		return
+	var start_idx := 0
+	if _last_hover_cell.x >= 0:
+		start_idx = _last_hover_cell.y * cols + _last_hover_cell.x + 1
+	for i in range(rows * cols):
+		var idx := (start_idx + i) % (rows * cols)
+		var c := idx % cols
+		var r := idx / cols
+		var t := str(grid[r][c])
+		if t != cur_terrain and not t.is_empty():
+			_last_hover_cell = Vector2i(c, r)
+			_show_terrain_at(_last_hover_cell)
+			return
