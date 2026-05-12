@@ -21,6 +21,8 @@ func run(assertions) -> void:
 	_test_move_range_enemy_block(assertions, rs)
 	_test_attack_range_simple(assertions, rs)
 	_test_skill_directional_range(assertions, rs)
+	_test_skill_target_selection_range(assertions, rs)
+	_test_skill_target_blast_range(assertions, rs)
 
 func _make_grass_grid() -> Array:
 	var grid: Array = []
@@ -104,3 +106,25 @@ func _test_skill_directional_range(assertions, rs) -> void:
 	var dir_partial = rs.get_skill_directional_range({"position": Vector2i(6, 3)}, "straight_sword_thrust", Vector2i(1, 0))
 	assertions.assert_eq(dir_partial.size(), 1, "边缘部分裁剪应 1 格")
 	assertions.assert_true(dir_partial.has(Vector2i(7, 3)), "应是 (7,3)")
+
+func _test_skill_target_selection_range(assertions, rs) -> void:
+	# 剑气漩可选中心：主角 (3,3)，cast_range=3 → 曼哈顿距离 ≤ 3 但不含自身格
+	var centers = rs.get_skill_target_selection_range({"position": Vector2i(3, 3)}, "sword_aura_swirl", 3)
+	assertions.assert_false(centers.has(Vector2i(3, 3)), "主角自身格不应在可选中心")
+	assertions.assert_true(centers.has(Vector2i(6, 3)), "(6,3) 距离 3 应可选")
+	assertions.assert_true(centers.has(Vector2i(3, 0)), "(3,0) 距离 3 应可选")
+	assertions.assert_false(centers.has(Vector2i(7, 3)), "(7,3) 距离 4 应不可选")
+	assertions.assert_true(centers.has(Vector2i(2, 2)), "(2,2) 距离 2 应可选")
+
+func _test_skill_target_blast_range(assertions, rs) -> void:
+	# 十字命中：中心 (4,3) → 中心 + 上下左右 = 5 格
+	var blast = rs.get_skill_target_blast_range("sword_aura_swirl", Vector2i(4, 3))
+	assertions.assert_eq(blast.size(), 5, "中心十字应有 5 格")
+	assertions.assert_true(blast.has(Vector2i(4, 3)), "应包含中心")
+	assertions.assert_true(blast.has(Vector2i(4, 2)) and blast.has(Vector2i(4, 4)), "应包含上下相邻")
+	assertions.assert_true(blast.has(Vector2i(3, 3)) and blast.has(Vector2i(5, 3)), "应包含左右相邻")
+
+	# 边界裁剪：中心 (0,0) 十字仅剩 (0,0)+(1,0)+(0,1) = 3 格
+	var blast_corner = rs.get_skill_target_blast_range("sword_aura_swirl", Vector2i(0, 0))
+	assertions.assert_eq(blast_corner.size(), 3, "角落十字应 3 格")
+	assertions.assert_true(blast_corner.has(Vector2i(0, 0)) and blast_corner.has(Vector2i(1, 0)) and blast_corner.has(Vector2i(0, 1)), "角落十字应剩中心+右+下")

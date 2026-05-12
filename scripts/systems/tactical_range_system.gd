@@ -80,3 +80,31 @@ func _get_skill_line_length(skill_id: String) -> int:
 	if skill_id == "straight_sword_thrust":
 		return 2
 	return 1
+
+# 目标型技能可选中心范围：返回 Array[Vector2i]，所有曼哈顿距离 ≤ cast_range 且
+# 不含主角自身格、未越棋盘边界的格子。
+# 当前不剔除盟友/敌方占据格（由 UI 层在选中时再行二次校验）。
+func get_skill_target_selection_range(unit: Dictionary, skill_id: String, cast_range: int) -> Array:
+	var src: Vector2i = unit.get("position", Vector2i(0, 0))
+	var result: Array = []
+	for r in range(GRID_ROWS):
+		for c in range(GRID_COLS):
+			var p := Vector2i(c, r)
+			if p == src:
+				continue
+			var dist: int = abs(p.x - src.x) + abs(p.y - src.y)
+			if dist <= cast_range:
+				result.append(p)
+	return result
+
+# 目标型技能命中范围（爆炸/扩散）：当前仅 target_cross_1 = 中心 + 上下左右四向 1 格。
+# 边界外的格被裁剪。返回 Array[Vector2i]。
+func get_skill_target_blast_range(skill_id: String, center: Vector2i) -> Array:
+	var result: Array = []
+	if center.x >= 0 and center.x < GRID_COLS and center.y >= 0 and center.y < GRID_ROWS:
+		result.append(center)
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var p: Vector2i = center + d
+		if p.x >= 0 and p.x < GRID_COLS and p.y >= 0 and p.y < GRID_ROWS:
+			result.append(p)
+	return result
