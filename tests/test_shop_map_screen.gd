@@ -43,5 +43,14 @@ func run(assertions) -> void:
 	assertions.assert_eq(screen.hud.message_label.text, "买入小还丹。", "地图场景购买后应显示系统返回消息")
 	assertions.assert_eq(screen.hud.shop_coins_label.text, "铜钱：50", "地图场景购买后应刷新商店铜钱")
 
+	# 药铺应出售凝神丹
+	var pharmacy_objects = repository.get_map("foot_village").get("objects", [])
+	var pharmacy_items: Array = []
+	for obj in pharmacy_objects:
+		if str(obj.get("id", "")) == "shop_foot_village_pharmacy":
+			pharmacy_items = obj.get("items", [])
+			break
+	assertions.assert_true(pharmacy_items.has("herb_focus"), "药铺商品应包含凝神丹")
+
 	screen.hud.free()
 	screen.free()

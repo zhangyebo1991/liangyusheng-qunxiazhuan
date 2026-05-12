@@ -42,11 +42,9 @@ func run(assertions) -> void:
 	assertions.assert_eq(pharmacy.get("name", ""), "药铺", "药铺对象应显示中文名称")
 	assertions.assert_eq(pharmacy.get("shop_id", ""), "foot_village_pharmacy", "药铺对象应保存商店编号")
 	var pharmacy_items = pharmacy.get("items", [])
-	assertions.assert_eq(pharmacy_items.size(), 1, "药铺第一版只应配置一个商品")
-	if pharmacy_items.size() > 0:
-		assertions.assert_eq(pharmacy_items[0], "herb_small", "药铺第一版应出售小还丹")
-	else:
-		assertions.assert_true(false, "药铺第一版应出售小还丹")
+	assertions.assert_eq(pharmacy_items.size(), 2, "药铺应配置小还丹与凝神丹两件商品")
+	assertions.assert_true(pharmacy_items.has("herb_small"), "药铺应出售小还丹")
+	assertions.assert_true(pharmacy_items.has("herb_focus"), "药铺应出售凝神丹")
 
 	var road_exit = _find_object(village, "exit_to_road_outskirts")
 	assertions.assert_eq(road_exit.get("type", ""), "exit", "村镇应配置官道出口")
