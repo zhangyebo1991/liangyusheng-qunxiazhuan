@@ -19,6 +19,7 @@ var shop_coins_label: Label
 var shop_list: VBoxContainer
 var shop_empty_label: Label
 var shop_is_open := false
+var mp_label: Label = null
 
 func _ready() -> void:
 	quest_label = Label.new()
@@ -48,12 +49,32 @@ func _ready() -> void:
 	tracked_task_list.size = Vector2(520, 96)
 	add_child(tracked_task_list)
 
+	mp_label = Label.new()
+	mp_label.name = "MpLabel"
+	mp_label.modulate = Color(0.6, 0.85, 1.0, 1.0)
+	mp_label.position = Vector2(24, 600)
+	mp_label.size = Vector2(520, 32)
+	add_child(mp_label)
+
 	_create_inventory_panel()
 	_create_shop_panel()
 
 	set_quest_text("")
 	set_prompt("")
 	show_message("")
+
+	if is_inside_tree() and has_node("/root/EventBus"):
+		var bus = get_node("/root/EventBus")
+		if bus.has_signal("hero_mp_changed") and not bus.hero_mp_changed.is_connected(_on_hero_mp_changed):
+			bus.hero_mp_changed.connect(_on_hero_mp_changed)
+
+	if is_inside_tree() and has_node("/root/GameState"):
+		var gs = get_node("/root/GameState")
+		var cur_mp = int(gs.get("hero_cur_mp")) if gs.get("hero_cur_mp") != null else 0
+		var max_mp = int(gs.get("hero_max_mp")) if gs.get("hero_max_mp") != null else 0
+		refresh_mp_display(cur_mp, max_mp)
+	else:
+		refresh_mp_display(0, 0)
 
 func set_quest_text(text: String) -> void:
 	quest_label.text = text
@@ -63,6 +84,13 @@ func set_prompt(text: String) -> void:
 
 func show_message(text: String) -> void:
 	message_label.text = text
+
+func refresh_mp_display(cur_mp: int, max_mp: int) -> void:
+	if mp_label != null:
+		mp_label.text = "内力 %d/%d" % [cur_mp, max_mp]
+
+func _on_hero_mp_changed(cur_mp: int, max_mp: int) -> void:
+	refresh_mp_display(cur_mp, max_mp)
 
 func set_tracked_tasks(tasks: Array) -> void:
 	for child in tracked_task_list.get_children():
