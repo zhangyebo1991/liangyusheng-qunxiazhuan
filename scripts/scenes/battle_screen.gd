@@ -3,6 +3,8 @@ extends Control
 const CombatSystemScript = preload("res://scripts/systems/combat_system.gd")
 const TacticalCombatSystemScript = preload("res://scripts/systems/tactical_combat_system.gd")
 const TacticalBattleStateScript = preload("res://scripts/domain/tactical_battle_state.gd")
+const BattleGridScript = preload("res://scripts/scenes/battle_grid.gd")
+const TerrainSystemScript = preload("res://scripts/systems/terrain_system.gd")
 const TACTICAL_CELL_SIZE := 64
 const TACTICAL_GRID_OFFSET := Vector2(64, 48)
 
@@ -20,6 +22,7 @@ var is_tactical_mode := false
 var tactical_battle_state = null
 var tactical_combat_system = TacticalCombatSystemScript.new()
 var grid_layer: Control
+var battle_grid: Node2D
 var status_label: Label
 var unit_panel: VBoxContainer
 var end_action_button: Button
@@ -116,6 +119,16 @@ func _create_tactical_ui() -> void:
 	grid_layer.position = Vector2(120, 110)
 	grid_layer.size = Vector2(640, 420)
 	add_child(grid_layer)
+
+	# Task 9: 在 grid_layer 之下加 battle_grid 像素地形层（旧 ColorRect 仍然可见可点击）
+	battle_grid = BattleGridScript.new()
+	battle_grid.position = Vector2(120, 110)
+	add_child(battle_grid)
+	move_child(battle_grid, grid_layer.get_index())
+	var terrain_system = TerrainSystemScript.new()
+	terrain_system.set_repository(DataRepository)
+	if tactical_battle_state != null:
+		battle_grid.setup(tactical_battle_state.terrain_grid, terrain_system)
 
 	unit_panel = VBoxContainer.new()
 	unit_panel.position = Vector2(820, 56)
