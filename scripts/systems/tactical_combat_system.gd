@@ -202,6 +202,61 @@ func end_unit_action(battle, unit_id: String) -> Dictionary:
 	battle.is_action_phase = false
 	return {"success": true, "message": "行动结束。"}
 
+# 战棋行动统一入口（Task 5 起逐步替代直接调 attack_unit / use_martial_art 的 UI 路径）。
+# action_id 取自招式编号（如 "sword_aura_swirl"）；target_cells 为 Array[Vector2i]，
+# 由 tactical_range_system 的范围算法生成。
+# 当前仅实现剑气漩分支；其他 action_id（普攻 attack 等）由后续 Task 7 扩展。
+func resolve_action(battle, unit_id: String, action_id: String, target_cells: Array) -> Dictionary:
+	if battle == null:
+		return {"success": false, "message": "战斗尚未准备好。"}
+	var unit = battle.get_unit(unit_id)
+	if unit == null or not unit.is_alive():
+		return {"success": false, "message": "行动单位不存在。"}
+	if action_id == "sword_aura_swirl":
+		return _resolve_sword_aura_swirl(battle, unit, target_cells)
+	return {"success": false, "message": "未知行动。"}
+
+func _resolve_sword_aura_swirl(battle, attacker, target_cells: Array) -> Dictionary:
+	var skill_data = repository.get_martial_art("sword_aura_swirl") if repository != null else {}
+	if skill_data.is_empty():
+		return {"success": false, "message": "剑气漩数据缺失。"}
+	var mp_cost = int(skill_data.get("mp_cost", 8))
+	var base_damage = int(skill_data.get("base_damage", 0))
+	var scale_ratio = float(skill_data.get("scale_ratio", 0.0))
+	if attacker.mp < mp_cost:
+		return {"success": false, "message": "内力不足。"}
+	var damage_each = int(base_damage + attacker.attack * scale_ratio)
+	if damage_each < 1:
+		damage_each = 1
+	var hits: Array = []
+	for cell_v in target_cells:
+		var defender = _find_unit_at_cell_v(battle, cell_v)
+		if defender == null or defender.team == attacker.team or not defender.is_alive():
+			continue
+		defender.hp = max(0, defender.hp - damage_each)
+		hits.append(defender.unit_id)
+		battle.append_log("%s使出剑气漩袭击%s，造成%d点伤害。" % [attacker.display_name, defender.display_name, damage_each])
+		if defender.hp <= 0:
+			battle.append_log("%s被击败。" % defender.display_name)
+	attacker.mp = max(0, attacker.mp - mp_cost)
+	if hits.is_empty():
+		battle.append_log("%s剑气漩起，未击中目标。" % attacker.display_name)
+	check_battle_finished(battle)
+	return {"success": true, "message": "剑气漩已发动。", "damage": damage_each, "hits": hits}
+
+# target_cells 元素为 Vector2i(x=q, y=r)；与 unit.cell {q,r} 对齐查找。
+func _find_unit_at_cell_v(battle, cell_v):
+	if typeof(cell_v) != TYPE_VECTOR2I:
+		return null
+	var q = int(cell_v.x)
+	var r = int(cell_v.y)
+	for unit in battle.units:
+		if not unit.is_alive():
+			continue
+		if int(unit.cell.get("q", 0)) == q and int(unit.cell.get("r", 0)) == r:
+			return unit
+	return null
+
 func resolve_enemy_action(battle, unit_id: String) -> Dictionary:
 	var unit = battle.get_unit(unit_id) if battle != null else null
 	if unit == null or not unit.is_alive():

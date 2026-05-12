@@ -135,6 +135,33 @@ func run(assertions) -> void:
 	assertions.assert_true(defeat_battle.is_finished, "主角被击败后战棋应结束")
 	assertions.assert_true(not defeat_battle.victory, "主角被击败后不应标记胜利")
 
+	# 剑气漩命中：通过 resolve_action 接受 Vector2i 目标格列表，命中范围内敌人。
+	# hero attack=18, swirl base_damage=14, scale_ratio=0.6 → 每格命中伤害 = int(14 + 18*0.6) = 24
+	var swirl_battle = system.create_battle(state, _sample_context(), repository)
+	swirl_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	swirl_battle.get_unit("bandit").cell = {"q": 5, "r": 2}
+	swirl_battle.get_unit("lackey").cell = {"q": 5, "r": 3}
+	var swirl_mp_before = swirl_battle.get_unit("hero").mp
+	# target_cells: 中心 (5,2) + 上下左右十字
+	var swirl_targets: Array = [
+		Vector2i(5, 2), Vector2i(4, 2), Vector2i(6, 2), Vector2i(5, 1), Vector2i(5, 3)
+	]
+	var swirl_result = system.resolve_action(swirl_battle, "hero", "sword_aura_swirl", swirl_targets)
+	assertions.assert_true(bool(swirl_result.get("success", false)), "剑气漩应释放成功")
+	assertions.assert_eq(int(swirl_result.get("damage", 0)), 24, "剑气漩单格伤害应为 24")
+	assertions.assert_eq(swirl_battle.get_unit("hero").mp, swirl_mp_before - 8, "剑气漩应扣 8 点内力")
+	assertions.assert_eq(swirl_battle.get_unit("bandit").hp, 60 - 24, "剑气漩应命中山道强人")
+	assertions.assert_eq(swirl_battle.get_unit("lackey").hp, 60 - 24, "剑气漩应命中山道喽啰")
+
+	# 内力不足时剑气漩应失败、不扣血
+	var swirl_low_mp = system.create_battle(state, _sample_context(), repository)
+	swirl_low_mp.get_unit("hero").cell = {"q": 4, "r": 2}
+	swirl_low_mp.get_unit("hero").mp = 3
+	var swirl_low_result = system.resolve_action(swirl_low_mp, "hero", "sword_aura_swirl", [Vector2i(5, 2)])
+	assertions.assert_true(not bool(swirl_low_result.get("success", false)), "内力不足时剑气漩应失败")
+	assertions.assert_eq(swirl_low_mp.get_unit("hero").mp, 3, "剑气漩失败不应扣内力")
+	assertions.assert_eq(swirl_low_mp.get_unit("bandit").hp, 60, "剑气漩失败不应造成伤害")
+
 	repository.free()
 	state.free()
 

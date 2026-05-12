@@ -20,4 +20,6 @@ func run(assertions) -> void:
 	assertions.assert_eq(repository.get_actor("missing_id"), {}, "缺失角色编号应返回空字典")
 	assertions.assert_true(repository.terrains.size() >= 4, "应加载至少 4 种地形")
 	assertions.assert_true(repository.get_terrain("grass").has("name"), "草地应有 name 字段")
+	assertions.assert_eq(repository.get_martial_art("sword_aura_swirl").get("name", ""), "剑气漩", "应按编号读取剑气漩")
+	assertions.assert_eq(int(repository.get_martial_art("sword_aura_swirl").get("mp_cost", 0)), 8, "剑气漩应消耗 8 点内力")
 	repository.free()

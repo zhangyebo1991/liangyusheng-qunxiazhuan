@@ -22,11 +22,33 @@
     "cost": 5,
     "description": "挺剑直进，可隔一身位刺敌。",
     "proficiency_reward": 0,
+    "shape": "line_2",
     "tactical": {
       "damage_bonus": 4,
       "range": 2,
       "range_shape": "line",
       "mp_cost": 5
+    }
+  },
+  {
+    "id": "sword_aura_swirl",
+    "name": "剑气漩",
+    "school": "江湖",
+    "power": 14,
+    "cost": 8,
+    "description": "凝聚内力一掷，目标处剑气漩起，伤及周遭。",
+    "proficiency_reward": 1,
+    "shape": "target_cross_1",
+    "cast_range": 3,
+    "base_damage": 14,
+    "scale_attr": "atk",
+    "scale_ratio": 0.6,
+    "mp_cost": 8,
+    "tactical": {
+      "damage_bonus": 10,
+      "range": 3,
+      "range_shape": "diamond",
+      "mp_cost": 8
     }
   },
   {
