@@ -120,6 +120,72 @@ func get_attackable_units(battle, unit_id: String) -> Array:
 			result.append(target)
 	return result
 
+func attack_unit(battle, attacker_id: String, defender_id: String) -> Dictionary:
+	var attacker = battle.get_unit(attacker_id) if battle != null else null
+	var defender = battle.get_unit(defender_id) if battle != null else null
+	if attacker == null or defender == null:
+		return {"success": false, "message": "攻击目标不存在。"}
+	if not attacker.is_alive() or not defender.is_alive():
+		return {"success": false, "message": "攻击目标已倒下。"}
+	if attacker.team == defender.team:
+		return {"success": false, "message": "不能攻击同伴。"}
+	if _cell_distance(attacker.cell, defender.cell) > attacker.attack_range:
+		return {"success": false, "message": "目标不在攻击范围内。"}
+
+	var damage = maxi(1, attacker.attack - defender.defense)
+	defender.hp = max(0, defender.hp - damage)
+	battle.append_log("%s攻击%s，造成%d点伤害。" % [attacker.display_name, defender.display_name, damage])
+	if defender.hp <= 0:
+		battle.append_log("%s被击败。" % defender.display_name)
+	check_battle_finished(battle)
+	return {"success": true, "message": "已经攻击。", "damage": damage}
+
+func end_unit_action(battle, unit_id: String) -> Dictionary:
+	var unit = battle.get_unit(unit_id) if battle != null else null
+	if unit == null:
+		return {"success": false, "message": "行动单位不存在。"}
+	unit.reset_charge()
+	if battle.current_unit_id == unit_id:
+		battle.current_unit_id = ""
+	battle.is_action_phase = false
+	return {"success": true, "message": "行动结束。"}
+
+func resolve_enemy_action(battle, unit_id: String) -> Dictionary:
+	var unit = battle.get_unit(unit_id) if battle != null else null
+	if unit == null or not unit.is_alive():
+		return {"success": false, "message": "敌人不存在。"}
+	var target = _first_living_player(battle)
+	if target == null:
+		check_battle_finished(battle)
+		return {"success": false, "message": "玩家单位不存在。"}
+
+	if _cell_distance(unit.cell, target.cell) > unit.attack_range:
+		var best_cell = _best_enemy_move_cell(battle, unit, target)
+		move_unit(battle, unit.unit_id, best_cell)
+	if unit.is_alive() and target.is_alive() and _cell_distance(unit.cell, target.cell) <= unit.attack_range:
+		attack_unit(battle, unit.unit_id, target.unit_id)
+	if not battle.is_finished:
+		end_unit_action(battle, unit.unit_id)
+	return {"success": true, "message": "敌人已经行动。"}
+
+func resolve_retreat(battle) -> Dictionary:
+	if battle == null:
+		return {"success": false, "message": "战斗尚未准备好。"}
+	if not battle.is_finished:
+		battle.append_log("暂退数步。")
+		battle.finish(false)
+	return {"success": true, "message": "暂退数步。"}
+
+func check_battle_finished(battle) -> void:
+	if battle == null or battle.is_finished:
+		return
+	if not battle.has_living_team(TacticalBattleStateScript.TEAM_PLAYER):
+		battle.append_log("气血不支，暂退数步。")
+		battle.finish(false)
+	elif not battle.has_living_team(TacticalBattleStateScript.TEAM_ENEMY):
+		battle.append_log("敌人尽数败退。")
+		battle.finish(true)
+
 func _build_unit(raw_unit: Dictionary, game_state, source):
 	var actor_id = str(raw_unit.get("actor_id", ""))
 	var actor = source.get_actor(actor_id) if source != null and source.has_method("get_actor") else {}
@@ -170,3 +236,22 @@ func _read_cell(cell: Dictionary) -> Dictionary:
 
 func _cell_distance(a: Dictionary, b: Dictionary) -> int:
 	return abs(int(a.get("q", 0)) - int(b.get("q", 0))) + abs(int(a.get("r", 0)) - int(b.get("r", 0)))
+
+func _first_living_player(battle):
+	var players = battle.get_living_units_by_team(TacticalBattleStateScript.TEAM_PLAYER)
+	if players.is_empty():
+		return null
+	return players[0]
+
+func _best_enemy_move_cell(battle, unit, target) -> Dictionary:
+	var cells = get_movable_cells(battle, unit.unit_id)
+	if cells.is_empty():
+		return unit.cell.duplicate(true)
+	var best = cells[0]
+	var best_distance = _cell_distance(best, target.cell)
+	for cell in cells:
+		var distance = _cell_distance(cell, target.cell)
+		if distance < best_distance:
+			best = cell
+			best_distance = distance
+	return best.duplicate(true)

@@ -47,6 +47,39 @@ func run(assertions) -> void:
 	assertions.assert_eq(attackable_after_move.size(), 1, "移动后应能攻击相邻敌人")
 	assertions.assert_eq(attackable_after_move[0].unit_id, "bandit", "可攻击目标应为山道强人")
 
+	var attack_result = system.attack_unit(battle, "hero", "bandit")
+	assertions.assert_true(bool(attack_result.get("success", false)), "攻击相邻敌人应成功")
+	assertions.assert_eq(battle.get_unit("bandit").hp, 46, "普通攻击应按攻击减防御造成伤害")
+	assertions.assert_true(battle.log.has("云游少侠攻击山道强人，造成14点伤害。"), "普通攻击应写入战斗日志")
+
+	system.end_unit_action(battle, "hero")
+	assertions.assert_eq(battle.get_unit("hero").charge, 0, "结束行动应清空当前单位集气")
+	assertions.assert_true(not battle.is_action_phase, "结束行动后应恢复集气阶段")
+	assertions.assert_eq(battle.current_unit_id, "", "结束行动后应清空当前行动单位")
+
+	var enemy_battle = system.create_battle(state, _sample_context(), repository)
+	enemy_battle.get_unit("bandit").cell = {"q": 2, "r": 2}
+	enemy_battle.get_unit("hero").cell = {"q": 1, "r": 2}
+	var ai_result = system.resolve_enemy_action(enemy_battle, "bandit")
+	assertions.assert_true(bool(ai_result.get("success", false)), "敌人在攻击范围内应自动行动成功")
+	assertions.assert_eq(enemy_battle.get_unit("hero").hp, 96, "敌人普通攻击应扣除主角气血")
+
+	var finish_battle = system.create_battle(state, _sample_context(), repository)
+	finish_battle.get_unit("bandit").hp = 1
+	finish_battle.get_unit("lackey").hp = 0
+	finish_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	system.attack_unit(finish_battle, "hero", "bandit")
+	assertions.assert_true(finish_battle.is_finished, "击败全部敌人后战棋应结束")
+	assertions.assert_true(finish_battle.victory, "击败全部敌人后应标记胜利")
+	var payload = finish_battle.to_result_dictionary()
+	assertions.assert_eq(payload.get("source_object_id", ""), "enemy_bandit_gate", "战棋胜利 payload 应包含来源对象")
+	assertions.assert_eq(payload.get("quest_id", ""), "quest_mountain_trial", "战棋胜利 payload 应包含任务编号")
+
+	var retreat_battle = system.create_battle(state, _sample_context(), repository)
+	system.resolve_retreat(retreat_battle)
+	assertions.assert_true(retreat_battle.is_finished, "暂退应结束战棋")
+	assertions.assert_true(not retreat_battle.victory, "暂退不应标记胜利")
+
 	repository.free()
 	state.free()
 
