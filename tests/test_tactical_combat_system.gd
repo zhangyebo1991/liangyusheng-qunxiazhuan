@@ -22,6 +22,10 @@ func run(assertions) -> void:
 	var battle = system.create_battle(state, _sample_context(), repository)
 	assertions.assert_eq(battle.units.size(), 3, "战棋战斗应创建 3 个单位")
 	assertions.assert_eq(battle.get_unit("hero").hp, 100, "主角单位应读取当前 GameState 气血")
+	assertions.assert_eq(battle.get_unit("hero").max_mp, 20, "玩家战棋单位应读取 GameState 最大内力")
+	assertions.assert_eq(battle.get_unit("hero").mp, 20, "玩家战棋单位开战时内力应回满")
+	assertions.assert_true(battle.get_unit("hero").martial_art_ids.has("basic_sword"), "玩家战棋单位应读取基础剑法")
+	assertions.assert_true(battle.get_unit("hero").martial_art_ids.has("straight_sword_thrust"), "玩家战棋单位应读取穿云刺")
 	assertions.assert_eq(battle.get_unit("bandit").display_name, "山道强人", "敌人单位应读取角色名")
 	assertions.assert_eq(battle.source_object_id, "enemy_bandit_gate", "战棋战斗应保存来源对象")
 
@@ -52,6 +56,41 @@ func run(assertions) -> void:
 	assertions.assert_eq(battle.get_unit("bandit").hp, 46, "普通攻击应按攻击减防御造成伤害")
 	assertions.assert_true(battle.log.has("云游少侠攻击山道强人，造成14点伤害。"), "普通攻击应写入战斗日志")
 
+	var skill_battle = system.create_battle(state, _sample_context(), repository)
+	skill_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	var skill_result = system.use_martial_art(skill_battle, "hero", "bandit", "basic_sword", repository)
+	assertions.assert_true(bool(skill_result.get("success", false)), "内力足够且近身时应能使用基础剑法")
+	assertions.assert_eq(skill_result.get("damage", 0), 20, "基础剑法伤害应为攻击加招式加值再减防御")
+	assertions.assert_eq(skill_battle.get_unit("bandit").hp, 40, "基础剑法应扣除敌人气血")
+	assertions.assert_eq(skill_battle.get_unit("hero").mp, 17, "基础剑法应消耗 3 点内力")
+	assertions.assert_true(skill_battle.log.has("云游少侠使出基础剑法攻击山道强人，造成20点伤害。"), "基础剑法应写入战斗日志")
+
+	var line_battle = system.create_battle(state, _sample_context(), repository)
+	line_battle.get_unit("hero").cell = {"q": 3, "r": 2}
+	var line_targets = system.get_attackable_units_for_martial_art(line_battle, "hero", "straight_sword_thrust", repository)
+	assertions.assert_eq(line_targets.size(), 1, "穿云刺应能选中两格直线目标")
+	assertions.assert_eq(line_targets[0].unit_id, "bandit", "穿云刺直线目标应为山道强人")
+	var line_result = system.use_martial_art(line_battle, "hero", "bandit", "straight_sword_thrust", repository)
+	assertions.assert_true(bool(line_result.get("success", false)), "穿云刺应能攻击两格直线目标")
+	assertions.assert_eq(line_result.get("damage", 0), 18, "穿云刺伤害应使用战棋伤害加值")
+	assertions.assert_eq(line_battle.get_unit("hero").mp, 15, "穿云刺应消耗 5 点内力")
+
+	var diagonal_battle = system.create_battle(state, _sample_context(), repository)
+	diagonal_battle.get_unit("hero").cell = {"q": 4, "r": 1}
+	var diagonal_result = system.use_martial_art(diagonal_battle, "hero", "bandit", "straight_sword_thrust", repository)
+	assertions.assert_true(not bool(diagonal_result.get("success", false)), "穿云刺不能攻击斜向目标")
+	assertions.assert_eq(diagonal_battle.get_unit("hero").mp, 20, "招式失败不应扣内力")
+
+	var low_mp_battle = system.create_battle(state, _sample_context(), repository)
+	low_mp_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	low_mp_battle.get_unit("hero").mp = 2
+	var low_mp_result = system.use_martial_art(low_mp_battle, "hero", "bandit", "basic_sword", repository)
+	assertions.assert_true(not bool(low_mp_result.get("success", false)), "内力不足时基础剑法应失败")
+	assertions.assert_eq(low_mp_battle.get_unit("hero").mp, 2, "内力不足失败不应扣资源")
+
+	var unknown_skill_result = system.use_martial_art(skill_battle, "hero", "bandit", "rough_fist", repository)
+	assertions.assert_true(not bool(unknown_skill_result.get("success", false)), "不能使用未学会的武学")
+
 	system.end_unit_action(battle, "hero")
 	assertions.assert_eq(battle.get_unit("hero").charge, 0, "结束行动应清空当前单位集气")
 	assertions.assert_true(not battle.is_action_phase, "结束行动后应恢复集气阶段")
@@ -74,6 +113,14 @@ func run(assertions) -> void:
 	var payload = finish_battle.to_result_dictionary()
 	assertions.assert_eq(payload.get("source_object_id", ""), "enemy_bandit_gate", "战棋胜利 payload 应包含来源对象")
 	assertions.assert_eq(payload.get("quest_id", ""), "quest_mountain_trial", "战棋胜利 payload 应包含任务编号")
+
+	var skill_finish_battle = system.create_battle(state, _sample_context(), repository)
+	skill_finish_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	skill_finish_battle.get_unit("bandit").hp = 1
+	skill_finish_battle.get_unit("lackey").hp = 0
+	system.use_martial_art(skill_finish_battle, "hero", "bandit", "basic_sword", repository)
+	assertions.assert_true(skill_finish_battle.is_finished, "武学击败全部敌人后战棋应结束")
+	assertions.assert_true(skill_finish_battle.victory, "武学击败全部敌人后应标记胜利")
 
 	var retreat_battle = system.create_battle(state, _sample_context(), repository)
 	system.resolve_retreat(retreat_battle)

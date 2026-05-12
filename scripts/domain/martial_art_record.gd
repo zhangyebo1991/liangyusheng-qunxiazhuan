@@ -8,6 +8,11 @@ var power: int = 0
 var cost: int = 0
 var description: String = ""
 var proficiency_reward: int = 1
+var tactical: Dictionary = {}
+var tactical_damage_bonus: int = 0
+var tactical_range: int = 0
+var tactical_range_shape: String = ""
+var tactical_mp_cost: int = 0
 
 static func from_dictionary(data: Dictionary):
 	var martial_art = new()
@@ -18,4 +23,26 @@ static func from_dictionary(data: Dictionary):
 	martial_art.cost = int(data.get("cost", 0))
 	martial_art.description = str(data.get("description", ""))
 	martial_art.proficiency_reward = max(0, int(data.get("proficiency_reward", 1)))
+	martial_art.tactical = _read_tactical_config(data.get("tactical", {}), martial_art.cost)
+	martial_art.tactical_damage_bonus = int(martial_art.tactical.get("damage_bonus", 0))
+	martial_art.tactical_range = int(martial_art.tactical.get("range", 0))
+	martial_art.tactical_range_shape = str(martial_art.tactical.get("range_shape", ""))
+	martial_art.tactical_mp_cost = int(martial_art.tactical.get("mp_cost", 0))
 	return martial_art
+
+func has_tactical_config() -> bool:
+	return not tactical.is_empty() and tactical_range > 0 and not tactical_range_shape.is_empty()
+
+static func _read_tactical_config(value: Variant, fallback_cost: int) -> Dictionary:
+	if typeof(value) != TYPE_DICTIONARY:
+		return {}
+	var range_shape = str(value.get("range_shape", ""))
+	var attack_range = max(1, int(value.get("range", 1)))
+	if range_shape.is_empty():
+		return {}
+	return {
+		"damage_bonus": int(value.get("damage_bonus", 0)),
+		"range": attack_range,
+		"range_shape": range_shape,
+		"mp_cost": max(0, int(value.get("mp_cost", fallback_cost))),
+	}

@@ -49,6 +49,7 @@ func run(assertions) -> void:
 
 	var game_state = GameStateScript.new()
 	game_state.start_new_game()
+	assertions.assert_eq(game_state.hero_max_mp, 20, "新游戏主角最大内力应为 20")
 	game_state.quest_system.start_quest("quest_mountain_trial")
 	game_state.apply_battle_result({
 		"victory": true,
@@ -62,6 +63,28 @@ func run(assertions) -> void:
 	assertions.assert_eq(game_state.quest_system.get_status("quest_mountain_trial"), "ready_to_complete", "胜利后山道任务应进入可交付状态")
 	assertions.assert_eq(game_state.hero_hp, 44, "胜利后应保存战斗剩余气血")
 	assertions.assert_eq(game_state.get_martial_proficiency("basic_sword"), 1, "胜利后应增加基础剑法熟练度")
+
+	var serialized_with_mp = game_state.to_dictionary()
+	assertions.assert_eq(serialized_with_mp.get("hero_max_mp", 0), 20, "存档应保存主角最大内力")
+
+	var restored_with_mp = GameStateScript.new()
+	restored_with_mp.from_dictionary(serialized_with_mp)
+	assertions.assert_eq(restored_with_mp.hero_max_mp, 20, "读档应恢复主角最大内力")
+
+	var old_save_state = GameStateScript.new()
+	old_save_state.from_dictionary({
+		"party": game_state.party.to_dictionary(),
+		"quests": game_state.quest_system.to_dictionary(),
+		"map_state": game_state.map_state.to_dictionary(),
+		"journal_state": game_state.journal_state.to_dictionary(),
+		"flags": game_state.flags.duplicate(true),
+		"hero_hp": 90,
+		"hero_max_hp": 120,
+		"martial_proficiency": {},
+	})
+	assertions.assert_eq(old_save_state.hero_max_mp, 20, "旧存档缺少最大内力时应使用默认值")
+	restored_with_mp.free()
+	old_save_state.free()
 
 	var effect_state = GameStateScript.new()
 	effect_state.start_new_game()

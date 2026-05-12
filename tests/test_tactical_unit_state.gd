@@ -20,9 +20,12 @@ func run(assertions) -> void:
 		"defense": 8,
 		"move_range": 3,
 		"attack_range": 1,
+		"mp": 12,
+		"max_mp": 20,
 		"charge_speed": 240,
 		"charge": 700,
 		"cell": {"q": 1, "r": 2},
+		"martial_art_ids": ["basic_sword", "straight_sword_thrust"],
 	})
 
 	assertions.assert_eq(unit.unit_id, "hero", "战棋单位应读取单位编号")
@@ -33,6 +36,10 @@ func run(assertions) -> void:
 	assertions.assert_eq(unit.max_hp, 120, "战棋单位应读取最大气血")
 	assertions.assert_eq(unit.cell.get("q", -1), 1, "战棋单位应读取 q 坐标")
 	assertions.assert_eq(unit.cell.get("r", -1), 2, "战棋单位应读取 r 坐标")
+	assertions.assert_eq(unit.mp, 12, "战棋单位应读取当前内力")
+	assertions.assert_eq(unit.max_mp, 20, "战棋单位应读取最大内力")
+	assertions.assert_eq(unit.martial_art_ids.size(), 2, "战棋单位应读取可用武学列表")
+	assertions.assert_true(unit.martial_art_ids.has("straight_sword_thrust"), "战棋单位应保存穿云刺编号")
 	assertions.assert_true(unit.is_alive(), "气血大于 0 的单位应存活")
 
 	unit.reset_charge()
@@ -42,6 +49,9 @@ func run(assertions) -> void:
 	assertions.assert_eq(serialized.get("unit_id", ""), "hero", "单位序列化应保存单位编号")
 	assertions.assert_eq(serialized.get("cell", {}).get("q", -1), 1, "单位序列化应保存 q 坐标")
 	assertions.assert_eq(serialized.get("charge", -1), 0, "单位序列化应保存当前集气")
+	assertions.assert_eq(serialized.get("mp", -1), 12, "单位序列化应保存当前内力")
+	assertions.assert_eq(serialized.get("max_mp", -1), 20, "单位序列化应保存最大内力")
+	assertions.assert_true(serialized.get("martial_art_ids", []).has("basic_sword"), "单位序列化应保存武学列表")
 
 	unit.hp = 0
 	assertions.assert_true(not unit.is_alive(), "气血为 0 的单位不应存活")

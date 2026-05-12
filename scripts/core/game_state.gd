@@ -9,6 +9,7 @@ const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
 const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
 
 const DEFAULT_HERO_MAX_HP := 120
+const DEFAULT_HERO_MAX_MP := 20
 const STARTING_COINS := 80
 const DEFAULT_MAP_SCENE_PATH := "res://scenes/mountain_pass.tscn"
 
@@ -20,6 +21,7 @@ var flags: Dictionary = {}
 var battle_context: Dictionary = {}
 var hero_hp := DEFAULT_HERO_MAX_HP
 var hero_max_hp := DEFAULT_HERO_MAX_HP
+var hero_max_mp := DEFAULT_HERO_MAX_MP
 var martial_proficiency: Dictionary = {}
 
 func start_new_game() -> void:
@@ -31,6 +33,7 @@ func start_new_game() -> void:
 	map_state = MapStateScript.new()
 	journal_state = JournalStateScript.new()
 	hero_max_hp = DEFAULT_HERO_MAX_HP
+	hero_max_mp = DEFAULT_HERO_MAX_MP
 	hero_hp = hero_max_hp
 	martial_proficiency = {}
 	set_current_map("mountain_pass", Vector2(160, 320))
@@ -160,6 +163,7 @@ func to_dictionary() -> Dictionary:
 		"flags": flags.duplicate(true),
 		"hero_hp": hero_hp,
 		"hero_max_hp": hero_max_hp,
+		"hero_max_mp": hero_max_mp,
 		"martial_proficiency": _normalized_martial_proficiency(),
 	}
 
@@ -178,6 +182,9 @@ func from_dictionary(data: Dictionary) -> void:
 	hero_max_hp = int(data.get("hero_max_hp", DEFAULT_HERO_MAX_HP))
 	if hero_max_hp <= 0:
 		hero_max_hp = DEFAULT_HERO_MAX_HP
+	hero_max_mp = int(data.get("hero_max_mp", DEFAULT_HERO_MAX_MP))
+	if hero_max_mp <= 0:
+		hero_max_mp = DEFAULT_HERO_MAX_MP
 	hero_hp = int(data.get("hero_hp", hero_max_hp))
 	martial_proficiency = _read_martial_proficiency(data.get("martial_proficiency", {}))
 	_normalize_hero_hp()
