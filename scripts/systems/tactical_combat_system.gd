@@ -26,6 +26,10 @@ func create_battle(game_state, context: Dictionary, data_source = null):
 		battle.battlefield_width = max(1, int(battlefield.get("width", 7)))
 		battle.battlefield_height = max(1, int(battlefield.get("height", 5)))
 
+	# 写入战场地形矩阵：优先取 context.terrain_grid，缺失或非法时兜底全 grass 6×8。
+	var raw_grid = context.get("terrain_grid", null)
+	battle.terrain_grid = _normalize_terrain_grid(raw_grid)
+
 	var raw_units = context.get("units", [])
 	if typeof(raw_units) != TYPE_ARRAY:
 		raw_units = []
@@ -233,6 +237,27 @@ func check_battle_finished(battle) -> void:
 	elif not battle.has_living_team(TacticalBattleStateScript.TEAM_ENEMY):
 		battle.append_log("敌人尽数败退。")
 		battle.finish(true)
+
+# 兜底地形矩阵：传入合法 6 行 × 8 列字符串数组则原样深拷贝；
+# 否则回退默认全 grass 的 6×8 矩阵。
+func _normalize_terrain_grid(raw_grid) -> Array:
+	var fallback: Array = []
+	for _r in range(6):
+		var row: Array = []
+		for _c in range(8):
+			row.append("grass")
+		fallback.append(row)
+	if typeof(raw_grid) != TYPE_ARRAY or raw_grid.size() != 6:
+		return fallback
+	var normalized: Array = []
+	for row in raw_grid:
+		if typeof(row) != TYPE_ARRAY or row.size() != 8:
+			return fallback
+		var clean_row: Array = []
+		for cell in row:
+			clean_row.append(str(cell))
+		normalized.append(clean_row)
+	return normalized
 
 func _build_unit(raw_unit: Dictionary, game_state, source):
 	var actor_id = str(raw_unit.get("actor_id", ""))

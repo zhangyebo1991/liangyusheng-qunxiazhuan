@@ -19,6 +19,11 @@ func run(assertions) -> void:
 	assertions.assert_eq(bandit_gate.get("battlefield", {}).get("width", 0), 7, "山道战棋战场宽度应为 7")
 	assertions.assert_eq(bandit_gate.get("battlefield", {}).get("height", 0), 5, "山道战棋战场高度应为 5")
 	assertions.assert_eq(bandit_gate.get("time_mode", ""), "pause_on_action", "山道战棋应配置行动暂停集气")
+	# 山道战棋触发节点应配置 6 行 × 8 列地形矩阵
+	var bandit_terrain = bandit_gate.get("terrain_grid", [])
+	assertions.assert_eq(bandit_terrain.size(), 6, "山道战棋应配置 6 行地形")
+	if bandit_terrain.size() >= 1:
+		assertions.assert_eq(bandit_terrain[0].size(), 8, "山道战棋地形每行应有 8 列")
 	var bandit_units = bandit_gate.get("units", [])
 	assertions.assert_eq(bandit_units.size(), 3, "山道战棋应配置主角与 2 名敌人")
 	if bandit_units.size() >= 3:

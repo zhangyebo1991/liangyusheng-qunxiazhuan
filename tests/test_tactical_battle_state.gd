@@ -19,6 +19,10 @@ func run(assertions) -> void:
 	battle.battlefield_width = 7
 	battle.battlefield_height = 5
 
+	# 新建战棋状态应有 terrain_grid 字段（默认空数组），便于战斗系统赋值
+	assertions.assert_true(battle.terrain_grid != null, "新建战棋状态应有 terrain_grid 字段")
+	assertions.assert_eq(battle.terrain_grid.size(), 0, "默认 terrain_grid 应为空数组")
+
 	var hero = TacticalUnitStateScript.new()
 	hero.from_dictionary({
 		"unit_id": "hero",

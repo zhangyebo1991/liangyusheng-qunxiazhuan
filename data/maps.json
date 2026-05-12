@@ -31,6 +31,14 @@
         "encounter_id": "mountain_bandit_tutorial",
         "battlefield": {"width": 7, "height": 5},
         "time_mode": "pause_on_action",
+        "terrain_grid": [
+          ["grass","grass","grass","water","grass","grass","grass","grass"],
+          ["grass","grass","grass","water","grass","grass","tree","grass"],
+          ["grass","tree","grass","bridge","grass","grass","grass","grass"],
+          ["grass","grass","grass","water","grass","grass","grass","grass"],
+          ["grass","grass","grass","water","grass","grass","tree","grass"],
+          ["grass","grass","grass","water","grass","grass","grass","grass"]
+        ],
         "units": [
           {
             "unit_id": "hero",

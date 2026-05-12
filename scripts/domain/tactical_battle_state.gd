@@ -9,6 +9,9 @@ const TIME_MODE_PAUSE_ON_ACTION := "pause_on_action"
 var battlefield_width: int = 7
 var battlefield_height: int = 5
 var time_mode: String = TIME_MODE_PAUSE_ON_ACTION
+# 战场地形矩阵：6 行 × 8 列字符串地形编号（grass / water / tree / bridge ……），
+# 由 maps.json 战斗触发节点提供，缺省时由 tactical_combat_system 兜底全 grass。
+var terrain_grid: Array = []
 var units: Array = []
 var current_unit_id: String = ""
 var is_action_phase := false
@@ -84,6 +87,7 @@ func to_dictionary() -> Dictionary:
 		"battlefield_width": battlefield_width,
 		"battlefield_height": battlefield_height,
 		"time_mode": time_mode,
+		"terrain_grid": terrain_grid.duplicate(true),
 		"units": serialized_units,
 		"current_unit_id": current_unit_id,
 		"is_action_phase": is_action_phase,

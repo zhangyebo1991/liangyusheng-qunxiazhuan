@@ -40,6 +40,7 @@ const TestInnRestLoopScript = preload("res://tests/test_inn_rest_loop.gd")
 const TestDeathWarpToInnScript = preload("res://tests/test_death_warp_to_inn.gd")
 const TestHudMpDisplayScript = preload("res://tests/test_hud_mp_display.gd")
 const TestTerrainSystemScript = preload("res://tests/test_terrain_system.gd")
+const TestTacticalBattleTerrainGridScript = preload("res://tests/test_tactical_battle_terrain_grid.gd")
 
 func _initialize() -> void:
 	var assertions = TestAssertionsScript.new()
@@ -83,6 +84,7 @@ func _initialize() -> void:
 		TestDeathWarpToInnScript.new(),
 		TestHudMpDisplayScript.new(),
 		TestTerrainSystemScript.new(),
+		TestTacticalBattleTerrainGridScript.new(),
 	]
 
 	for suite in suites:
