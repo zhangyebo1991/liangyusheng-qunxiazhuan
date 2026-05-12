@@ -80,6 +80,14 @@ func run(assertions) -> void:
 	assertions.assert_true(retreat_battle.is_finished, "暂退应结束战棋")
 	assertions.assert_true(not retreat_battle.victory, "暂退不应标记胜利")
 
+	var defeat_battle = system.create_battle(state, _sample_context(), repository)
+	defeat_battle.get_unit("hero").hp = 1
+	defeat_battle.get_unit("bandit").cell = {"q": 2, "r": 2}
+	defeat_battle.get_unit("hero").cell = {"q": 1, "r": 2}
+	system.resolve_enemy_action(defeat_battle, "bandit")
+	assertions.assert_true(defeat_battle.is_finished, "主角被击败后战棋应结束")
+	assertions.assert_true(not defeat_battle.victory, "主角被击败后不应标记胜利")
+
 	repository.free()
 	state.free()
 

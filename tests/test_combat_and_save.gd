@@ -97,9 +97,28 @@ func run(assertions) -> void:
 	assertions.assert_eq(failure_state.hero_hp, 1, "失败后主角气血应钳制到安全值")
 	assertions.assert_eq(failure_state.get_martial_proficiency("basic_sword"), 0, "失败后不应增加熟练度")
 	assertions.assert_eq(failure_state.map_state.player_position, Vector2(160, 320), "失败后应回到山道入口")
+
+	var tactical_state = GameStateScript.new()
+	tactical_state.start_new_game()
+	tactical_state.quest_system.start_quest("quest_mountain_trial")
+	tactical_state.apply_battle_result({
+		"victory": true,
+		"hero_hp": 72,
+		"source_map_id": "mountain_pass",
+		"source_object_id": "enemy_bandit_gate",
+		"quest_id": "quest_mountain_trial",
+		"martial_art_id": "basic_sword",
+		"proficiency_reward": 1,
+		"log": ["敌人尽数败退。"]
+	})
+	assertions.assert_true(tactical_state.is_map_object_resolved("enemy_bandit_gate"), "战棋胜利后强人触发点应被标记为已解决")
+	assertions.assert_eq(tactical_state.quest_system.get_status("quest_mountain_trial"), "ready_to_complete", "战棋胜利后山道任务应进入可交付状态")
+	assertions.assert_eq(tactical_state.hero_hp, 72, "战棋胜利后应保存主角剩余气血")
+	assertions.assert_eq(tactical_state.get_martial_proficiency("basic_sword"), 1, "战棋胜利后应增加基础剑法熟练度")
 	repository.free()
 	game_state.free()
 	failure_state.free()
+	tactical_state.free()
 
 	var save_system = SaveSystemScript.new()
 	var state = {
