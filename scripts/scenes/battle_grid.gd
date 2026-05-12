@@ -8,6 +8,8 @@ const TILES_DIR := "res://assets/kenney_tiny-battle/Tiles/"
 var _terrain_grid: Array = []
 var _terrain_system = null
 var _tile_sprites: Dictionary = {}  # Vector2i → Sprite2D
+var _range_overlays: Array = []  # ColorRect 节点列表，用于范围三态可视化
+var _range_mode: int = 0  # 当前范围模式（NONE=0/MOVE=1/ATTACK=2/SKILL_DIR=3/SKILL_TARGET=4）
 
 func setup(terrain_grid: Array, terrain_system) -> void:
 	_terrain_grid = terrain_grid
@@ -42,3 +44,29 @@ func _build_tiles() -> void:
 
 func grid_to_pixel(cell: Vector2i) -> Vector2:
 	return Vector2(cell.x * TILE_SIZE + TILE_SIZE / 2, cell.y * TILE_SIZE + TILE_SIZE / 2)
+
+# Task 11: 范围 overlay。mode = 0 清空；其余按颜色绘制半透明覆盖。
+# MOVE = 蓝半透；ATTACK / SKILL_DIR / SKILL_TARGET = 红半透。
+func set_range_overlay(mode: int, cells: Array) -> void:
+	for n in _range_overlays:
+		if is_instance_valid(n):
+			n.queue_free()
+	_range_overlays.clear()
+	_range_mode = int(mode)
+	if _range_mode == 0:
+		return
+	var color: Color
+	if _range_mode == 1:
+		color = Color(0.25, 0.55, 1.0, 0.35)
+	else:
+		color = Color(1.0, 0.3, 0.3, 0.35)
+	for c in cells:
+		if typeof(c) != TYPE_VECTOR2I:
+			continue
+		var rect := ColorRect.new()
+		rect.color = color
+		rect.size = Vector2(TILE_SIZE, TILE_SIZE)
+		rect.position = Vector2(c.x * TILE_SIZE, c.y * TILE_SIZE)
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(rect)
+		_range_overlays.append(rect)

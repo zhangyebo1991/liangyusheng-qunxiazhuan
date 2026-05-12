@@ -6,8 +6,11 @@ const TacticalBattleStateScript = preload("res://scripts/domain/tactical_battle_
 const BattleGridScript = preload("res://scripts/scenes/battle_grid.gd")
 const TerrainSystemScript = preload("res://scripts/systems/terrain_system.gd")
 const TacticalUnitSpriteScript = preload("res://scripts/scenes/tactical_unit_sprite.gd")
+const TacticalRangeSystemScript = preload("res://scripts/systems/tactical_range_system.gd")
 const TACTICAL_CELL_SIZE := 64
 const TACTICAL_GRID_OFFSET := Vector2(64, 48)
+
+enum RangeMode { NONE = 0, MOVE = 1, ATTACK = 2, SKILL_DIR_PREVIEW = 3, SKILL_TARGET_PREVIEW = 4 }
 
 var title_label: Label
 var hero_hp_label: Label
@@ -34,6 +37,11 @@ var cell_buttons: Dictionary = {}
 var cell_visuals: Dictionary = {}
 var selected_unit_id: String = ""
 var _unit_sprites: Dictionary = {}  # unit_id → TacticalUnitSpriteScript 实例（挂在 battle_grid 下）
+var tactical_range_system = TacticalRangeSystemScript.new()
+var range_mode: int = RangeMode.NONE
+var range_cells: Array = []  # Array[Vector2i]
+var action_bar = null  # Task 12 底部行动栏（BattleActionBarScript 实例）
+var charge_bar = null  # Task 13 顶部集气进度条（ChargeBarScript 实例）
 
 func _ready() -> void:
 	context = GameState.peek_battle_context()
@@ -131,6 +139,7 @@ func _create_tactical_ui() -> void:
 	terrain_system.set_repository(DataRepository)
 	if tactical_battle_state != null:
 		battle_grid.setup(tactical_battle_state.terrain_grid, terrain_system)
+	tactical_range_system.set_terrain_system(terrain_system)
 
 	unit_panel = VBoxContainer.new()
 	unit_panel.position = Vector2(820, 56)
@@ -502,3 +511,35 @@ func _enemy_id() -> String:
 	if enemy_id.is_empty():
 		return "bandit_01"
 	return enemy_id
+
+# Task 11: 切换范围模式（NONE/MOVE/ATTACK/SKILL_DIR_PREVIEW/SKILL_TARGET_PREVIEW），
+# 同步给 battle_grid 绘制 overlay 并广播事件。
+func _set_range_mode(mode: int, cells: Array = []) -> void:
+	range_mode = mode
+	range_cells = cells
+	if battle_grid != null:
+		battle_grid.set_range_overlay(mode, cells)
+	EventBus.tactical_range_mode_changed.emit(mode)
+
+# Task 11/12: 收集所有存活敌方单位的 Vector2i 坐标，给 tactical_range_system 用。
+func _enemy_positions() -> Array:
+	var arr: Array = []
+	if tactical_battle_state == null:
+		return arr
+	for unit in tactical_battle_state.units:
+		if not unit.is_alive():
+			continue
+		if unit.team != TacticalBattleStateScript.TEAM_PLAYER:
+			arr.append(Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0))))
+	return arr
+
+# Task 11/12: 把 unit.cell 字典转 Dictionary→Vector2i 与 unit.position 兼容，
+# 为 range_system 提供调用所需的 unit 视图。
+func _unit_view_for_range(unit) -> Dictionary:
+	if unit == null:
+		return {}
+	var pos := Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0)))
+	return {
+		"position": pos,
+		"move": int(unit.move_range),
+	}
