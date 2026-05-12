@@ -46,6 +46,10 @@
 
 江湖记事切片使用 `JournalState` 保存追踪任务、可追查传闻和已触发传闻，使用 `JournalSystem` 统一处理传闻记录、传闻归档和任务追踪上限。地图中按 `J` 或点击 HUD“记事”按钮打开独立页面。HUD 只显示最多 3 个追踪任务，记事页面负责展示任务列表和传闻列表，不直接修改任务、传闻或存档状态。
 
+## 菱形战棋与集气基础切片
+
+菱形战棋切片新增 `TacticalUnitState` 和 `TacticalBattleState` 保存战棋单位与战斗运行时状态，新增 `TacticalCombatSystem` 处理实时集气、行动暂停、移动范围、攻击范围、敌人 AI、胜负和暂退。山道强人触发点通过 `data/maps.json` 声明 `battle_mode = "tactical"`、战场尺寸、单位站位和集气速度；`battle_screen.gd` 根据战斗上下文分流普通回合战斗和战棋战斗。战棋胜利仍生成 `GameState.apply_battle_result()` 可处理的 payload，不直接修改任务、地图对象或熟练度。
+
 ## 验证命令
 
 ```powershell
