@@ -46,6 +46,9 @@ const TestSwordAuraSwirlSkillScript = preload("res://tests/test_sword_aura_swirl
 const TestBattleActionEmptyCastScript = preload("res://tests/test_battle_action_empty_cast.gd")
 const TestBattleScreenRangeModeScript = preload("res://tests/test_battle_screen_range_mode.gd")
 const TestChargeBarLayoutScript = preload("res://tests/test_charge_bar_layout.gd")
+const TestBattleScreenSkillMenuScript = preload("res://tests/test_battle_screen_skill_menu.gd")
+const TestBattleScreenTargetSkillScript = preload("res://tests/test_battle_screen_target_skill.gd")
+const TestBattleScreenMoveAnimationScript = preload("res://tests/test_battle_screen_move_animation.gd")
 
 func _initialize() -> void:
 	var assertions = TestAssertionsScript.new()
@@ -95,6 +98,9 @@ func _initialize() -> void:
 		TestBattleActionEmptyCastScript.new(),
 		TestBattleScreenRangeModeScript.new(),
 		TestChargeBarLayoutScript.new(),
+		TestBattleScreenSkillMenuScript.new(),
+		TestBattleScreenTargetSkillScript.new(),
+		TestBattleScreenMoveAnimationScript.new(),
 	]
 
 	for suite in suites:

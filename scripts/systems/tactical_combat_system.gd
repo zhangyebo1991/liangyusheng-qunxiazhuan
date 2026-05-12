@@ -219,10 +219,45 @@ func resolve_action(battle, unit_id: String, action_id: String, target_cells: Ar
 	elif action_id == "attack":
 		result = _resolve_basic_attack(battle, unit, target_cells)
 	else:
-		return {"success": false, "message": "未知行动。"}
+		# Task 17 fallback：未单独写 handler 的 tactical 武学（如方向型「穿云刺」）
+		# 走通用结算：扣 mp_cost，对 target_cells 列表逐格命中扣血。
+		var skill_data: Dictionary = {}
+		if repository != null:
+			skill_data = repository.get_martial_art(action_id)
+		if skill_data.is_empty() or typeof(skill_data.get("tactical", {})) != TYPE_DICTIONARY:
+			return {"success": false, "message": "未知行动。"}
+		result = _resolve_generic_skill(battle, unit, action_id, target_cells, skill_data)
 	if bool(result.get("success", false)):
 		_emit_action_resolved(unit_id, action_id, target_cells)
 	return result
+
+# Task 17: 通用方向型/范围型招式结算。
+# - 扣除 tactical.mp_cost；mp 不足直接失败。
+# - 对 target_cells 内每个敌方占据格结算 max(1, attacker.attack + damage_bonus - defender.defense)。
+# - 空中（无敌人或全是己方）走"挥击落空"日志。
+func _resolve_generic_skill(battle, attacker, action_id: String, target_cells: Array, skill_data: Dictionary) -> Dictionary:
+	var tactical = skill_data.get("tactical", {})
+	var mp_cost: int = int(tactical.get("mp_cost", skill_data.get("mp_cost", 0)))
+	var damage_bonus: int = int(tactical.get("damage_bonus", 0))
+	if attacker.mp < mp_cost:
+		return {"success": false, "message": "内力不足。"}
+	attacker.mp = max(0, attacker.mp - mp_cost)
+	var skill_name: String = str(skill_data.get("name", action_id))
+	var hits: Array = []
+	for cell_v in target_cells:
+		var defender = _find_unit_at_cell_v(battle, cell_v)
+		if defender == null or defender.team == attacker.team or not defender.is_alive():
+			continue
+		var damage: int = maxi(1, attacker.attack + damage_bonus - defender.defense)
+		defender.hp = max(0, defender.hp - damage)
+		hits.append(defender.unit_id)
+		_log(battle, "%s使出%s攻击%s，造成%d点伤害。" % [attacker.display_name, skill_name, defender.display_name, damage])
+		if defender.hp <= 0:
+			_log(battle, "%s被击败。" % defender.display_name)
+	if hits.is_empty():
+		_log(battle, "%s%s落空。" % [attacker.display_name, skill_name])
+	check_battle_finished(battle)
+	return {"success": true, "message": "已经出招。", "hits": hits}
 
 func _resolve_sword_aura_swirl(battle, attacker, target_cells: Array) -> Dictionary:
 	var skill_data = repository.get_martial_art("sword_aura_swirl") if repository != null else {}

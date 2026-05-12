@@ -54,6 +54,13 @@ var panel_actor = null  # Task 15 右上「主角信息卡」
 var battle_log = null  # Task 16 右下「战斗日志」
 var _terrain_system = null  # Task 14 共享给 hover/Tab 切换查地形数据
 var _last_hover_cell: Vector2i = Vector2i(-1, -1)  # Task 14 鼠标 hover 去重
+# Task 17: 技能菜单/方向箭头/目标范围状态
+var _pending_skill_id: String = ""  # 当前 SKILL_DIR_PREVIEW / SKILL_TARGET_PREVIEW 模式锁定的招式 id
+var _direction_buttons: Array = []  # 4 方向箭头 Button 列表（释放后清空）
+var _skill_menu = null  # 当前打开的招式 PopupMenu（多次点击避免重叠）
+# Task 19: 移动滑动动画锁
+var is_animating := false
+var _move_anim_target_cell: Dictionary = {}  # 动画结束后 commit_move 用的目标格
 
 func _ready() -> void:
 	context = GameState.peek_battle_context()
@@ -71,6 +78,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if not is_tactical_mode or tactical_battle_state == null or tactical_battle_state.is_finished:
+		return
+	# Task 19: 动画期间冻结集气推进与敌方 AI，避免动画未完角色已"被攻击/被切换"。
+	if is_animating:
 		return
 	if not tactical_battle_state.is_action_phase:
 		tactical_combat_system.advance_charge(tactical_battle_state, delta)
@@ -405,10 +415,26 @@ func _refresh() -> void:
 	retreat_button.disabled = finished
 
 func _on_tactical_cell_pressed(q: int, r: int) -> void:
+	# Task 19: 动画期间禁用任何点击，避免「移动中又点了攻击」状态错乱。
+	if is_animating:
+		return
 	if not _is_player_action():
 		return
 	var current_unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
 	if current_unit == null:
+		return
+	# Task 18: SKILL_TARGET_PREVIEW 模式下点中心格 → 计算十字爆炸 → resolve_action。
+	if range_mode == RangeMode.SKILL_TARGET_PREVIEW and not _pending_skill_id.is_empty():
+		var clicked := Vector2i(q, r)
+		var hit := false
+		for c in range_cells:
+			if typeof(c) == TYPE_VECTOR2I and Vector2i(c) == clicked:
+				hit = true
+				break
+		if not hit:
+			return
+		var blast: Array = tactical_range_system.get_skill_target_blast_range(_pending_skill_id, clicked)
+		_resolve_skill_action(_pending_skill_id, blast)
 		return
 	var cell = {"q": q, "r": r}
 	var target = _unit_at_cell(cell)
@@ -420,10 +446,14 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 			result = tactical_combat_system.use_martial_art(tactical_battle_state, current_unit.unit_id, target.unit_id, selected_tactical_action_id, DataRepository)
 		if bool(result.get("success", false)) and not tactical_battle_state.is_finished:
 			tactical_combat_system.end_unit_action(tactical_battle_state, current_unit.unit_id)
-	else:
-		tactical_combat_system.move_unit(tactical_battle_state, current_unit.unit_id, cell)
+		_refresh_tactical()
+		_return_if_tactical_finished()
+		return
+	# Task 19: 走移动 → 改为先播滑动动画，动画结束才 commit_move。
+	if _start_move_animation(current_unit, cell):
+		return
+	# 不可移动则原地刷新（兜底，几乎不会触发）。
 	_refresh_tactical()
-	_return_if_tactical_finished()
 
 func _on_tactical_action_selected(action_id: String) -> void:
 	if action_id.is_empty():
@@ -616,8 +646,11 @@ func _on_action_bar_selected(action_id: String) -> void:
 			var cells := tactical_range_system.get_attack_range_simple(view)
 			_set_range_mode(RangeMode.ATTACK, cells)
 		"skill":
-			# 退化版：先把范围切回 NONE，等 Task 17/18 接技能菜单。
+			# Task 17: 弹出当前主角已学的 tactical 武学菜单，按 shape 走方向/目标交互。
+			_clear_direction_arrows()
+			_pending_skill_id = ""
 			_set_range_mode(RangeMode.NONE, [])
+			_open_skill_menu()
 		"item", "view", "system":
 			_set_range_mode(RangeMode.NONE, [])
 		"wait":
@@ -773,3 +806,194 @@ func _on_hero_mp_changed_for_actor_panel(_cur_mp: int, _max_mp: int) -> void:
 func _on_tactical_log_appended(line: String) -> void:
 	if battle_log != null:
 		battle_log.append(line)
+
+# ─── Task 17: 招式菜单 + 方向箭头 ──────────────────────────────────────────────
+
+# 弹出 PopupMenu，列出当前主角已学且 mp 够 + 含 shape 字段的 tactical 武学；
+# 点击某项后走 _on_skill_chosen。无可用招式时静默关闭。
+func _open_skill_menu() -> void:
+	if not _is_player_action() or tactical_battle_state == null:
+		return
+	var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+	if unit == null:
+		return
+	if _skill_menu != null and is_instance_valid(_skill_menu):
+		_skill_menu.queue_free()
+	var menu := PopupMenu.new()
+	var skill_ids: Array = []
+	for sid in unit.martial_art_ids:
+		var sid_s := str(sid)
+		var data: Dictionary = DataRepository.get_martial_art(sid_s)
+		if data.is_empty():
+			continue
+		var shape := str(data.get("shape", ""))
+		if shape.is_empty():
+			continue  # 仅展示方向/目标型招式（基础剑法等近身招式仍走旧攻击按钮）
+		if not _can_current_unit_use_tactical_art(unit, sid_s):
+			menu.add_item("%s（内力不足）" % str(data.get("name", sid_s)))
+			menu.set_item_disabled(menu.get_item_count() - 1, true)
+		else:
+			menu.add_item(str(data.get("name", sid_s)))
+		skill_ids.append(sid_s)
+	if skill_ids.is_empty():
+		menu.queue_free()
+		return
+	add_child(menu)
+	_skill_menu = menu
+	menu.id_pressed.connect(func(idx: int) -> void:
+		if idx >= 0 and idx < skill_ids.size():
+			_on_skill_chosen(skill_ids[idx])
+		menu.queue_free()
+	)
+	menu.popup_hide.connect(func() -> void:
+		if is_instance_valid(menu):
+			menu.queue_free()
+	)
+	var mouse_pos := get_viewport().get_mouse_position()
+	menu.position = Vector2i(int(mouse_pos.x), int(mouse_pos.y))
+	menu.popup()
+
+# 根据招式 shape 切换到 SKILL_DIR_PREVIEW（方向箭头）或 SKILL_TARGET_PREVIEW（中心格）。
+func _on_skill_chosen(skill_id: String) -> void:
+	_pending_skill_id = skill_id
+	var data: Dictionary = DataRepository.get_martial_art(skill_id)
+	var shape := str(data.get("shape", ""))
+	if shape.begins_with("line_"):
+		_set_range_mode(RangeMode.SKILL_DIR_PREVIEW, [])
+		_show_direction_arrows(skill_id)
+	elif shape.begins_with("target_"):
+		var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+		var view := _unit_view_for_range(unit)
+		var cast_range: int = int(data.get("cast_range", int(data.get("tactical", {}).get("range", 1))))
+		var centers: Array = tactical_range_system.get_skill_target_selection_range(view, skill_id, cast_range)
+		_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, centers)
+	else:
+		_pending_skill_id = ""
+		_set_range_mode(RangeMode.NONE, [])
+
+# 在主角四向相邻格放 4 个箭头按钮。边界外的方向不显示。
+# 简化版：用 Button + 文本箭头（→/←/↑/↓），后续可换 Kenney TextureButton 资源。
+func _show_direction_arrows(skill_id: String) -> void:
+	_clear_direction_arrows()
+	if tactical_battle_state == null or battle_grid == null:
+		return
+	var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+	if unit == null:
+		return
+	var src := Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0)))
+	var dirs := [
+		{"d": Vector2i(0, -1), "label": "↑"},
+		{"d": Vector2i(0, 1), "label": "↓"},
+		{"d": Vector2i(-1, 0), "label": "←"},
+		{"d": Vector2i(1, 0), "label": "→"},
+	]
+	for entry in dirs:
+		var d: Vector2i = entry["d"]
+		var nb := src + d
+		if nb.x < 0 or nb.x >= 8 or nb.y < 0 or nb.y >= 6:
+			continue
+		var btn := Button.new()
+		btn.text = str(entry["label"])
+		btn.size = Vector2(32, 32)
+		btn.position = battle_grid.position + battle_grid.grid_to_pixel(nb) - Vector2(16, 16)
+		btn.add_theme_font_size_override("font_size", 22)
+		btn.add_theme_color_override("font_color", Color(1, 0.92, 0.45))
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.pressed.connect(_on_direction_chosen.bind(skill_id, d))
+		add_child(btn)
+		_direction_buttons.append(btn)
+
+# 清空当前 4 方向箭头按钮（释放招式或切换模式时调用）。
+func _clear_direction_arrows() -> void:
+	for b in _direction_buttons:
+		if is_instance_valid(b):
+			b.queue_free()
+	_direction_buttons.clear()
+
+# 玩家点了某方向 → 计算线性范围 → 走通用 resolve_action 路径释放。
+func _on_direction_chosen(skill_id: String, direction: Vector2i) -> void:
+	_clear_direction_arrows()
+	if tactical_battle_state == null:
+		_pending_skill_id = ""
+		_set_range_mode(RangeMode.NONE, [])
+		return
+	var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+	if unit == null:
+		_pending_skill_id = ""
+		_set_range_mode(RangeMode.NONE, [])
+		return
+	var view := _unit_view_for_range(unit)
+	var cells: Array = tactical_range_system.get_skill_directional_range(view, skill_id, direction)
+	_resolve_skill_action(skill_id, cells)
+
+# Task 17/18 共用：执行招式 → 行动结束 → 刷新 UI → 检查战斗结算。
+func _resolve_skill_action(skill_id: String, target_cells: Array) -> void:
+	_pending_skill_id = ""
+	_clear_direction_arrows()
+	_set_range_mode(RangeMode.NONE, [])
+	if tactical_battle_state == null:
+		return
+	var current_id := str(tactical_battle_state.current_unit_id)
+	var result: Dictionary = tactical_combat_system.resolve_action(tactical_battle_state, current_id, skill_id, target_cells)
+	# 招式失败（内力不足等）保留行动相位让玩家重选；成功才结束行动。
+	if bool(result.get("success", false)) and not tactical_battle_state.is_finished:
+		tactical_combat_system.end_unit_action(tactical_battle_state, current_id)
+	_refresh_tactical()
+	_return_if_tactical_finished()
+
+# ─── Task 19: 移动滑动动画 ───────────────────────────────────────────────────
+
+# 检查 target_cell 是否在 movable_cells 内 → 是则播 sprite.animate_to 滑动；
+# 动画结束才落地 move_unit + emit tactical_unit_moved。
+# 返回 true = 动画已启动；false = 不可移动（caller 自行兜底）。
+func _start_move_animation(unit, target_cell: Dictionary) -> bool:
+	if unit == null or tactical_battle_state == null or battle_grid == null:
+		return false
+	if not _cell_in_list(target_cell, tactical_combat_system.get_movable_cells(tactical_battle_state, str(unit.unit_id))):
+		return false
+	var sprite = _unit_sprites.get(str(unit.unit_id))
+	var src_q: int = int(unit.cell.get("q", 0))
+	var src_r: int = int(unit.cell.get("r", 0))
+	var dst := Vector2i(int(target_cell.get("q", 0)), int(target_cell.get("r", 0)))
+	# sprite 不存在的兜底（理论不会发生）：直接同步 commit。
+	if sprite == null or not is_instance_valid(sprite):
+		tactical_combat_system.move_unit(tactical_battle_state, str(unit.unit_id), target_cell)
+		EventBus.tactical_unit_moved.emit(str(unit.unit_id), Vector2i(src_q, src_r), dst)
+		_refresh_tactical()
+		return true
+	var distance: int = abs(dst.x - src_q) + abs(dst.y - src_r)
+	var duration: float = 0.18 * float(max(1, distance))
+	is_animating = true
+	_move_anim_target_cell = target_cell.duplicate()
+	sprite.animation_finished.connect(_on_move_animation_done.bind(str(unit.unit_id), src_q, src_r), CONNECT_ONE_SHOT)
+	sprite.animate_to(battle_grid.grid_to_pixel(dst), duration)
+	return true
+
+# 滑动动画完成 → 落地 move_unit → 广播 → 刷新。
+func _on_move_animation_done(unit_id: String, from_q: int, from_r: int) -> void:
+	is_animating = false
+	if tactical_battle_state == null:
+		_move_anim_target_cell = {}
+		return
+	var target_cell: Dictionary = _move_anim_target_cell.duplicate()
+	_move_anim_target_cell = {}
+	if target_cell.is_empty():
+		_refresh_tactical()
+		return
+	var result: Dictionary = tactical_combat_system.move_unit(tactical_battle_state, unit_id, target_cell)
+	if bool(result.get("success", false)):
+		var to_cell := Vector2i(int(target_cell.get("q", 0)), int(target_cell.get("r", 0)))
+		EventBus.tactical_unit_moved.emit(unit_id, Vector2i(from_q, from_r), to_cell)
+	_refresh_tactical()
+	_return_if_tactical_finished()
+
+# 工具：在 movable_cells 列表里查 target_cell（{q,r} dict 形式）是否存在。
+func _cell_in_list(target_cell: Dictionary, list: Array) -> bool:
+	var tq: int = int(target_cell.get("q", -999))
+	var tr: int = int(target_cell.get("r", -999))
+	for c in list:
+		if typeof(c) != TYPE_DICTIONARY:
+			continue
+		if int(c.get("q", -1000)) == tq and int(c.get("r", -1000)) == tr:
+			return true
+	return false
