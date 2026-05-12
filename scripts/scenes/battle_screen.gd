@@ -200,6 +200,8 @@ func _refresh_tactical() -> void:
 		if cell_visuals.has(key):
 			_apply_tactical_cell_visual_style(cell_visuals[key], "idle")
 	for unit in tactical_battle_state.units:
+		if not unit.is_alive():
+			continue
 		var unit_key = _cell_key(unit.cell)
 		if cell_buttons.has(unit_key):
 			cell_buttons[unit_key].text = unit.display_name.substr(0, 2)

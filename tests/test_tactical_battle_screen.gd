@@ -66,6 +66,11 @@ func run(assertions) -> void:
 	var origin_cell = screen._cell_to_screen({"q": 0, "r": 0})
 	assertions.assert_eq(screen._cell_to_screen({"q": 1, "r": 0}) - origin_cell, Vector2(64, 0), "方格战棋 q 轴应水平递增")
 	assertions.assert_eq(screen._cell_to_screen({"q": 0, "r": 1}) - origin_cell, Vector2(0, 64), "方格战棋 r 轴应垂直递增")
+	assertions.assert_eq(screen.cell_buttons.get("5:2").text, "山道", "存活敌人应显示在所在格子")
+	screen.tactical_battle_state.get_unit("bandit").hp = 0
+	screen._refresh_tactical()
+	assertions.assert_eq(screen.cell_buttons.get("5:2").text, "", "已被击败的敌人不应继续显示在格子上")
+	assertions.assert_eq(screen.cell_buttons.get("5:3").text, "山道", "其他存活敌人仍应显示在格子上")
 
 	screen.tactical_combat_system.advance_charge(screen.tactical_battle_state, 5.0)
 	screen._refresh_tactical()
