@@ -30,6 +30,7 @@ const TestJournalMapScreenScript = preload("res://tests/test_journal_map_screen.
 const TestTacticalUnitStateScript = preload("res://tests/test_tactical_unit_state.gd")
 const TestTacticalBattleStateScript = preload("res://tests/test_tactical_battle_state.gd")
 const TestTacticalCombatSystemScript = preload("res://tests/test_tactical_combat_system.gd")
+const TestTacticalBattleScreenScript = preload("res://tests/test_tactical_battle_screen.gd")
 const TestBattleStateScript = preload("res://tests/test_battle_state.gd")
 const TestTurnBasedCombatSystemScript = preload("res://tests/test_turn_based_combat_system.gd")
 
@@ -65,6 +66,7 @@ func _initialize() -> void:
 		TestTacticalUnitStateScript.new(),
 		TestTacticalBattleStateScript.new(),
 		TestTacticalCombatSystemScript.new(),
+		TestTacticalBattleScreenScript.new(),
 		TestBattleStateScript.new(),
 		TestTurnBasedCombatSystemScript.new(),
 	]
