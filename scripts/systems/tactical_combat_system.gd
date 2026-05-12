@@ -2,6 +2,7 @@ extends RefCounted
 
 const TacticalBattleStateScript = preload("res://scripts/domain/tactical_battle_state.gd")
 const TacticalUnitStateScript = preload("res://scripts/domain/tactical_unit_state.gd")
+const MartialArtRecordScript = preload("res://scripts/domain/martial_art_record.gd")
 
 var repository = null
 
@@ -120,6 +121,53 @@ func get_attackable_units(battle, unit_id: String) -> Array:
 			result.append(target)
 	return result
 
+func get_attackable_units_for_martial_art(battle, unit_id: String, martial_art_id: String, data_source = null) -> Array:
+	var unit = battle.get_unit(unit_id) if battle != null else null
+	if unit == null or not unit.is_alive():
+		return []
+	var martial_art = _get_tactical_martial_art(martial_art_id, data_source)
+	if martial_art == null:
+		return []
+	if not unit.martial_art_ids.has(martial_art.id):
+		return []
+	if unit.mp < martial_art.tactical_mp_cost:
+		return []
+	var result: Array = []
+	for target in battle.units:
+		if not target.is_alive() or target.team == unit.team:
+			continue
+		if _is_target_in_martial_range(unit.cell, target.cell, martial_art):
+			result.append(target)
+	return result
+
+func use_martial_art(battle, attacker_id: String, defender_id: String, martial_art_id: String, data_source = null) -> Dictionary:
+	var attacker = battle.get_unit(attacker_id) if battle != null else null
+	var defender = battle.get_unit(defender_id) if battle != null else null
+	if attacker == null or defender == null:
+		return {"success": false, "message": "武学目标不存在。"}
+	if not attacker.is_alive() or not defender.is_alive():
+		return {"success": false, "message": "武学目标已倒下。"}
+	if attacker.team == defender.team:
+		return {"success": false, "message": "不能攻击同伴。"}
+	if not attacker.martial_art_ids.has(martial_art_id):
+		return {"success": false, "message": "不能使用未学会的武学。"}
+	var martial_art = _get_tactical_martial_art(martial_art_id, data_source)
+	if martial_art == null:
+		return {"success": false, "message": "此武学不能用于战棋。"}
+	if attacker.mp < martial_art.tactical_mp_cost:
+		return {"success": false, "message": "内力不足。"}
+	if not _is_target_in_martial_range(attacker.cell, defender.cell, martial_art):
+		return {"success": false, "message": "目标不在招式范围内。"}
+
+	var damage = maxi(1, attacker.attack + martial_art.tactical_damage_bonus - defender.defense)
+	attacker.mp = max(0, attacker.mp - martial_art.tactical_mp_cost)
+	defender.hp = max(0, defender.hp - damage)
+	battle.append_log("%s使出%s攻击%s，造成%d点伤害。" % [attacker.display_name, martial_art.name, defender.display_name, damage])
+	if defender.hp <= 0:
+		battle.append_log("%s被击败。" % defender.display_name)
+	check_battle_finished(battle)
+	return {"success": true, "message": "已经出招。", "damage": damage}
+
 func attack_unit(battle, attacker_id: String, defender_id: String) -> Dictionary:
 	var attacker = battle.get_unit(attacker_id) if battle != null else null
 	var defender = battle.get_unit(defender_id) if battle != null else null
@@ -195,10 +243,15 @@ func _build_unit(raw_unit: Dictionary, game_state, source):
 	unit_data["max_hp"] = max(1, int(actor.get("max_hp", unit_data["hp"])))
 	unit_data["attack"] = max(1, int(actor.get("attack", 1)))
 	unit_data["defense"] = max(0, int(actor.get("defense", 0)))
+	unit_data["martial_art_ids"] = actor.get("martial_arts", [])
+	unit_data["max_mp"] = max(0, int(raw_unit.get("max_mp", 0)))
+	unit_data["mp"] = clamp(int(raw_unit.get("mp", unit_data["max_mp"])), 0, int(unit_data["max_mp"]))
 	unit_data["cell"] = raw_unit.get("start_cell", raw_unit.get("cell", {}))
 	if str(raw_unit.get("team", "")) == TacticalBattleStateScript.TEAM_PLAYER and game_state != null:
 		unit_data["max_hp"] = max(1, int(game_state.hero_max_hp))
 		unit_data["hp"] = clamp(int(game_state.hero_hp), 1, int(unit_data["max_hp"]))
+		unit_data["max_mp"] = max(0, int(game_state.hero_max_mp))
+		unit_data["mp"] = int(unit_data["max_mp"])
 	var unit = TacticalUnitStateScript.new()
 	unit.from_dictionary(unit_data)
 	return unit
@@ -236,6 +289,34 @@ func _read_cell(cell: Dictionary) -> Dictionary:
 
 func _cell_distance(a: Dictionary, b: Dictionary) -> int:
 	return abs(int(a.get("q", 0)) - int(b.get("q", 0))) + abs(int(a.get("r", 0)) - int(b.get("r", 0)))
+
+func _get_tactical_martial_art(martial_art_id: String, data_source = null):
+	if martial_art_id.is_empty():
+		return null
+	var source = data_source if data_source != null else repository
+	if source == null or not source.has_method("get_martial_art"):
+		return null
+	var martial_art_data = source.get_martial_art(martial_art_id)
+	if martial_art_data.is_empty():
+		return null
+	var martial_art = MartialArtRecordScript.from_dictionary(martial_art_data)
+	if not martial_art.has_tactical_config():
+		return null
+	if not ["diamond", "line"].has(martial_art.tactical_range_shape):
+		return null
+	return martial_art
+
+func _is_target_in_martial_range(attacker_cell: Dictionary, defender_cell: Dictionary, martial_art) -> bool:
+	var distance = _cell_distance(attacker_cell, defender_cell)
+	if distance <= 0 or distance > martial_art.tactical_range:
+		return false
+	match martial_art.tactical_range_shape:
+		"diamond":
+			return true
+		"line":
+			return int(attacker_cell.get("q", 0)) == int(defender_cell.get("q", 0)) or int(attacker_cell.get("r", 0)) == int(defender_cell.get("r", 0))
+		_:
+			return false
 
 func _first_living_player(battle):
 	var players = battle.get_living_units_by_team(TacticalBattleStateScript.TEAM_PLAYER)
