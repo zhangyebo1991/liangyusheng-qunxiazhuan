@@ -37,6 +37,7 @@ const TestLongTermMpSaveScript = preload("res://tests/test_long_term_mp_save.gd"
 const TestMpPotionScript = preload("res://tests/test_mp_potion.gd")
 const TestInnDataScript = preload("res://tests/test_inn_data.gd")
 const TestInnRestLoopScript = preload("res://tests/test_inn_rest_loop.gd")
+const TestDeathWarpToInnScript = preload("res://tests/test_death_warp_to_inn.gd")
 
 func _initialize() -> void:
 	var assertions = TestAssertionsScript.new()
@@ -77,6 +78,7 @@ func _initialize() -> void:
 		TestMpPotionScript.new(),
 		TestInnDataScript.new(),
 		TestInnRestLoopScript.new(),
+		TestDeathWarpToInnScript.new(),
 	]
 
 	for suite in suites:

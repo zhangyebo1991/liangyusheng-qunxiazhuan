@@ -374,7 +374,11 @@ func _return_to_map() -> void:
 	if source_map_id.is_empty():
 		source_map_id = "mountain_pass"
 	GameState.consume_battle_context()
-	SceneLoader.change_scene(GameState.get_scene_path_for_map(source_map_id))
+	# 失败回流可能已经切了 current_map_id，优先使用它
+	var target_map_id = GameState.map_state.current_map_id
+	if target_map_id.is_empty():
+		target_map_id = source_map_id
+	SceneLoader.change_scene(GameState.get_scene_path_for_map(target_map_id))
 
 func _is_player_action() -> bool:
 	if tactical_battle_state == null or not tactical_battle_state.is_action_phase:

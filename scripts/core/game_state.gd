@@ -180,6 +180,22 @@ func apply_battle_result(result: Dictionary) -> void:
 		var effect_system = EffectSystemScript.new()
 		effect_system.apply_effects(self, _battle_victory_effects(result), result)
 	else:
+		if has_bound_inn():
+			var inn = _resolve_bound_inn()
+			if not inn.is_empty():
+				var inn_map_id = str(inn.get("map_id", ""))
+				var spawn = inn.get("spawn_position", {})
+				var spawn_pos = Vector2(int(spawn.get("x", 160)), int(spawn.get("y", 320)))
+				if not inn_map_id.is_empty():
+					set_current_map(inn_map_id, spawn_pos)
+				hero_hp = hero_max_hp
+				hero_cur_mp = hero_max_mp
+				_normalize_hero_hp()
+				_normalize_hero_mp()
+				if is_inside_tree() and has_node("/root/EventBus"):
+					get_node("/root/EventBus").hero_mp_changed.emit(hero_cur_mp, hero_max_mp)
+				return
+		# 未绑定客栈：沿用原地复活
 		hero_hp = max(1, hero_hp)
 		map_state.player_position = Vector2(160, 320)
 
@@ -291,3 +307,14 @@ func _get_map_data(map_id: String) -> Dictionary:
 	var map_data = repository.get_map(map_id)
 	repository.free()
 	return map_data
+
+func _resolve_bound_inn() -> Dictionary:
+	if last_inn_id.is_empty():
+		return {}
+	if is_inside_tree() and has_node("/root/DataRepository"):
+		return get_node("/root/DataRepository").get_inn(last_inn_id)
+	var repository = DataRepositoryScript.new()
+	repository.load_all()
+	var inn = repository.get_inn(last_inn_id)
+	repository.free()
+	return inn
