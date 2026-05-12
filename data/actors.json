@@ -7,7 +7,7 @@
     "max_hp": 120,
     "attack": 18,
     "defense": 8,
-    "martial_arts": ["basic_sword"]
+    "martial_arts": ["basic_sword", "straight_sword_thrust"]
   },
   {
     "id": "qingshanke",

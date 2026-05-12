@@ -40,9 +40,35 @@ func run(assertions) -> void:
 		"cost": 3,
 		"description": "入门剑招，胜在稳妥。",
 		"proficiency_reward": 1,
+		"tactical": {
+			"damage_bonus": 6,
+			"range": 1,
+			"range_shape": "diamond",
+			"mp_cost": 3,
+		},
 	})
 	assertions.assert_eq(martial_art.power, 12, "武学应保存威力")
 	assertions.assert_eq(martial_art.proficiency_reward, 1, "武学应保存熟练度奖励")
+	assertions.assert_true(martial_art.has_tactical_config(), "武学应识别战棋配置")
+	assertions.assert_eq(martial_art.tactical_damage_bonus, 6, "武学应读取战棋伤害加值")
+	assertions.assert_eq(martial_art.tactical_range, 1, "武学应读取战棋范围")
+	assertions.assert_eq(martial_art.tactical_range_shape, "diamond", "武学应读取战棋范围形状")
+	assertions.assert_eq(martial_art.tactical_mp_cost, 3, "武学应读取战棋内力消耗")
+
+	var fallback_cost_art = MartialArtRecordScript.from_dictionary({
+		"id": "fallback_cost",
+		"name": "旧式招式",
+		"cost": 4,
+		"tactical": {"damage_bonus": 2, "range": 1, "range_shape": "diamond"},
+	})
+	assertions.assert_eq(fallback_cost_art.tactical_mp_cost, 4, "缺少 mp_cost 时应回退到 cost")
+
+	var plain_art = MartialArtRecordScript.from_dictionary({
+		"id": "plain_art",
+		"name": "普通武学",
+		"cost": 2,
+	})
+	assertions.assert_true(not plain_art.has_tactical_config(), "缺少 tactical 时不应视为战棋招式")
 
 	var quest = QuestRecordScript.from_dictionary({
 		"id": "quest_first_step",

@@ -6,7 +6,28 @@
     "power": 12,
     "cost": 3,
     "description": "入门剑招，胜在稳妥。",
-    "proficiency_reward": 1
+    "proficiency_reward": 1,
+    "tactical": {
+      "damage_bonus": 6,
+      "range": 1,
+      "range_shape": "diamond",
+      "mp_cost": 3
+    }
+  },
+  {
+    "id": "straight_sword_thrust",
+    "name": "穿云刺",
+    "school": "江湖",
+    "power": 10,
+    "cost": 5,
+    "description": "挺剑直进，可隔一身位刺敌。",
+    "proficiency_reward": 0,
+    "tactical": {
+      "damage_bonus": 4,
+      "range": 2,
+      "range_shape": "line",
+      "mp_cost": 5
+    }
   },
   {
     "id": "rough_fist",
