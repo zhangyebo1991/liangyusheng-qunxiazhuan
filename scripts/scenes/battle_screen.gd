@@ -23,6 +23,9 @@ var grid_layer: Control
 var status_label: Label
 var unit_panel: VBoxContainer
 var end_action_button: Button
+var normal_attack_button: Button
+var tactical_art_buttons: Dictionary = {}
+var selected_tactical_action_id: String = "attack"
 var cell_buttons: Dictionary = {}
 var cell_visuals: Dictionary = {}
 var selected_unit_id: String = ""
@@ -125,16 +128,26 @@ func _create_tactical_ui() -> void:
 	output.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(output)
 
+	normal_attack_button = Button.new()
+	normal_attack_button.text = "普通攻击"
+	normal_attack_button.position = Vector2(820, 560)
+	normal_attack_button.size = Vector2(112, 36)
+	normal_attack_button.pressed.connect(_on_tactical_action_selected.bind("attack"))
+	add_child(normal_attack_button)
+
+	_create_tactical_art_button("basic_sword", Vector2(940, 560))
+	_create_tactical_art_button("straight_sword_thrust", Vector2(1060, 560))
+
 	end_action_button = Button.new()
 	end_action_button.text = "结束行动"
-	end_action_button.position = Vector2(820, 570)
+	end_action_button.position = Vector2(820, 610)
 	end_action_button.size = Vector2(120, 40)
 	end_action_button.pressed.connect(_on_tactical_end_action_pressed)
 	add_child(end_action_button)
 
 	retreat_button = Button.new()
 	retreat_button.text = "暂退"
-	retreat_button.position = Vector2(960, 570)
+	retreat_button.position = Vector2(960, 610)
 	retreat_button.size = Vector2(120, 40)
 	retreat_button.pressed.connect(_on_tactical_retreat_pressed)
 	add_child(retreat_button)
@@ -167,12 +180,26 @@ func _create_tactical_grid() -> void:
 			grid_layer.add_child(button)
 			cell_buttons[cell_key] = button
 
+func _create_tactical_art_button(martial_art_id: String, button_position: Vector2) -> void:
+	var martial_art = DataRepository.get_martial_art(martial_art_id)
+	if martial_art.is_empty() or typeof(martial_art.get("tactical", {})) != TYPE_DICTIONARY:
+		return
+	var button = Button.new()
+	button.text = str(martial_art.get("name", martial_art_id))
+	button.position = button_position
+	button.size = Vector2(112, 36)
+	button.pressed.connect(_on_tactical_action_selected.bind(martial_art_id))
+	add_child(button)
+	tactical_art_buttons[martial_art_id] = button
+
 func _refresh_tactical() -> void:
 	if tactical_battle_state == null:
 		return
 	var current = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
 	if tactical_battle_state.is_finished:
 		status_label.text = "战斗结束"
+	elif current != null and current.team == TacticalBattleStateScript.TEAM_PLAYER:
+		status_label.text = "%s行动 内力 %d/%d" % [current.display_name, current.mp, current.max_mp]
 	elif current != null:
 		status_label.text = "%s行动" % current.display_name
 	else:
@@ -191,8 +218,11 @@ func _refresh_tactical() -> void:
 		]
 		unit_panel.add_child(label)
 
-	var movable = tactical_combat_system.get_movable_cells(tactical_battle_state, tactical_battle_state.current_unit_id)
-	var attackable = tactical_combat_system.get_attackable_units(tactical_battle_state, tactical_battle_state.current_unit_id)
+	var movable: Array = []
+	var attackable: Array = []
+	if _is_player_action():
+		movable = tactical_combat_system.get_movable_cells(tactical_battle_state, tactical_battle_state.current_unit_id)
+		attackable = _get_attackable_units_for_selected_action()
 	for key in cell_buttons.keys():
 		var button = cell_buttons[key]
 		button.text = ""
@@ -219,6 +249,7 @@ func _refresh_tactical() -> void:
 			_apply_tactical_cell_visual_style(cell_visuals[target_key], "attack")
 
 	output.text = "\n".join(PackedStringArray(tactical_battle_state.log))
+	_refresh_tactical_action_buttons(current)
 	end_action_button.disabled = tactical_battle_state.is_finished or not _is_player_action()
 	retreat_button.disabled = tactical_battle_state.is_finished
 
@@ -258,13 +289,52 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 	var cell = {"q": q, "r": r}
 	var target = _unit_at_cell(cell)
 	if target != null and target.team != current_unit.team:
-		tactical_combat_system.attack_unit(tactical_battle_state, current_unit.unit_id, target.unit_id)
-		if not tactical_battle_state.is_finished:
+		var result: Dictionary
+		if selected_tactical_action_id == "attack":
+			result = tactical_combat_system.attack_unit(tactical_battle_state, current_unit.unit_id, target.unit_id)
+		else:
+			result = tactical_combat_system.use_martial_art(tactical_battle_state, current_unit.unit_id, target.unit_id, selected_tactical_action_id, DataRepository)
+		if bool(result.get("success", false)) and not tactical_battle_state.is_finished:
 			tactical_combat_system.end_unit_action(tactical_battle_state, current_unit.unit_id)
 	else:
 		tactical_combat_system.move_unit(tactical_battle_state, current_unit.unit_id, cell)
 	_refresh_tactical()
 	_return_if_tactical_finished()
+
+func _on_tactical_action_selected(action_id: String) -> void:
+	if action_id.is_empty():
+		return
+	selected_tactical_action_id = action_id
+	_refresh_tactical()
+
+func _get_attackable_units_for_selected_action() -> Array:
+	if selected_tactical_action_id == "attack":
+		return tactical_combat_system.get_attackable_units(tactical_battle_state, tactical_battle_state.current_unit_id)
+	return tactical_combat_system.get_attackable_units_for_martial_art(tactical_battle_state, tactical_battle_state.current_unit_id, selected_tactical_action_id, DataRepository)
+
+func _refresh_tactical_action_buttons(current_unit) -> void:
+	var can_act = _is_player_action() and current_unit != null
+	if normal_attack_button != null:
+		normal_attack_button.disabled = not can_act
+	for martial_art_id in tactical_art_buttons.keys():
+		var button = tactical_art_buttons[martial_art_id]
+		button.disabled = not can_act or not _can_current_unit_use_tactical_art(current_unit, str(martial_art_id))
+	if selected_tactical_action_id != "attack":
+		var selected_button = tactical_art_buttons.get(selected_tactical_action_id)
+		if selected_button == null or selected_button.disabled:
+			selected_tactical_action_id = "attack"
+
+func _can_current_unit_use_tactical_art(current_unit, martial_art_id: String) -> bool:
+	if current_unit == null or not current_unit.martial_art_ids.has(martial_art_id):
+		return false
+	var martial_art = DataRepository.get_martial_art(martial_art_id)
+	if martial_art.is_empty():
+		return false
+	var tactical = martial_art.get("tactical", {})
+	if typeof(tactical) != TYPE_DICTIONARY:
+		return false
+	var mp_cost = max(0, int(tactical.get("mp_cost", martial_art.get("cost", 0))))
+	return current_unit.mp >= mp_cost
 
 func _on_tactical_end_action_pressed() -> void:
 	if not _is_player_action():

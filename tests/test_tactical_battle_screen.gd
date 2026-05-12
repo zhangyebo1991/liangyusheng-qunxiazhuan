@@ -41,6 +41,9 @@ func run(assertions) -> void:
 	assertions.assert_true(_has_property(screen, "cell_buttons"), "战斗界面应暴露格子按钮字典")
 	assertions.assert_true(_has_property(screen, "cell_visuals"), "战斗界面应暴露可见格子字典")
 	assertions.assert_true(_has_property(screen, "tactical_combat_system"), "战斗界面应暴露战棋系统")
+	assertions.assert_true(_has_property(screen, "normal_attack_button"), "战斗界面应暴露普通攻击按钮")
+	assertions.assert_true(_has_property(screen, "tactical_art_buttons"), "战斗界面应暴露招式按钮字典")
+	assertions.assert_true(_has_property(screen, "selected_tactical_action_id"), "战斗界面应暴露当前战棋动作")
 	assertions.assert_true(screen.has_method("_refresh_tactical"), "战斗界面应提供战棋刷新方法")
 	if not _has_property(screen, "is_tactical_mode") or not _has_property(screen, "cell_visuals") or not screen.has_method("_refresh_tactical"):
 		screen.free()
@@ -51,6 +54,10 @@ func run(assertions) -> void:
 	assertions.assert_true(screen.grid_layer != null, "战棋模式应创建格子层")
 	assertions.assert_true(screen.status_label != null, "战棋模式应创建状态文本")
 	assertions.assert_true(screen.end_action_button != null, "战棋模式应创建结束行动按钮")
+	assertions.assert_true(screen.normal_attack_button != null, "战棋模式应创建普通攻击按钮")
+	assertions.assert_true(screen.tactical_art_buttons.has("basic_sword"), "战棋模式应创建基础剑法按钮")
+	assertions.assert_true(screen.tactical_art_buttons.has("straight_sword_thrust"), "战棋模式应创建穿云刺按钮")
+	assertions.assert_eq(screen.selected_tactical_action_id, "attack", "战棋默认动作应为普通攻击")
 	assertions.assert_eq(screen.tactical_battle_state.units.size(), 3, "战棋场景应创建 3 个单位")
 	assertions.assert_true(screen.cell_buttons.size() >= 35, "7x5 战场应创建至少 35 个格子按钮")
 	assertions.assert_true(screen.cell_visuals.size() >= 35, "7x5 战场应创建至少 35 个可见格子")
@@ -74,7 +81,20 @@ func run(assertions) -> void:
 
 	screen.tactical_combat_system.advance_charge(screen.tactical_battle_state, 5.0)
 	screen._refresh_tactical()
-	assertions.assert_eq(screen.status_label.text, "云游少侠行动", "主角满集气后状态文本应显示主角行动")
+	assertions.assert_true(screen.status_label.text.contains("云游少侠行动"), "主角满集气后状态文本应显示主角行动")
+	assertions.assert_true(screen.status_label.text.contains("内力 20/20"), "玩家行动时状态文本应显示内力")
+	assertions.assert_true(not screen.normal_attack_button.disabled, "玩家行动时普通攻击按钮应可用")
+	assertions.assert_true(not screen.tactical_art_buttons.get("basic_sword").disabled, "内力足够时基础剑法按钮应可用")
+	screen.tactical_battle_state.get_unit("hero").cell = {"q": 3, "r": 2}
+	screen.tactical_battle_state.get_unit("bandit").hp = screen.tactical_battle_state.get_unit("bandit").max_hp
+	screen._on_tactical_action_selected("straight_sword_thrust")
+	assertions.assert_eq(screen.selected_tactical_action_id, "straight_sword_thrust", "点击穿云刺按钮应切换当前动作")
+	screen._refresh_tactical()
+	assertions.assert_true(not screen.cell_buttons.get("5:2").disabled, "选中穿云刺时两格直线敌人应可点击")
+	screen.tactical_battle_state.get_unit("hero").mp = 2
+	screen._refresh_tactical()
+	assertions.assert_true(screen.tactical_art_buttons.get("basic_sword").disabled, "内力不足时基础剑法按钮应禁用")
+	assertions.assert_true(screen.tactical_art_buttons.get("straight_sword_thrust").disabled, "内力不足时穿云刺按钮应禁用")
 
 	screen.free()
 
