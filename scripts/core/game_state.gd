@@ -22,6 +22,8 @@ var battle_context: Dictionary = {}
 var hero_hp := DEFAULT_HERO_MAX_HP
 var hero_max_hp := DEFAULT_HERO_MAX_HP
 var hero_max_mp := DEFAULT_HERO_MAX_MP
+var hero_cur_mp := DEFAULT_HERO_MAX_MP
+var last_inn_id: String = ""
 var martial_proficiency: Dictionary = {}
 
 func start_new_game() -> void:
@@ -35,6 +37,8 @@ func start_new_game() -> void:
 	hero_max_hp = DEFAULT_HERO_MAX_HP
 	hero_max_mp = DEFAULT_HERO_MAX_MP
 	hero_hp = hero_max_hp
+	hero_cur_mp = hero_max_mp
+	last_inn_id = ""
 	martial_proficiency = {}
 	set_current_map("mountain_pass", Vector2(160, 320))
 	flags = {"current_map": "mountain_pass"}
@@ -90,6 +94,56 @@ func restore_hero_hp(amount: int) -> int:
 func is_hero_hp_full() -> bool:
 	_normalize_hero_hp()
 	return hero_hp >= hero_max_hp
+
+func restore_hero_mp(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	_normalize_hero_mp()
+	if hero_cur_mp >= hero_max_mp:
+		return 0
+	var before = hero_cur_mp
+	hero_cur_mp = min(hero_max_mp, hero_cur_mp + amount)
+	var delta = hero_cur_mp - before
+	if delta > 0 and is_inside_tree() and has_node("/root/EventBus"):
+		get_node("/root/EventBus").hero_mp_changed.emit(hero_cur_mp, hero_max_mp)
+	return delta
+
+func consume_hero_mp(amount: int) -> bool:
+	if amount <= 0:
+		return true
+	_normalize_hero_mp()
+	if hero_cur_mp < amount:
+		return false
+	hero_cur_mp -= amount
+	if is_inside_tree() and has_node("/root/EventBus"):
+		get_node("/root/EventBus").hero_mp_changed.emit(hero_cur_mp, hero_max_mp)
+	return true
+
+func set_hero_cur_mp(value: int) -> void:
+	_normalize_hero_mp()
+	var clamped = clamp(value, 0, hero_max_mp)
+	if clamped == hero_cur_mp:
+		return
+	hero_cur_mp = clamped
+	if is_inside_tree() and has_node("/root/EventBus"):
+		get_node("/root/EventBus").hero_mp_changed.emit(hero_cur_mp, hero_max_mp)
+
+func is_hero_mp_full() -> bool:
+	_normalize_hero_mp()
+	return hero_cur_mp >= hero_max_mp
+
+func bind_inn(inn_id: String) -> void:
+	if inn_id.is_empty():
+		return
+	last_inn_id = inn_id
+
+func has_bound_inn() -> bool:
+	return not last_inn_id.is_empty()
+
+func _normalize_hero_mp() -> void:
+	if hero_max_mp <= 0:
+		hero_max_mp = DEFAULT_HERO_MAX_MP
+	hero_cur_mp = clamp(hero_cur_mp, 0, hero_max_mp)
 
 func add_martial_proficiency(martial_art_id: String, amount: int) -> int:
 	if martial_art_id.is_empty() or amount <= 0:
@@ -164,6 +218,8 @@ func to_dictionary() -> Dictionary:
 		"hero_hp": hero_hp,
 		"hero_max_hp": hero_max_hp,
 		"hero_max_mp": hero_max_mp,
+		"hero_cur_mp": hero_cur_mp,
+		"last_inn_id": last_inn_id,
 		"martial_proficiency": _normalized_martial_proficiency(),
 	}
 
@@ -185,9 +241,12 @@ func from_dictionary(data: Dictionary) -> void:
 	hero_max_mp = int(data.get("hero_max_mp", DEFAULT_HERO_MAX_MP))
 	if hero_max_mp <= 0:
 		hero_max_mp = DEFAULT_HERO_MAX_MP
+	hero_cur_mp = int(data.get("hero_cur_mp", hero_max_mp))
+	last_inn_id = str(data.get("last_inn_id", ""))
 	hero_hp = int(data.get("hero_hp", hero_max_hp))
 	martial_proficiency = _read_martial_proficiency(data.get("martial_proficiency", {}))
 	_normalize_hero_hp()
+	_normalize_hero_mp()
 	battle_context = {}
 
 func _normalize_hero_hp() -> void:

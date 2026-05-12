@@ -33,6 +33,7 @@ const TestTacticalCombatSystemScript = preload("res://tests/test_tactical_combat
 const TestTacticalBattleScreenScript = preload("res://tests/test_tactical_battle_screen.gd")
 const TestBattleStateScript = preload("res://tests/test_battle_state.gd")
 const TestTurnBasedCombatSystemScript = preload("res://tests/test_turn_based_combat_system.gd")
+const TestLongTermMpSaveScript = preload("res://tests/test_long_term_mp_save.gd")
 
 func _initialize() -> void:
 	var assertions = TestAssertionsScript.new()
@@ -69,6 +70,7 @@ func _initialize() -> void:
 		TestTacticalBattleScreenScript.new(),
 		TestBattleStateScript.new(),
 		TestTurnBasedCombatSystemScript.new(),
+		TestLongTermMpSaveScript.new(),
 	]
 
 	for suite in suites:
