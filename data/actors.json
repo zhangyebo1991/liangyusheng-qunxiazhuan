@@ -7,7 +7,8 @@
     "max_hp": 120,
     "attack": 18,
     "defense": 8,
-    "martial_arts": ["basic_sword", "straight_sword_thrust"]
+    "martial_arts": ["basic_sword", "straight_sword_thrust"],
+    "sprite_tile_id": "tile_0098"
   },
   {
     "id": "qingshanke",
@@ -17,7 +18,8 @@
     "max_hp": 260,
     "attack": 42,
     "defense": 26,
-    "martial_arts": ["basic_sword"]
+    "martial_arts": ["basic_sword"],
+    "sprite_tile_id": "tile_0099"
   },
   {
     "id": "bandit_01",
@@ -27,7 +29,8 @@
     "max_hp": 60,
     "attack": 12,
     "defense": 4,
-    "martial_arts": ["rough_fist"]
+    "martial_arts": ["rough_fist"],
+    "sprite_tile_id": "tile_0107"
   },
   {
     "id": "bandit_lackey_01",
@@ -37,7 +40,8 @@
     "max_hp": 38,
     "attack": 10,
     "defense": 3,
-    "martial_arts": ["rough_fist"]
+    "martial_arts": ["rough_fist"],
+    "sprite_tile_id": "tile_0108"
   },
   {
     "id": "innkeeper_lu",
@@ -47,7 +51,8 @@
     "max_hp": 160,
     "attack": 14,
     "defense": 10,
-    "martial_arts": ["basic_sword"]
+    "martial_arts": ["basic_sword"],
+    "sprite_tile_id": "tile_0100"
   },
   {
     "id": "porter_chen",
@@ -57,6 +62,7 @@
     "max_hp": 130,
     "attack": 10,
     "defense": 8,
-    "martial_arts": ["rough_fist"]
+    "martial_arts": ["rough_fist"],
+    "sprite_tile_id": "tile_0101"
   }
 ]

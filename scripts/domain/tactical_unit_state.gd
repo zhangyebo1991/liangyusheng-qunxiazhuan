@@ -20,6 +20,7 @@ var charge_speed: int = 200
 var charge: int = 0
 var cell: Dictionary = {"q": 0, "r": 0}
 var martial_art_ids: Array[String] = []
+var sprite_tile_id: String = ""
 
 func is_alive() -> bool:
 	return hp > 0
@@ -45,6 +46,7 @@ func to_dictionary() -> Dictionary:
 		"charge": charge,
 		"cell": cell.duplicate(true),
 		"martial_art_ids": martial_art_ids.duplicate(),
+		"sprite_tile_id": sprite_tile_id,
 	}
 
 func from_dictionary(data: Dictionary) -> void:
@@ -66,6 +68,7 @@ func from_dictionary(data: Dictionary) -> void:
 	charge = max(0, int(data.get("charge", 0)))
 	cell = _read_cell(data.get("cell", data.get("start_cell", {})))
 	martial_art_ids = _to_string_array(data.get("martial_art_ids", []))
+	sprite_tile_id = str(data.get("sprite_tile_id", ""))
 
 func _read_cell(value: Variant) -> Dictionary:
 	if typeof(value) != TYPE_DICTIONARY:

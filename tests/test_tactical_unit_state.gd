@@ -55,3 +55,28 @@ func run(assertions) -> void:
 
 	unit.hp = 0
 	assertions.assert_true(not unit.is_alive(), "气血为 0 的单位不应存活")
+
+	# Task 8: sprite_tile_id 字段断言
+	var unit2 = TacticalUnitStateScript.new()
+	unit2.from_dictionary({
+		"unit_id": "hero2",
+		"actor_id": "hero_yun",
+		"sprite_tile_id": "tile_0098",
+	})
+	assertions.assert_eq(unit2.sprite_tile_id, "tile_0098", "战棋单位应读取像素精灵编号")
+	var serialized2 = unit2.to_dictionary()
+	assertions.assert_eq(serialized2.get("sprite_tile_id", ""), "tile_0098", "单位序列化应保存 sprite_tile_id")
+
+	var unit3 = TacticalUnitStateScript.new()
+	unit3.from_dictionary({"unit_id": "x"})
+	assertions.assert_eq(unit3.sprite_tile_id, "", "缺省 sprite_tile_id 应为空字符串")
+
+	# Task 8: actors.json 中主角与强人应有 sprite_tile_id（数据契约校验）
+	var DataRepoScript = load("res://scripts/systems/data_repository.gd")
+	var repo = DataRepoScript.new()
+	repo.load_all()
+	var hero_data = repo.get_actor("hero_yun")
+	assertions.assert_true(hero_data.has("sprite_tile_id"), "主角 actors.json 应有 sprite_tile_id")
+	assertions.assert_true(str(hero_data.get("sprite_tile_id", "")).begins_with("tile_"), "sprite_tile_id 应为 tile_ 前缀")
+	var bandit_data = repo.get_actor("bandit_01")
+	assertions.assert_true(bandit_data.has("sprite_tile_id"), "山道强人 actors.json 应有 sprite_tile_id")

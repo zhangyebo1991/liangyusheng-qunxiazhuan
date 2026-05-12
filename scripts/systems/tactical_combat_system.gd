@@ -362,6 +362,7 @@ func _build_unit(raw_unit: Dictionary, game_state, source):
 	unit_data["attack"] = max(1, int(actor.get("attack", 1)))
 	unit_data["defense"] = max(0, int(actor.get("defense", 0)))
 	unit_data["martial_art_ids"] = actor.get("martial_arts", [])
+	unit_data["sprite_tile_id"] = str(actor.get("sprite_tile_id", ""))
 	unit_data["max_mp"] = max(0, int(raw_unit.get("max_mp", 0)))
 	unit_data["mp"] = clamp(int(raw_unit.get("mp", unit_data["max_mp"])), 0, int(unit_data["max_mp"]))
 	unit_data["cell"] = raw_unit.get("start_cell", raw_unit.get("cell", {}))
