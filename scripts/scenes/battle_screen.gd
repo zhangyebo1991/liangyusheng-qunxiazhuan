@@ -34,13 +34,10 @@ var tactical_combat_system = TacticalCombatSystemScript.new()
 var grid_layer: Control
 var battle_grid: Node2D
 var status_label: Label
-var unit_panel: VBoxContainer
-var end_action_button: Button
-var normal_attack_button: Button
-var tactical_art_buttons: Dictionary = {}
+# Task 20: 删除 unit_panel/normal_attack_button/end_action_button/tactical_art_buttons/cell_visuals。
+# cell_buttons 仍保留：当前点击命中仍依赖每格 Button.pressed 信号；视觉高亮已迁至 battle_grid.set_range_overlay。
 var selected_tactical_action_id: String = "attack"
 var cell_buttons: Dictionary = {}
-var cell_visuals: Dictionary = {}
 var selected_unit_id: String = ""
 var _unit_sprites: Dictionary = {}  # unit_id → TacticalUnitSpriteScript 实例（挂在 battle_grid 下）
 var tactical_range_system = TacticalRangeSystemScript.new()
@@ -166,33 +163,11 @@ func _create_tactical_ui() -> void:
 	tactical_range_system.set_terrain_system(terrain_system)
 	_terrain_system = terrain_system
 
-	unit_panel = VBoxContainer.new()
-	unit_panel.position = Vector2(820, 56)
-	unit_panel.size = Vector2(360, 300)
-	add_child(unit_panel)
-
 	output = Label.new()
 	output.position = Vector2(820, 380)
 	output.size = Vector2(380, 170)
 	output.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(output)
-
-	normal_attack_button = Button.new()
-	normal_attack_button.text = "普通攻击"
-	normal_attack_button.position = Vector2(820, 560)
-	normal_attack_button.size = Vector2(112, 36)
-	normal_attack_button.pressed.connect(_on_tactical_action_selected.bind("attack"))
-	add_child(normal_attack_button)
-
-	_create_tactical_art_button("basic_sword", Vector2(940, 560))
-	_create_tactical_art_button("straight_sword_thrust", Vector2(1060, 560))
-
-	end_action_button = Button.new()
-	end_action_button.text = "结束行动"
-	end_action_button.position = Vector2(820, 610)
-	end_action_button.size = Vector2(120, 40)
-	end_action_button.pressed.connect(_on_tactical_end_action_pressed)
-	add_child(end_action_button)
 
 	retreat_button = Button.new()
 	retreat_button.text = "暂退"
@@ -261,19 +236,10 @@ func _build_unit_sprites() -> void:
 
 func _create_tactical_grid() -> void:
 	cell_buttons.clear()
-	cell_visuals.clear()
 	for q in range(tactical_battle_state.battlefield_width):
 		for r in range(tactical_battle_state.battlefield_height):
 			var cell = {"q": q, "r": r}
 			var cell_key = _cell_key(cell)
-			var visual = Panel.new()
-			visual.size = Vector2(TACTICAL_CELL_SIZE, TACTICAL_CELL_SIZE)
-			visual.position = _cell_to_screen(cell)
-			visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			_apply_tactical_cell_visual_style(visual, "idle")
-			grid_layer.add_child(visual)
-			cell_visuals[cell_key] = visual
-
 			var button = Button.new()
 			button.text = ""
 			button.size = Vector2(TACTICAL_CELL_SIZE, TACTICAL_CELL_SIZE)
@@ -285,17 +251,9 @@ func _create_tactical_grid() -> void:
 			grid_layer.add_child(button)
 			cell_buttons[cell_key] = button
 
-func _create_tactical_art_button(martial_art_id: String, button_position: Vector2) -> void:
-	var martial_art = DataRepository.get_martial_art(martial_art_id)
-	if martial_art.is_empty() or typeof(martial_art.get("tactical", {})) != TYPE_DICTIONARY:
-		return
-	var button = Button.new()
-	button.text = str(martial_art.get("name", martial_art_id))
-	button.position = button_position
-	button.size = Vector2(112, 36)
-	button.pressed.connect(_on_tactical_action_selected.bind(martial_art_id))
-	add_child(button)
-	tactical_art_buttons[martial_art_id] = button
+func _create_tactical_art_button(_martial_art_id: String, _button_position: Vector2) -> void:
+	# Task 20: 旧接口保留为空壳，防止外部调用者报错；期间不创建任何节点。
+	pass
 
 func _refresh_tactical() -> void:
 	if tactical_battle_state == null:
@@ -310,19 +268,6 @@ func _refresh_tactical() -> void:
 	else:
 		status_label.text = "等待集气"
 
-	for child in unit_panel.get_children():
-		child.queue_free()
-	for unit in tactical_battle_state.units:
-		var label = Label.new()
-		label.text = "%s 气血:%d/%d 集气:%d/%d" % [
-			unit.display_name,
-			unit.hp,
-			unit.max_hp,
-			unit.charge,
-			TacticalBattleStateScript.CHARGE_LIMIT,
-		]
-		unit_panel.add_child(label)
-
 	var movable: Array = []
 	var attackable: Array = []
 	if _is_player_action():
@@ -332,8 +277,6 @@ func _refresh_tactical() -> void:
 		var button = cell_buttons[key]
 		button.text = ""
 		button.disabled = true
-		if cell_visuals.has(key):
-			_apply_tactical_cell_visual_style(cell_visuals[key], "idle")
 	for unit in tactical_battle_state.units:
 		if not unit.is_alive():
 			continue
@@ -344,18 +287,12 @@ func _refresh_tactical() -> void:
 		var move_key = _cell_key(cell)
 		if cell_buttons.has(move_key):
 			cell_buttons[move_key].disabled = false
-		if cell_visuals.has(move_key):
-			_apply_tactical_cell_visual_style(cell_visuals[move_key], "move")
 	for target in attackable:
 		var target_key = _cell_key(target.cell)
 		if cell_buttons.has(target_key):
 			cell_buttons[target_key].disabled = false
-		if cell_visuals.has(target_key):
-			_apply_tactical_cell_visual_style(cell_visuals[target_key], "attack")
 
 	output.text = "\n".join(PackedStringArray(tactical_battle_state.log))
-	_refresh_tactical_action_buttons(current)
-	end_action_button.disabled = tactical_battle_state.is_finished or not _is_player_action()
 	retreat_button.disabled = tactical_battle_state.is_finished
 	_sync_unit_sprites()
 	_refresh_actor_panel()
@@ -455,28 +392,10 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 	# 不可移动则原地刷新（兜底，几乎不会触发）。
 	_refresh_tactical()
 
-func _on_tactical_action_selected(action_id: String) -> void:
-	if action_id.is_empty():
-		return
-	selected_tactical_action_id = action_id
-	_refresh_tactical()
-
 func _get_attackable_units_for_selected_action() -> Array:
 	if selected_tactical_action_id == "attack":
 		return tactical_combat_system.get_attackable_units(tactical_battle_state, tactical_battle_state.current_unit_id)
 	return tactical_combat_system.get_attackable_units_for_martial_art(tactical_battle_state, tactical_battle_state.current_unit_id, selected_tactical_action_id, DataRepository)
-
-func _refresh_tactical_action_buttons(current_unit) -> void:
-	var can_act = _is_player_action() and current_unit != null
-	if normal_attack_button != null:
-		normal_attack_button.disabled = not can_act
-	for martial_art_id in tactical_art_buttons.keys():
-		var button = tactical_art_buttons[martial_art_id]
-		button.disabled = not can_act or not _can_current_unit_use_tactical_art(current_unit, str(martial_art_id))
-	if selected_tactical_action_id != "attack":
-		var selected_button = tactical_art_buttons.get(selected_tactical_action_id)
-		if selected_button == null or selected_button.disabled:
-			selected_tactical_action_id = "attack"
 
 func _can_current_unit_use_tactical_art(current_unit, martial_art_id: String) -> bool:
 	if current_unit == null or not current_unit.martial_art_ids.has(martial_art_id):
@@ -489,12 +408,6 @@ func _can_current_unit_use_tactical_art(current_unit, martial_art_id: String) ->
 		return false
 	var mp_cost = max(0, int(tactical.get("mp_cost", martial_art.get("cost", 0))))
 	return current_unit.mp >= mp_cost
-
-func _on_tactical_end_action_pressed() -> void:
-	if not _is_player_action():
-		return
-	tactical_combat_system.end_unit_action(tactical_battle_state, tactical_battle_state.current_unit_id)
-	_refresh_tactical()
 
 func _on_tactical_retreat_pressed() -> void:
 	tactical_combat_system.resolve_retreat(tactical_battle_state)
@@ -559,18 +472,6 @@ func _apply_tactical_cell_style(button: Button) -> void:
 	button.add_theme_color_override("font_hover_color", Color.WHITE)
 	button.add_theme_color_override("font_pressed_color", Color.WHITE)
 	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.88))
-
-func _apply_tactical_cell_visual_style(panel: Panel, state: String) -> void:
-	var fill = Color(0.20, 0.26, 0.20, 0.22)
-	var border = Color(0.82, 0.90, 0.72, 0.38)
-	match state:
-		"move":
-			fill = Color(0.20, 0.48, 0.74, 0.28)
-			border = Color(0.42, 0.70, 1.00, 0.75)
-		"attack":
-			fill = Color(0.72, 0.24, 0.20, 0.30)
-			border = Color(1.00, 0.42, 0.36, 0.82)
-	panel.add_theme_stylebox_override("panel", _make_tactical_cell_style(fill, border))
 
 func _make_tactical_cell_style(fill: Color, border: Color) -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
