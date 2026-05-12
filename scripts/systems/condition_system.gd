@@ -40,6 +40,8 @@ func is_condition_met(game_state, condition: Variant, context: Dictionary = {}) 
 			_check_has_item(result, game_state, condition)
 		"map_object_resolved":
 			_check_map_object_resolved(result, game_state, condition)
+		"coins_at_least":
+			_check_coins_at_least(result, game_state, condition)
 		"not":
 			_check_not(result, game_state, condition, context)
 		_:
@@ -94,6 +96,17 @@ func _check_map_object_resolved(result: Dictionary, game_state, condition: Dicti
 		return
 	if not game_state.is_map_object_resolved(object_id):
 		_mark_unmet(result, "地图对象状态不满足：%s" % object_id)
+
+func _check_coins_at_least(result: Dictionary, game_state, condition: Dictionary) -> void:
+	var amount = int(condition.get("amount", 0))
+	if amount <= 0:
+		_add_error(result, "铜钱条件数量必须大于 0。")
+		return
+	if game_state.party == null:
+		_add_error(result, "队伍状态缺失。")
+		return
+	if int(game_state.party.coins) < amount:
+		_mark_unmet(result, "铜钱不足：需要 %d 文。" % amount)
 
 func _check_not(result: Dictionary, game_state, condition: Dictionary, context: Dictionary) -> void:
 	var nested = condition.get("condition", {})

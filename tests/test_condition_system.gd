@@ -51,4 +51,20 @@ func run(assertions) -> void:
 	var invalid_not = condition_system.is_condition_met(state, {"type": "not", "condition": []})
 	assertions.assert_true(not bool(invalid_not.get("success", true)), "not 条件缺少子条件时应失败")
 
+	# coins_at_least
+	var coin_state = GameStateScript.new()
+	coin_state.start_new_game()
+	# 新游戏起始 80 文（来自 STARTING_COINS），> 5 应满足
+	var ok = condition_system.is_condition_met(coin_state, {"type": "coins_at_least", "amount": 5})
+	assertions.assert_true(bool(ok.get("met", false)), "80 文应满足 >= 5 文条件")
+	# 扣到 4 文
+	coin_state.party.spend_coins(76)
+	assertions.assert_eq(coin_state.party.coins, 4, "扣后应为 4 文")
+	var fail = condition_system.is_condition_met(coin_state, {"type": "coins_at_least", "amount": 5})
+	assertions.assert_false(bool(fail.get("met", false)), "4 文应不满足 >= 5 文条件")
+	# amount 缺失或非正
+	var bad = condition_system.is_condition_met(coin_state, {"type": "coins_at_least", "amount": 0})
+	assertions.assert_false(bool(bad.get("success", true)), "amount=0 应返回 error")
+	coin_state.free()
+
 	state.free()
