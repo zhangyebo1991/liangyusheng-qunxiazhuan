@@ -49,3 +49,34 @@ func get_move_range(unit: Dictionary, terrain_grid: Array, enemy_positions: Arra
 		if k != src:
 			result.append(k)
 	return result
+
+# 普攻范围：四向相邻 1 格，不考虑地形/敌我（命中判定在 combat_system 做）。
+# 仅做棋盘边界裁剪。
+func get_attack_range_simple(unit: Dictionary) -> Array:
+	var src: Vector2i = unit.get("position", Vector2i(0, 0))
+	var result: Array = []
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var nb: Vector2i = src + d
+		if nb.x >= 0 and nb.x < GRID_COLS and nb.y >= 0 and nb.y < GRID_ROWS:
+			result.append(nb)
+	return result
+
+# 方向型技能范围：从 unit.position 沿 direction 延伸 length 格。
+# 当前仅 straight_sword_thrust（line_2，长度 2）；后续读招式数据扩展。
+# 边界外的格被裁剪（不延伸到棋盘外，遇边界即停）。
+func get_skill_directional_range(unit: Dictionary, skill_id: String, direction: Vector2i) -> Array:
+	var length: int = _get_skill_line_length(skill_id)
+	var src: Vector2i = unit.get("position", Vector2i(0, 0))
+	var result: Array = []
+	for i in range(1, length + 1):
+		var nb: Vector2i = src + direction * i
+		if nb.x < 0 or nb.x >= GRID_COLS or nb.y < 0 or nb.y >= GRID_ROWS:
+			break
+		result.append(nb)
+	return result
+
+func _get_skill_line_length(skill_id: String) -> int:
+	# 当前硬编码 straight_sword_thrust = 2；Task 5 读 martial_arts.json 后改为按 shape 解析。
+	if skill_id == "straight_sword_thrust":
+		return 2
+	return 1
