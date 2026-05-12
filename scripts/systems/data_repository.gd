@@ -9,13 +9,17 @@ const DATA_FILES := {
 	"maps": "res://data/maps.json",
 }
 
+const TERRAINS_FILE := "res://data/terrains.json"
+
 var content: Dictionary = {}
+var terrains: Dictionary = {}
 
 func load_all() -> Dictionary:
 	var loaded: Dictionary = {}
 	for key in DATA_FILES.keys():
 		loaded[key] = _load_json_array(DATA_FILES[key])
 	content = loaded
+	_load_terrains()
 	return content
 
 func get_actor(actor_id: String) -> Dictionary:
@@ -35,6 +39,11 @@ func get_dialogue(dialogue_id: String) -> Dictionary:
 
 func get_map(map_id: String) -> Dictionary:
 	return _find_by_id("maps", map_id)
+
+func get_terrain(terrain_id: String) -> Dictionary:
+	if terrains.is_empty():
+		_load_terrains()
+	return terrains.get(terrain_id, {})
 
 func get_inn(inn_id: String) -> Dictionary:
 	if inn_id.is_empty():
@@ -96,3 +105,19 @@ func _load_json_array(path: String) -> Array:
 		return []
 
 	return parsed
+
+func _load_terrains() -> void:
+	# terrains.json 是字典（按地形 ID 索引），与其他 *.json 的数组结构不同，单独处理。
+	var file = FileAccess.open(TERRAINS_FILE, FileAccess.READ)
+	if file == null:
+		push_error("无法读取地形数据：%s" % TERRAINS_FILE)
+		terrains = {}
+		return
+
+	var parsed = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_error("地形数据文件必须是字典：%s" % TERRAINS_FILE)
+		terrains = {}
+		return
+
+	terrains = parsed

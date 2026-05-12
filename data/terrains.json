@@ -1,0 +1,6 @@
+{
+  "grass":  { "name": "草地", "passable": true,  "move_cost": 1,  "evasion_bonus": 0,   "tile_id": "tile_0024" },
+  "water":  { "name": "浅水", "passable": true,  "move_cost": 2,  "evasion_bonus": -10, "tile_id": "tile_0001" },
+  "bridge": { "name": "桥",   "passable": true,  "move_cost": 1,  "evasion_bonus": 0,   "tile_id": "tile_0048" },
+  "tree":   { "name": "树丛", "passable": false, "move_cost": 99, "evasion_bonus": 0,   "tile_id": "tile_0096" }
+}

@@ -18,4 +18,6 @@ func run(assertions) -> void:
 	assertions.assert_true(repository.get_actor("hero_yun").get("martial_arts", []).has("straight_sword_thrust"), "主角应学会穿云刺")
 	assertions.assert_eq(repository.get_dialogue("intro_meet_master").get("title", ""), "初入江湖", "应按编号读取对话")
 	assertions.assert_eq(repository.get_actor("missing_id"), {}, "缺失角色编号应返回空字典")
+	assertions.assert_true(repository.terrains.size() >= 4, "应加载至少 4 种地形")
+	assertions.assert_true(repository.get_terrain("grass").has("name"), "草地应有 name 字段")
 	repository.free()
