@@ -8,6 +8,7 @@ const TerrainSystemScript = preload("res://scripts/systems/terrain_system.gd")
 const TacticalUnitSpriteScript = preload("res://scripts/scenes/tactical_unit_sprite.gd")
 const TacticalRangeSystemScript = preload("res://scripts/systems/tactical_range_system.gd")
 const BattleActionBarScript = preload("res://scripts/scenes/battle_action_bar.gd")
+const ChargeBarScript = preload("res://scripts/scenes/charge_bar.gd")
 const TACTICAL_CELL_SIZE := 64
 const TACTICAL_GRID_OFFSET := Vector2(64, 48)
 
@@ -70,6 +71,7 @@ func _process(delta: float) -> void:
 			tactical_combat_system.resolve_enemy_action(tactical_battle_state, unit.unit_id)
 			_refresh_tactical()
 			_return_if_tactical_finished()
+	_refresh_charge_bar()
 
 func _create_ui() -> void:
 	title_label = Label.new()
@@ -184,6 +186,13 @@ func _create_tactical_ui() -> void:
 	action_bar.position = Vector2(180, 660)
 	add_child(action_bar)
 	action_bar.action_selected.connect(_on_action_bar_selected)
+	# Task 13: 顶部集气进度条（800 宽，置于标题下方）。
+	charge_bar = ChargeBarScript.new()
+	charge_bar.position = Vector2(120, 88)
+	charge_bar.size = Vector2(800, 32)
+	charge_bar.bar_width = 800
+	add_child(charge_bar)
+	_refresh_charge_bar()
 
 func _build_unit_sprites() -> void:
 	# 为 tactical_battle_state.units 中每个单位创建一个 TacticalUnitSprite，
@@ -578,3 +587,22 @@ func _on_action_bar_selected(action_id: String) -> void:
 				tactical_combat_system.end_unit_action(tactical_battle_state, tactical_battle_state.current_unit_id)
 				_refresh_tactical()
 				_return_if_tactical_finished()
+
+# Task 13: 把 tactical_battle_state.units 转成 charge_bar 期望的 dict 列表。
+# cur_charge 字段映射自 unit.charge；is_action 表示当前正在行动相位的角色。
+func _refresh_charge_bar() -> void:
+	if charge_bar == null or tactical_battle_state == null:
+		return
+	var current_id := str(tactical_battle_state.current_unit_id)
+	var dicts: Array = []
+	for unit in tactical_battle_state.units:
+		if not unit.is_alive():
+			continue
+		var team := 0 if unit.team == TacticalBattleStateScript.TEAM_PLAYER else 1
+		dicts.append({
+			"unit_id": str(unit.unit_id),
+			"team": team,
+			"cur_charge": int(unit.charge),
+			"is_action": tactical_battle_state.is_action_phase and str(unit.unit_id) == current_id,
+		})
+	charge_bar.set_units(dicts)
