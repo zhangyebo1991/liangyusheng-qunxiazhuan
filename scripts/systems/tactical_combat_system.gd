@@ -472,7 +472,7 @@ func _get_tactical_martial_art(martial_art_id: String, data_source = null):
 	var martial_art = MartialArtRecordScript.from_dictionary(martial_art_data)
 	if not martial_art.has_tactical_config():
 		return null
-	if not ["diamond", "line"].has(martial_art.tactical_range_shape):
+	if not ["diamond", "line", "fan", "surround", "pierce", "ring", "target_cross_1"].has(martial_art.tactical_range_shape):
 		return null
 	return martial_art
 

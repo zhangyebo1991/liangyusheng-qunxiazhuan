@@ -162,6 +162,43 @@ func run(assertions) -> void:
 	assertions.assert_eq(swirl_low_mp.get_unit("hero").mp, 3, "剑气漩失败不应扣内力")
 	assertions.assert_eq(swirl_low_mp.get_unit("bandit").hp, 60, "剑气漩失败不应造成伤害")
 
+	# 新形状武学可通过 resolve_action 结算。
+	var fan_battle = system.create_battle(state, _sample_context(), repository)
+	fan_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	fan_battle.get_unit("bandit").cell = {"q": 5, "r": 2}
+	var fan_mp_before = fan_battle.get_unit("hero").mp
+	var fan_result = system.resolve_action(fan_battle, "hero", "sword_willow_sweep", [Vector2i(5, 2)])
+	assertions.assert_true(bool(fan_result.get("success", false)), "回风拂柳应释放成功")
+	assertions.assert_eq(fan_battle.get_unit("hero").mp, fan_mp_before - 6, "回风拂柳应扣 6 点内力")
+	assertions.assert_eq(fan_battle.get_unit("bandit").hp, 60 - (18 + 5 - 4), "回风拂柳伤害 = atk + bonus - def")
+
+	# 八方风雨多格命中
+	var sur_battle = system.create_battle(state, _sample_context(), repository)
+	sur_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	sur_battle.get_unit("bandit").cell = {"q": 4, "r": 3}
+	sur_battle.get_unit("lackey").cell = {"q": 5, "r": 2}
+	var sur_mp_before = sur_battle.get_unit("hero").mp
+	var sur_result = system.resolve_action(sur_battle, "hero", "sword_all_directions", [Vector2i(4, 3), Vector2i(5, 2)])
+	assertions.assert_true(bool(sur_result.get("success", false)), "八方风雨应释放成功")
+	assertions.assert_eq(sur_battle.get_unit("hero").mp, sur_mp_before - 10, "八方风雨应扣 10 内力")
+
+	# 长虹贯日穿透两目标
+	var pierce_battle = system.create_battle(state, _sample_context(), repository)
+	pierce_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	pierce_battle.get_unit("bandit").cell = {"q": 5, "r": 2}
+	pierce_battle.get_unit("lackey").cell = {"q": 6, "r": 2}
+	var pierce_result = system.resolve_action(pierce_battle, "hero", "sword_rainbow_pierce", [Vector2i(5, 2), Vector2i(6, 2)])
+	assertions.assert_true(bool(pierce_result.get("success", false)), "长虹贯日应穿透两目标")
+
+	# 剑气环身环形命中
+	var ring_battle = system.create_battle(state, _sample_context(), repository)
+	ring_battle.get_unit("hero").cell = {"q": 3, "r": 3}
+	ring_battle.get_unit("bandit").cell = {"q": 5, "r": 3}
+	var ring_mp_before = ring_battle.get_unit("hero").mp
+	var ring_result = system.resolve_action(ring_battle, "hero", "sword_ring_aura", [Vector2i(5, 3)])
+	assertions.assert_true(bool(ring_result.get("success", false)), "剑气环身应释放成功")
+	assertions.assert_eq(ring_battle.get_unit("hero").mp, ring_mp_before - 8, "剑气环身应扣 8 内力")
+
 	repository.free()
 	state.free()
 
