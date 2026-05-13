@@ -57,8 +57,8 @@
 ### 4.1 BattleFeedbackDirector（新增）
 职责：
 - 订阅反馈事件
-- 产出短时表现命令（shake、flash、hit_stop、pop_text、avatar_focus）
-- 文档术语统一：`hit_stop` 命令对应“命中停顿（Hit Stop）”
+- 产出短时表现命令（shake、flash、hitstop、pop_text、avatar_focus）
+- 文档术语统一：`hitstop` 命令对应“命中停顿（Hit Stop）”
 - 维护表现队列，避免同帧多次命中导致效果过叠
 
 接口草案：
