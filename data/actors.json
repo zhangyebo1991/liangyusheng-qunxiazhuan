@@ -7,7 +7,7 @@
     "max_hp": 120,
     "attack": 18,
     "defense": 8,
-    "martial_arts": ["basic_sword", "straight_sword_thrust"],
+    "martial_arts": ["basic_sword", "straight_sword_thrust", "sword_aura_swirl", "sword_willow_sweep", "sword_all_directions", "sword_rainbow_pierce", "sword_ring_aura"],
     "sprite_tile_id": "tile_hero_yun_hd"
   },
   {

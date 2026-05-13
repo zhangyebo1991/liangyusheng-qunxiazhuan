@@ -55,6 +55,74 @@
     }
   },
   {
+    "id": "sword_willow_sweep",
+    "name": "回风拂柳",
+    "school": "江湖",
+    "power": 14,
+    "cost": 6,
+    "description": "剑势如风，横扫面前锥形之敌。",
+    "proficiency_reward": 1,
+    "proficiency_thresholds": [10, 25, 50],
+    "shape": "fan",
+    "tactical": {
+      "damage_bonus": 5,
+      "range": 2,
+      "range_shape": "fan",
+      "mp_cost": 6
+    }
+  },
+  {
+    "id": "sword_all_directions",
+    "name": "八方风雨",
+    "school": "江湖",
+    "power": 16,
+    "cost": 10,
+    "description": "剑光四射，周身之敌无一幸免。",
+    "proficiency_reward": 1,
+    "proficiency_thresholds": [10, 25, 50],
+    "shape": "surround",
+    "tactical": {
+      "damage_bonus": 3,
+      "range": 1,
+      "range_shape": "surround",
+      "mp_cost": 10
+    }
+  },
+  {
+    "id": "sword_rainbow_pierce",
+    "name": "长虹贯日",
+    "school": "江湖",
+    "power": 13,
+    "cost": 7,
+    "description": "剑气一线穿云，直线上敌皆受创。",
+    "proficiency_reward": 1,
+    "proficiency_thresholds": [12, 30, 60],
+    "shape": "pierce",
+    "tactical": {
+      "damage_bonus": 4,
+      "range": 3,
+      "range_shape": "pierce",
+      "mp_cost": 7
+    }
+  },
+  {
+    "id": "sword_ring_aura",
+    "name": "剑气环身",
+    "school": "江湖",
+    "power": 15,
+    "cost": 8,
+    "description": "内力外放成环，周身环形之敌尽遭波及。",
+    "proficiency_reward": 1,
+    "proficiency_thresholds": [12, 30, 60],
+    "shape": "ring",
+    "tactical": {
+      "damage_bonus": 4,
+      "range": 2,
+      "range_shape": "ring",
+      "mp_cost": 8
+    }
+  },
+  {
     "id": "rough_fist",
     "name": "粗浅拳脚",
     "school": "江湖",
