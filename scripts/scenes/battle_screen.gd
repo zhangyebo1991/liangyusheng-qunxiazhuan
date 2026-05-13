@@ -13,8 +13,10 @@ const BattlePanelObjectiveScript = preload("res://scripts/scenes/battle_panel_ob
 const BattlePanelTerrainScript = preload("res://scripts/scenes/battle_panel_terrain.gd")
 const BattlePanelActorScript = preload("res://scripts/scenes/battle_panel_actor.gd")
 const BattleLogScript = preload("res://scripts/scenes/battle_log.gd")
-const TACTICAL_CELL_SIZE := 64
-const TACTICAL_GRID_OFFSET := Vector2(64, 48)
+const TACTICAL_CELL_SIZE := 80  # 与 battle_grid TILE_SIZE 一致
+const TACTICAL_GRID_OFFSET := Vector2.ZERO
+# v0.x: 8×6 棋盘 × 80px = 640×480，居中原点 = ((1280-640)/2, 100) = (320, 100)。
+const TACTICAL_GRID_ORIGIN := Vector2(320, 100)
 
 enum RangeMode { NONE = 0, MOVE = 1, ATTACK = 2, SKILL_DIR_PREVIEW = 3, SKILL_TARGET_PREVIEW = 4 }
 
@@ -58,6 +60,11 @@ var _skill_menu = null  # 当前打开的招式 PopupMenu（多次点击避免�
 # Task 19: 移动滑动动画锁
 var is_animating := false
 var _move_anim_target_cell: Dictionary = {}  # 动画结束后 commit_move 用的目标格
+# v0.x: 本回合「已移动一次」锁 + ESC 撤销。
+# 一次行动只允许移动一次；未提交「攻击/技能/待机」前可按 ESC 回到移动前位置。
+var _has_moved_this_action := false
+var _pre_move_cell: Dictionary = {}
+var _last_action_unit_id: String = ""
 
 func _ready() -> void:
 	context = GameState.peek_battle_context()
@@ -135,27 +142,15 @@ func _create_ui() -> void:
 	add_child(retreat_button)
 
 func _create_tactical_ui() -> void:
-	title_label = Label.new()
-	title_label.text = "战棋：山道试剑"
-	title_label.position = Vector2(32, 20)
-	title_label.size = Vector2(420, 32)
-	add_child(title_label)
-
-	status_label = Label.new()
-	status_label.position = Vector2(32, 56)
-	status_label.size = Vector2(420, 32)
-	add_child(status_label)
-
-	grid_layer = Control.new()
-	grid_layer.position = Vector2(120, 110)
-	grid_layer.size = Vector2(640, 420)
-	add_child(grid_layer)
-
-	# Task 9: 在 grid_layer 之下加 battle_grid 像素地形层（旧 ColorRect 仍然可见可点击）
+	# v0.x 修复：删除 title_label/status_label/output/retreat_button/grid_layer 5 个旧节点。
+	# 旧节点职能已被以下面板/控件接管：
+	#   - title/status → panel_actor + charge_bar
+	#   - output       → battle_log
+	#   - retreat      → action_bar 的 system 图标（待后续接入）
+	#   - grid_layer   → cell_buttons 直接挂到 battle_grid 下，与 32px tile 共坐标系
 	battle_grid = BattleGridScript.new()
-	battle_grid.position = Vector2(120, 110)
+	battle_grid.position = TACTICAL_GRID_ORIGIN
 	add_child(battle_grid)
-	move_child(battle_grid, grid_layer.get_index())
 	var terrain_system = TerrainSystemScript.new()
 	terrain_system.set_repository(DataRepository)
 	if tactical_battle_state != null:
@@ -163,29 +158,16 @@ func _create_tactical_ui() -> void:
 	tactical_range_system.set_terrain_system(terrain_system)
 	_terrain_system = terrain_system
 
-	output = Label.new()
-	output.position = Vector2(820, 380)
-	output.size = Vector2(380, 170)
-	output.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(output)
-
-	retreat_button = Button.new()
-	retreat_button.text = "暂退"
-	retreat_button.position = Vector2(960, 610)
-	retreat_button.size = Vector2(120, 40)
-	retreat_button.pressed.connect(_on_tactical_retreat_pressed)
-	add_child(retreat_button)
-
 	_create_tactical_grid()
 	_build_unit_sprites()
 	# Task 12: 底部 7 图标行动栏（与旧按钮并存，旧按钮 Task 20 再清）。
 	action_bar = BattleActionBarScript.new()
-	action_bar.position = Vector2(180, 660)
+	action_bar.position = Vector2(290, 620)  # v0.x: 与 80px tile grid 底边 (580) 保持 40px 间隙
 	add_child(action_bar)
 	action_bar.action_selected.connect(_on_action_bar_selected)
-	# Task 13: 顶部集气进度条（800 宽，置于标题下方）。
+	# Task 13: 顶部集气进度条（800 宽，置于左右面板之间空隙）。
 	charge_bar = ChargeBarScript.new()
-	charge_bar.position = Vector2(120, 88)
+	charge_bar.position = Vector2(240, 24)  # v0.x: 上移到 grid (y=100) 上方 70px 间隙，避免遮挡第一行 HP 条
 	charge_bar.size = Vector2(800, 32)
 	charge_bar.bar_width = 800
 	add_child(charge_bar)
@@ -197,9 +179,9 @@ func _create_tactical_ui() -> void:
 	panel_objective.custom_minimum_size = Vector2(200, 180)
 	add_child(panel_objective)
 	panel_terrain = BattlePanelTerrainScript.new()
-	panel_terrain.position = Vector2(8, 460)
-	panel_terrain.size = Vector2(200, 252)
-	panel_terrain.custom_minimum_size = Vector2(200, 252)
+	panel_terrain.position = Vector2(8, 360)  # v0.x: 上提，避免与新 action_bar/grid 底部重叠
+	panel_terrain.size = Vector2(200, 230)
+	panel_terrain.custom_minimum_size = Vector2(200, 230)
 	add_child(panel_terrain)
 	# Task 15: 右上主角信息卡。
 	panel_actor = BattlePanelActorScript.new()
@@ -210,9 +192,9 @@ func _create_tactical_ui() -> void:
 	EventBus.hero_mp_changed.connect(_on_hero_mp_changed_for_actor_panel)
 	# Task 16: 右下战斗日志面板。
 	battle_log = BattleLogScript.new()
-	battle_log.position = Vector2(1072, 460)
-	battle_log.size = Vector2(200, 252)
-	battle_log.custom_minimum_size = Vector2(200, 252)
+	battle_log.position = Vector2(1072, 360)  # v0.x: 上提与 panel_terrain 对齐
+	battle_log.size = Vector2(200, 230)
+	battle_log.custom_minimum_size = Vector2(200, 230)
 	add_child(battle_log)
 	EventBus.tactical_log_appended.connect(_on_tactical_log_appended)
 	_refresh_terrain_panels_for_current_actor()
@@ -248,7 +230,7 @@ func _create_tactical_grid() -> void:
 			button.focus_mode = Control.FOCUS_NONE
 			_apply_tactical_cell_style(button)
 			button.pressed.connect(_on_tactical_cell_pressed.bind(q, r))
-			grid_layer.add_child(button)
+			battle_grid.add_child(button)  # 与地形 tile 共坐标系
 			cell_buttons[cell_key] = button
 
 func _create_tactical_art_button(_martial_art_id: String, _button_position: Vector2) -> void:
@@ -258,42 +240,57 @@ func _create_tactical_art_button(_martial_art_id: String, _button_position: Vect
 func _refresh_tactical() -> void:
 	if tactical_battle_state == null:
 		return
-	var current = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
-	if tactical_battle_state.is_finished:
-		status_label.text = "战斗结束"
-	elif current != null and current.team == TacticalBattleStateScript.TEAM_PLAYER:
-		status_label.text = "%s行动 内力 %d/%d" % [current.display_name, current.mp, current.max_mp]
-	elif current != null:
-		status_label.text = "%s行动" % current.display_name
-	else:
-		status_label.text = "等待集气"
-
+	# v0.x: 检测行动单位切换 → 重置「已移动」锁与撤销点。
+	var cur_id := str(tactical_battle_state.current_unit_id)
+	if cur_id != _last_action_unit_id:
+		_last_action_unit_id = cur_id
+		_has_moved_this_action = false
+		_pre_move_cell = {}
+	# status_label / output / retreat_button 已删除；行动者/HP/MP 由 panel_actor 显示，日志由 battle_log 显示。
 	var movable: Array = []
 	var attackable: Array = []
 	if _is_player_action():
-		movable = tactical_combat_system.get_movable_cells(tactical_battle_state, tactical_battle_state.current_unit_id)
+		# v0.x: 统一用 range_system.get_move_range，包含地形可通行性 + 敌方占据过滤，
+		# 与「移动」按钮高亮所用逻辑一致，避免「高亮 4 格但实际可点别处」 bug。
+		var current_unit2 = tactical_battle_state.get_unit(cur_id)
+		if current_unit2 != null:
+			var view2 := _unit_view_for_range(current_unit2)
+			var move_cells_v2i: Array = tactical_range_system.get_move_range(view2, tactical_battle_state.terrain_grid, _enemy_positions())
+			for v in move_cells_v2i:
+				movable.append({"q": int(v.x), "r": int(v.y)})
 		attackable = _get_attackable_units_for_selected_action()
 	for key in cell_buttons.keys():
 		var button = cell_buttons[key]
-		button.text = ""
+		button.text = ""  # 名字由像素 sprite 表达，cell button 不再显示文字
 		button.disabled = true
 	for unit in tactical_battle_state.units:
 		if not unit.is_alive():
 			continue
-		var unit_key = _cell_key(unit.cell)
-		if cell_buttons.has(unit_key):
-			cell_buttons[unit_key].text = unit.display_name.substr(0, 2)
-	for cell in movable:
-		var move_key = _cell_key(cell)
-		if cell_buttons.has(move_key):
-			cell_buttons[move_key].disabled = false
-	for target in attackable:
-		var target_key = _cell_key(target.cell)
-		if cell_buttons.has(target_key):
-			cell_buttons[target_key].disabled = false
+		# 旧 cell_buttons 文字标签删除：单位名/位置由 sprite 与 panel_actor 体现。
+	# v0.x: 只在有对应「动作模式」时才启用格子点击：
+	#  - MOVE: 启用可移动格
+	#  - ATTACK: 启用可攻击敌方格
+	#  - SKILL_TARGET_PREVIEW: 启用中心选择格
+	#  - 其它（NONE / SKILL_DIR_PREVIEW）：所有格保持 disabled
+	if range_mode == RangeMode.MOVE:
+		for cell in movable:
+			var move_key = _cell_key(cell)
+			if cell_buttons.has(move_key):
+				cell_buttons[move_key].disabled = false
+	elif range_mode == RangeMode.ATTACK:
+		for target in attackable:
+			var target_key = _cell_key(target.cell)
+			if cell_buttons.has(target_key):
+				cell_buttons[target_key].disabled = false
+	elif range_mode == RangeMode.SKILL_TARGET_PREVIEW:
+		for v in range_cells:
+			if typeof(v) != TYPE_VECTOR2I:
+				continue
+			var k := "%d:%d" % [int(v.x), int(v.y)]
+			if cell_buttons.has(k):
+				cell_buttons[k].disabled = false
 
-	output.text = "\n".join(PackedStringArray(tactical_battle_state.log))
-	retreat_button.disabled = tactical_battle_state.is_finished
+	# 日志由 battle_log（EventBus.tactical_log_appended）写入；retreat 已并入 action_bar.system。
 	_sync_unit_sprites()
 	_refresh_actor_panel()
 
@@ -315,6 +312,8 @@ func _sync_unit_sprites() -> void:
 		sprite.set_current_actor(uid == current_id and not tactical_battle_state.is_finished)
 		sprite.set_selected(uid == selected_unit_id)
 		sprite.visible = unit.is_alive()
+		# v0.x: z_index 按 r 排序，避免上一行 sprite 遮挡当前行 HP 条。
+		sprite.z_index = int(unit.cell.get("r", 0)) * 2
 		alive_ids[uid] = true
 	# 清理已不存在的单位精灵
 	for k in _unit_sprites.keys():
@@ -375,7 +374,10 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 		return
 	var cell = {"q": q, "r": r}
 	var target = _unit_at_cell(cell)
+	# v0.x: 攻击必须先选「普攻」或「技能」；MOVE 模式下点敌人不生效。
 	if target != null and target.team != current_unit.team:
+		if range_mode != RangeMode.ATTACK:
+			return
 		var result: Dictionary
 		if selected_tactical_action_id == "attack":
 			result = tactical_combat_system.attack_unit(tactical_battle_state, current_unit.unit_id, target.unit_id)
@@ -383,10 +385,14 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 			result = tactical_combat_system.use_martial_art(tactical_battle_state, current_unit.unit_id, target.unit_id, selected_tactical_action_id, DataRepository)
 		if bool(result.get("success", false)) and not tactical_battle_state.is_finished:
 			tactical_combat_system.end_unit_action(tactical_battle_state, current_unit.unit_id)
+		_set_range_mode(RangeMode.NONE, [])
 		_refresh_tactical()
 		_return_if_tactical_finished()
 		return
-	# Task 19: 走移动 → 改为先播滑动动画，动画结束才 commit_move。
+	# v0.x: 移动必须先点底部「移动」按钮进入 MOVE 模式，避免误操作。
+	if range_mode != RangeMode.MOVE:
+		return
+	# Task 19 / v0.x: 走移动 → BFS 路径 → 逐格滑动动画 → 动画结束才 commit_move。
 	if _start_move_animation(current_unit, cell):
 		return
 	# 不可移动则原地刷新（兜底，几乎不会触发）。
@@ -541,11 +547,16 @@ func _on_action_bar_selected(action_id: String) -> void:
 	var view := _unit_view_for_range(unit)
 	match action_id:
 		"move":
+			# v0.x: 本回合已移动一次 → 拒绝再进 MOVE 模式（需先按 ESC 撤销。顶部提示后续可加）。
+			if _has_moved_this_action:
+				return
 			var cells := tactical_range_system.get_move_range(view, tactical_battle_state.terrain_grid, _enemy_positions())
 			_set_range_mode(RangeMode.MOVE, cells)
+			_refresh_tactical()
 		"attack":
 			var cells := tactical_range_system.get_attack_range_simple(view)
 			_set_range_mode(RangeMode.ATTACK, cells)
+			_refresh_tactical()
 		"skill":
 			# Task 17: 弹出当前主角已学的 tactical 武学菜单，按 shape 走方向/目标交互。
 			_clear_direction_arrows()
@@ -598,9 +609,9 @@ func _poll_terrain_hover() -> void:
 	_show_terrain_at(cell)
 
 func _mouse_to_grid_cell() -> Vector2i:
-	# battle_grid 是 Node2D，position 是其全局原点；TILE_SIZE = 32（见 battle_grid.gd）。
+	# battle_grid 是 Node2D，position 是其全局原点；TILE_SIZE 与 BattleGrid.TILE_SIZE 一致。
 	var local: Vector2 = get_global_mouse_position() - battle_grid.global_position
-	var tile_size := 32
+	var tile_size := TACTICAL_CELL_SIZE
 	var c := int(floor(local.x / tile_size))
 	var r := int(floor(local.y / tile_size))
 	var rows: int = tactical_battle_state.terrain_grid.size()
@@ -620,9 +631,9 @@ func _show_terrain_at(cell: Vector2i) -> void:
 		var fallback := terrain_id if not terrain_id.is_empty() else "—"
 		var name_text := str(data.get("name", fallback))
 		var ev := int(data.get("evasion_bonus", 0))
-		var mc := int(data.get("move_cost", 1))
 		var sign_str := "+" if ev >= 0 else ""
-		var effect := "闪避 %s%d%% / 移动消耗 %d" % [sign_str, ev, mc]
+		# v0.x: 本作不采用「移动消耗」设定，只展示闪避加成。
+		var effect := "闪避 %s%d%%" % [sign_str, ev]
 		panel_objective.set_hovered_terrain(name_text, effect)
 
 func _terrain_at(cell: Vector2i) -> String:
@@ -653,6 +664,11 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_TAB:
 		_focus_next_distinct_terrain()
 		accept_event()
+		return
+	# v0.x: 未提交「攻击/技能/待机」前按 ESC 可撤销本回合的移动，回到移动前位置。
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if _try_undo_move():
+			accept_event()
 
 func _focus_next_distinct_terrain() -> void:
 	if tactical_battle_state == null:
@@ -795,9 +811,9 @@ func _show_direction_arrows(skill_id: String) -> void:
 			continue
 		var btn := Button.new()
 		btn.text = str(entry["label"])
-		btn.size = Vector2(32, 32)
-		btn.position = battle_grid.position + battle_grid.grid_to_pixel(nb) - Vector2(16, 16)
-		btn.add_theme_font_size_override("font_size", 22)
+		btn.size = Vector2(TACTICAL_CELL_SIZE, TACTICAL_CELL_SIZE)
+		btn.position = battle_grid.position + battle_grid.grid_to_pixel(nb) - Vector2(TACTICAL_CELL_SIZE / 2.0, TACTICAL_CELL_SIZE / 2.0)
+		btn.add_theme_font_size_override("font_size", 32)
 		btn.add_theme_color_override("font_color", Color(1, 0.92, 0.45))
 		btn.focus_mode = Control.FOCUS_NONE
 		btn.pressed.connect(_on_direction_chosen.bind(skill_id, d))
@@ -844,13 +860,14 @@ func _resolve_skill_action(skill_id: String, target_cells: Array) -> void:
 
 # ─── Task 19: 移动滑动动画 ───────────────────────────────────────────────────
 
-# 检查 target_cell 是否在 movable_cells 内 → 是则播 sprite.animate_to 滑动；
+# 检查 target_cell 是否在 movable_cells 内 → 是则 BFS 求路径，按格逐步滑动。
 # 动画结束才落地 move_unit + emit tactical_unit_moved。
 # 返回 true = 动画已启动；false = 不可移动（caller 自行兜底）。
 func _start_move_animation(unit, target_cell: Dictionary) -> bool:
 	if unit == null or tactical_battle_state == null or battle_grid == null:
 		return false
-	if not _cell_in_list(target_cell, tactical_combat_system.get_movable_cells(tactical_battle_state, str(unit.unit_id))):
+	var movable: Array = tactical_combat_system.get_movable_cells(tactical_battle_state, str(unit.unit_id))
+	if not _cell_in_list(target_cell, movable):
 		return false
 	var sprite = _unit_sprites.get(str(unit.unit_id))
 	var src_q: int = int(unit.cell.get("q", 0))
@@ -860,15 +877,61 @@ func _start_move_animation(unit, target_cell: Dictionary) -> bool:
 	if sprite == null or not is_instance_valid(sprite):
 		tactical_combat_system.move_unit(tactical_battle_state, str(unit.unit_id), target_cell)
 		EventBus.tactical_unit_moved.emit(str(unit.unit_id), Vector2i(src_q, src_r), dst)
+		_set_range_mode(RangeMode.NONE, [])
 		_refresh_tactical()
 		return true
-	var distance: int = abs(dst.x - src_q) + abs(dst.y - src_r)
-	var duration: float = 0.18 * float(max(1, distance))
+	# v0.x: BFS 求最短曼哈顿路径（仅穿过 movable 格 + 起点），让精灵走格而非斜线穿场。
+	var path_cells: Array = _compute_move_path(Vector2i(src_q, src_r), dst, movable)
+	var pixel_points: Array = []
+	for pc in path_cells:
+		pixel_points.append(battle_grid.grid_to_pixel(pc))
+	var per_step: float = 0.12  # 每格 120ms，比旧总时长 0.18s/格 略快、单步更清晰
 	is_animating = true
 	_move_anim_target_cell = target_cell.duplicate()
 	sprite.animation_finished.connect(_on_move_animation_done.bind(str(unit.unit_id), src_q, src_r), CONNECT_ONE_SHOT)
-	sprite.animate_to(battle_grid.grid_to_pixel(dst), duration)
+	if pixel_points.is_empty():
+		# 兜底：BFS 没找到路径（理论不会发生，因为 dst 在 movable 内），直接一步到位。
+		sprite.animate_to(battle_grid.grid_to_pixel(dst), 0.18)
+	else:
+		sprite.animate_along_path(pixel_points, per_step)
 	return true
+
+# v0.x: BFS 在 movable + 起点 集合内求 src→dst 4 邻最短路径，返回 Array[Vector2i]，不含起点、含终点。
+# 若不可达返回空数组，由 caller 兜底。
+func _compute_move_path(src: Vector2i, dst: Vector2i, movable: Array) -> Array:
+	if src == dst:
+		return []
+	var allowed: Dictionary = {src: true}
+	for c in movable:
+		if typeof(c) == TYPE_DICTIONARY:
+			allowed[Vector2i(int(c.get("q", 0)), int(c.get("r", 0)))] = true
+	if not allowed.has(dst):
+		return []
+	var parent: Dictionary = {}
+	var visited: Dictionary = {src: true}
+	var queue: Array = [src]
+	while queue.size() > 0:
+		var cur: Vector2i = queue.pop_front()
+		if cur == dst:
+			break
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var nb: Vector2i = cur + d
+			if visited.has(nb) or not allowed.has(nb):
+				continue
+			visited[nb] = true
+			parent[nb] = cur
+			queue.append(nb)
+	if not parent.has(dst):
+		return []
+	var rev: Array = [dst]
+	var cur2: Vector2i = dst
+	while parent.has(cur2):
+		cur2 = parent[cur2]
+		if cur2 == src:
+			break
+		rev.append(cur2)
+	rev.reverse()
+	return rev
 
 # 滑动动画完成 → 落地 move_unit → 广播 → 刷新。
 func _on_move_animation_done(unit_id: String, from_q: int, from_r: int) -> void:
@@ -881,12 +944,43 @@ func _on_move_animation_done(unit_id: String, from_q: int, from_r: int) -> void:
 	if target_cell.is_empty():
 		_refresh_tactical()
 		return
+	# v0.x: 记录本回合移动前位置，供 ESC 撤销使用；并锁定「本回合不能再移动」。
 	var result: Dictionary = tactical_combat_system.move_unit(tactical_battle_state, unit_id, target_cell)
 	if bool(result.get("success", false)):
 		var to_cell := Vector2i(int(target_cell.get("q", 0)), int(target_cell.get("r", 0)))
 		EventBus.tactical_unit_moved.emit(unit_id, Vector2i(from_q, from_r), to_cell)
+		_has_moved_this_action = true
+		_pre_move_cell = {"q": from_q, "r": from_r}
+	# v0.x: 移动落地后清 range_mode，避免高亮残留、避免玩家连点又动。
+	_set_range_mode(RangeMode.NONE, [])
 	_refresh_tactical()
 	_return_if_tactical_finished()
+
+# v0.x: ESC 撤销本回合移动。仅在：
+#  - 当前是玩家行动相
+#  - 本回合已移动 且 记录了移动前位置
+#  - 未进行攻击/技能提交（该状态下 current_unit_id 未变 + 未 finished）
+# 返回 true = 已撤销；false = 不满足条件。
+func _try_undo_move() -> bool:
+	if tactical_battle_state == null or is_animating:
+		return false
+	if not _is_player_action():
+		return false
+	if not _has_moved_this_action or _pre_move_cell.is_empty():
+		return false
+	var unit_id := str(tactical_battle_state.current_unit_id)
+	var unit = tactical_battle_state.get_unit(unit_id)
+	if unit == null:
+		return false
+	var from_cell := Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0)))
+	unit.cell = {"q": int(_pre_move_cell.get("q", 0)), "r": int(_pre_move_cell.get("r", 0))}
+	var to_cell := Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0)))
+	EventBus.tactical_unit_moved.emit(unit_id, from_cell, to_cell)
+	_has_moved_this_action = false
+	_pre_move_cell = {}
+	_set_range_mode(RangeMode.NONE, [])
+	_refresh_tactical()
+	return true
 
 # 工具：在 movable_cells 列表里查 target_cell（{q,r} dict 形式）是否存在。
 func _cell_in_list(target_cell: Dictionary, list: Array) -> bool:

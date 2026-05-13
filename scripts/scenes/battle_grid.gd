@@ -1,6 +1,8 @@
 extends Node2D
 
-const TILE_SIZE := 32  # Kenney tile 16x16 放大 2x
+# v0.x: TILE_SIZE 80，8×6 棋盘 → 640×480，靠近「铺满」中部可用区。
+const TILE_SIZE := 80
+const TILE_SCALE := 5  # Kenney tile 16 × 5 = 80
 const GRID_COLS := 8
 const GRID_ROWS := 6
 const TILES_DIR := "res://assets/kenney_tiny-battle/Tiles/"
@@ -37,7 +39,7 @@ func _build_tiles() -> void:
 				continue
 			var sprite := Sprite2D.new()
 			sprite.texture = load(tex_path)
-			sprite.scale = Vector2(2, 2)
+			sprite.scale = Vector2(TILE_SCALE, TILE_SCALE)
 			sprite.position = Vector2(c * TILE_SIZE + TILE_SIZE / 2, r * TILE_SIZE + TILE_SIZE / 2)
 			add_child(sprite)
 			_tile_sprites[Vector2i(c, r)] = sprite

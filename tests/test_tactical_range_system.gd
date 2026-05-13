@@ -53,13 +53,13 @@ func _test_move_range_tree_block(assertions, rs) -> void:
 
 func _test_move_range_water_cost(assertions, rs) -> void:
 	var grid = _make_grass_grid()
-	grid[3][4] = "water"  # Vector2i(4,3) 浅水，cost=2
+	grid[3][4] = "water"  # Vector2i(4,3) 浅水：v0.x 起 step_cost 拍死 1，与草地等同
 	var unit = {"position": Vector2i(3, 3), "move": 3, "team": 0}
 	var enemies: Array = []
 	var range_cells = rs.get_move_range(unit, grid, enemies)
 	assertions.assert_true(range_cells.has(Vector2i(4, 3)), "浅水可通过")
 	assertions.assert_true(range_cells.has(Vector2i(5, 3)), "浅水后再走 1 步应可达")
-	assertions.assert_false(range_cells.has(Vector2i(6, 3)), "浅水路径下 (6,3) 应不可达（cost 2+1+1=4>3）")
+	assertions.assert_true(range_cells.has(Vector2i(6, 3)), "v0.x: 不再读地形 move_cost，浅水路径 (6,3) 距离 3 应可达")
 
 func _test_move_range_enemy_block(assertions, rs) -> void:
 	var grid = _make_grass_grid()

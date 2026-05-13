@@ -1,7 +1,8 @@
 extends PanelContainer
 
 # Task 14: 左下「地形信息」面板。
-# 显示当前焦点格的地形名 / tile 图 / 移动消耗 / 闪避加成；底部小字提示。
+# 显示当前焦点格的地形名 / tile 图 / 闪避加成；底部小字提示。
+# v0.x: 去掉「移动消耗」显示，本作不采用该设定。
 
 const COLOR_PANEL := Color(0.06, 0.08, 0.10, 0.62)
 const COLOR_BORDER := Color(0.84, 0.70, 0.36, 0.85)
@@ -13,7 +14,6 @@ const TILES_DIR := "res://assets/kenney_tiny-battle/Tiles/"
 var _name_label: Label
 var _tile_rect: TextureRect
 var _evasion_label: Label
-var _move_cost_label: Label
 var _hint_label: Label
 
 func _ready() -> void:
@@ -38,9 +38,6 @@ func _ready() -> void:
 	_evasion_label = _make_text("闪避 +0%")
 	box.add_child(_evasion_label)
 
-	_move_cost_label = _make_text("移动消耗 1")
-	box.add_child(_move_cost_label)
-
 	box.add_child(_make_separator())
 
 	_hint_label = Label.new()
@@ -57,8 +54,6 @@ func set_terrain(terrain_data: Dictionary) -> void:
 			_tile_rect.texture = null
 		if _evasion_label != null:
 			_evasion_label.text = "闪避 +0%"
-		if _move_cost_label != null:
-			_move_cost_label.text = "移动消耗 1"
 		return
 	if _name_label != null:
 		_name_label.text = str(terrain_data.get("name", "—"))
@@ -75,8 +70,6 @@ func set_terrain(terrain_data: Dictionary) -> void:
 	if _evasion_label != null:
 		var ev := int(terrain_data.get("evasion_bonus", 0))
 		_evasion_label.text = "闪避 %s%d%%" % [("+" if ev >= 0 else ""), ev]
-	if _move_cost_label != null:
-		_move_cost_label.text = "移动消耗 %d" % int(terrain_data.get("move_cost", 1))
 
 func _make_style() -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()

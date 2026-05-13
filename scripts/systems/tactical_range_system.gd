@@ -12,8 +12,9 @@ var _terrain_system = null
 func set_terrain_system(ts) -> void:
 	_terrain_system = ts
 
-# 移动范围：返回 Array[Vector2i]，从 unit.position 出发、累计移动消耗 ≤ unit.move 的所有可达格。
+# 移动范围：返回 Array[Vector2i]，从 unit.position 出发、曼哈顿步数 ≤ unit.move 的所有可达格。
 # 不含起点；树丛等不可通行地形与敌方占据格剔除。
+# v0.x: 本作不采用「地形移动消耗」设定，所有可通行格 step_cost 拍死为 1。
 func get_move_range(unit: Dictionary, terrain_grid: Array, enemy_positions: Array) -> Array:
 	var src: Vector2i = unit.get("position", Vector2i(0, 0))
 	var budget: int = int(unit.get("move", 0))
@@ -35,8 +36,7 @@ func get_move_range(unit: Dictionary, terrain_grid: Array, enemy_positions: Arra
 			var terrain_id: String = String(terrain_grid[nb.y][nb.x])
 			if _terrain_system == null or not _terrain_system.is_passable(terrain_id):
 				continue
-			var step_cost: int = _terrain_system.get_move_cost(terrain_id)
-			var new_d: int = cur_d + step_cost
+			var new_d: int = cur_d + 1  # v0.x: 拍死 1，不再读 _terrain_system.get_move_cost
 			if new_d > budget:
 				continue
 			if dist.has(nb) and int(dist[nb]) <= new_d:
