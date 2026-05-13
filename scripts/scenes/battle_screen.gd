@@ -13,6 +13,7 @@ const BattlePanelObjectiveScript = preload("res://scripts/scenes/battle_panel_ob
 const BattlePanelTerrainScript = preload("res://scripts/scenes/battle_panel_terrain.gd")
 const BattlePanelActorScript = preload("res://scripts/scenes/battle_panel_actor.gd")
 const BattleLogScript = preload("res://scripts/scenes/battle_log.gd")
+const ProficiencySystemScript = preload("res://scripts/systems/proficiency_system.gd")
 const BattleFeedbackDirectorScript = preload("res://scripts/systems/battle_feedback_director.gd")
 const TACTICAL_CELL_SIZE := 80  # 与 battle_grid TILE_SIZE 一致
 const TACTICAL_GRID_OFFSET := Vector2.ZERO
@@ -58,6 +59,7 @@ var _last_hover_cell: Vector2i = Vector2i(-1, -1)  # Task 14 鼠标 hover 去重
 var _pending_skill_id: String = ""  # 当前 SKILL_DIR_PREVIEW / SKILL_TARGET_PREVIEW 模式锁定的招式 id
 var _direction_buttons: Array = []  # 4 方向箭头 Button 列表（释放后清空）
 var _skill_menu = null  # 当前打开的招式 PopupMenu（多次点击避免重叠）
+var _proficiency_system = null
 # Task 19: 移动滑动动画锁
 var is_animating := false
 var _move_anim_target_cell: Dictionary = {}  # 动画结束后 commit_move 用的目标格
@@ -72,6 +74,7 @@ var _feedback_hitstop_sec := 0.0
 
 func _ready() -> void:
 	_feedback_director = BattleFeedbackDirectorScript.new()
+	_proficiency_system = ProficiencySystemScript.new()
 	context = GameState.peek_battle_context()
 	is_tactical_mode = str(context.get("battle_mode", "")) == "tactical"
 	if is_tactical_mode:
@@ -915,10 +918,28 @@ func _open_skill_menu() -> void:
 		if shape.is_empty():
 			continue  # 仅展示方向/目标型招式（基础剑法等近身招式仍走旧攻击按钮）
 		if not _can_current_unit_use_tactical_art(unit, sid_s):
-			menu.add_item("%s（内力不足）" % str(data.get("name", sid_s)))
+			var skill_name: String = str(data.get("name", sid_s))
+			var thresholds: Array = data.get("proficiency_thresholds", [])
+			var use_count := int(GameState.martial_proficiency.get(sid_s, 0))
+			var level := 0
+			if _proficiency_system != null:
+				level = _proficiency_system.get_level(use_count, thresholds)
+			var label := skill_name
+			if level > 0:
+				label = "%s Lv.%d" % [skill_name, level]
+			menu.add_item("%s（内力不足）" % label)
 			menu.set_item_disabled(menu.get_item_count() - 1, true)
 		else:
-			menu.add_item(str(data.get("name", sid_s)))
+			var skill_name: String = str(data.get("name", sid_s))
+			var thresholds: Array = data.get("proficiency_thresholds", [])
+			var use_count := int(GameState.martial_proficiency.get(sid_s, 0))
+			var level := 0
+			if _proficiency_system != null:
+				level = _proficiency_system.get_level(use_count, thresholds)
+			var label := skill_name
+			if level > 0:
+				label = "%s Lv.%d" % [skill_name, level]
+			menu.add_item(label)
 		skill_ids.append(sid_s)
 	if skill_ids.is_empty():
 		menu.queue_free()
