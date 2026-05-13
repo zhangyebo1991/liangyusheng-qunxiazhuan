@@ -64,11 +64,16 @@ func advance_charge(battle, delta: float) -> void:
 		begin_unit_action(battle, ready.unit_id)
 
 func get_ready_unit(battle):
+	return get_ready_unit_excluding(battle, "")
+
+func get_ready_unit_excluding(battle, excluded_unit_id: String):
 	if battle == null:
 		return null
 	var ready_players: Array = []
 	var ready_enemies: Array = []
 	for unit in battle.units:
+		if str(unit.unit_id) == excluded_unit_id:
+			continue
 		if not unit.is_alive() or unit.charge < TacticalBattleStateScript.CHARGE_LIMIT:
 			continue
 		if unit.team == TacticalBattleStateScript.TEAM_PLAYER:

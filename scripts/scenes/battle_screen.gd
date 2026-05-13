@@ -722,29 +722,32 @@ func _refresh_charge_bar() -> void:
 func _predict_next_charge_actor_id(current_id: String) -> String:
 	if tactical_battle_state == null:
 		return ""
-	var best_uid := ""
-	var best_charge := -1
-	var ready_player_uid := ""
-	var ready_enemy_uid := ""
+	var ready: Variant = tactical_combat_system.get_ready_unit_excluding(tactical_battle_state, current_id)
+	if ready != null:
+		return str(ready.unit_id)
+	var best_uid: String = ""
+	var best_eta: float = INF
+	var best_team_priority: int = 2
 	for unit in tactical_battle_state.units:
 		if not unit.is_alive():
 			continue
 		var uid := str(unit.unit_id)
 		if uid == current_id:
 			continue
-		var charge := int(unit.charge)
-		if charge >= TacticalBattleStateScript.CHARGE_LIMIT:
-			if unit.team == TacticalBattleStateScript.TEAM_PLAYER and ready_player_uid.is_empty():
-				ready_player_uid = uid
-			elif unit.team == TacticalBattleStateScript.TEAM_ENEMY and ready_enemy_uid.is_empty():
-				ready_enemy_uid = uid
-		if charge > best_charge:
-			best_charge = charge
+		var speed: int = int(unit.charge_speed)
+		if speed <= 0:
+			continue
+		var remain: int = maxi(0, TacticalBattleStateScript.CHARGE_LIMIT - int(unit.charge))
+		var eta: float = float(remain) / float(speed)
+		var team_priority: int = 0 if unit.team == TacticalBattleStateScript.TEAM_PLAYER else 1
+		if eta < best_eta:
+			best_eta = eta
+			best_team_priority = team_priority
 			best_uid = uid
-	if not ready_player_uid.is_empty():
-		return ready_player_uid
-	if not ready_enemy_uid.is_empty():
-		return ready_enemy_uid
+		elif is_equal_approx(eta, best_eta):
+			if team_priority < best_team_priority:
+				best_team_priority = team_priority
+				best_uid = uid
 	return best_uid
 
 # Task 14: 鼠标悬停某战棋格 → 刷新左下地形面板 + 左上战场信息面板。
