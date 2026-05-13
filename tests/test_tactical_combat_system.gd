@@ -199,6 +199,30 @@ func run(assertions) -> void:
 	assertions.assert_true(bool(ring_result.get("success", false)), "剑气环身应释放成功")
 	assertions.assert_eq(ring_battle.get_unit("hero").mp, ring_mp_before - 8, "剑气环身应扣 8 内力")
 
+	# 熟练度累加测试
+	const ProficiencySystemScript = preload("res://scripts/systems/proficiency_system.gd")
+	var prof_sys = ProficiencySystemScript.new()
+	system.set_proficiency(prof_sys, state.martial_proficiency)
+
+	var prof_battle = system.create_battle(state, _sample_context(), repository)
+	prof_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	prof_battle.get_unit("bandit").cell = {"q": 5, "r": 2}
+	system.resolve_action(prof_battle, "hero", "sword_willow_sweep", [Vector2i(5, 2)])
+	assertions.assert_eq(state.get_martial_proficiency("sword_willow_sweep"), 1, "首次使用回风拂柳后熟练度应 = 1")
+	system.resolve_action(prof_battle, "hero", "sword_willow_sweep", [Vector2i(5, 2)])
+	assertions.assert_eq(state.get_martial_proficiency("sword_willow_sweep"), 2, "二次使用回风拂柳后熟练度应 = 2")
+
+	# 熟练度加值验伤：手动设基本剑法 25 次 → 跨过 [10, 25] 两阈值 → bonus = +4
+	var bonus_battle = system.create_battle(state, _sample_context(), repository)
+	bonus_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	bonus_battle.get_unit("bandit").cell = {"q": 5, "r": 2}
+	bonus_battle.get_unit("bandit").hp = 60
+	state.martial_proficiency["basic_sword"] = 25
+	system.resolve_action(bonus_battle, "hero", "basic_sword", [Vector2i(5, 2)])
+	# 基础剑法：atk=18, tactical.damage_bonus=6, def=4 → 18+6-4=20
+	# 熟练度 bonus = Lv.2 × 2 = +4 → 总伤害 = 24
+	assertions.assert_eq(bonus_battle.get_unit("bandit").hp, 60 - 24, "熟练度 Lv.2 时基础剑法伤害应为 24")
+
 	repository.free()
 	state.free()
 

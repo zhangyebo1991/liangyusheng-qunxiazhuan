@@ -3,11 +3,18 @@ extends RefCounted
 const TacticalBattleStateScript = preload("res://scripts/domain/tactical_battle_state.gd")
 const TacticalUnitStateScript = preload("res://scripts/domain/tactical_unit_state.gd")
 const MartialArtRecordScript = preload("res://scripts/domain/martial_art_record.gd")
+const ProficiencySystemScript = preload("res://scripts/systems/proficiency_system.gd")
 
 var repository = null
+var _proficiency_system = null
+var _proficiency_map: Dictionary = {}
 
 func set_repository(next_repository) -> void:
 	repository = next_repository
+
+func set_proficiency(proficiency_system, proficiency_map: Dictionary) -> void:
+	_proficiency_system = proficiency_system
+	_proficiency_map = proficiency_map
 
 func create_battle(game_state, context: Dictionary, data_source = null):
 	var source = data_source if data_source != null else repository
@@ -237,6 +244,8 @@ func resolve_action(battle, unit_id: String, action_id: String, target_cells: Ar
 		result = _resolve_generic_skill(battle, unit, action_id, target_cells, skill_data)
 	if bool(result.get("success", false)):
 		_emit_action_resolved(unit_id, action_id, target_cells)
+		if action_id != "attack" and _proficiency_system != null:
+			_proficiency_system.add_use(_proficiency_map, action_id)
 	return result
 
 # Task 17: 通用方向型/范围型招式结算。
@@ -247,6 +256,10 @@ func _resolve_generic_skill(battle, attacker, action_id: String, target_cells: A
 	var tactical = skill_data.get("tactical", {})
 	var mp_cost: int = int(tactical.get("mp_cost", skill_data.get("mp_cost", 0)))
 	var damage_bonus: int = int(tactical.get("damage_bonus", 0))
+	if _proficiency_system != null and not _proficiency_map.is_empty():
+		var thresholds: Array = skill_data.get("proficiency_thresholds", [])
+		if typeof(thresholds) == TYPE_ARRAY and not thresholds.is_empty():
+			damage_bonus += _proficiency_system.get_bonus(int(_proficiency_map.get(action_id, 0)), thresholds)
 	if attacker.mp < mp_cost:
 		return {"success": false, "message": "内力不足。"}
 	attacker.mp = max(0, attacker.mp - mp_cost)
