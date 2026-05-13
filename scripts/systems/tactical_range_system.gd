@@ -128,3 +128,30 @@ func _grid_dims(terrain_grid: Array) -> Vector2i:
 	if typeof(terrain_grid) == TYPE_ARRAY and terrain_grid.size() > 0 and typeof(terrain_grid[0]) == TYPE_ARRAY and terrain_grid[0].size() > 0:
 		return Vector2i(int(terrain_grid[0].size()), int(terrain_grid.size()))
 	return Vector2i(DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS)
+
+# 扇形范围：从 unit.position 沿 direction 方向，夹角 ≤ 60 度（锥宽 120 度），
+# 曼哈顿距离 ≤ range 的格子。不含自身格。棋盘边界裁剪。
+func get_fan_range(unit: Dictionary, direction: Vector2i, range: int, terrain_grid: Array = []) -> Array:
+	var src: Vector2i = unit.get("position", Vector2i(0, 0))
+	var dims := _grid_dims(terrain_grid)
+	var cols: int = dims.x
+	var rows: int = dims.y
+	var result: Array = []
+	for r in range(rows):
+		for c in range(cols):
+			var p := Vector2i(c, r)
+			if p == src:
+				continue
+			var dq: int = p.x - src.x
+			var dr: int = p.y - src.y
+			var dist: int = abs(dq) + abs(dr)
+			if dist > range or dist <= 0:
+				continue
+			var proj: int = dq * direction.x + dr * direction.y
+			if proj <= 0:
+				continue
+			var cross: int = abs(dq * direction.y - dr * direction.x)
+			if cross > proj * 2:
+				continue
+			result.append(p)
+	return result
