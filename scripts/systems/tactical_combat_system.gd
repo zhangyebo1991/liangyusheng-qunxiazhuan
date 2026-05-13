@@ -26,9 +26,12 @@ func create_battle(game_state, context: Dictionary, data_source = null):
 		battle.battlefield_width = max(1, int(battlefield.get("width", 7)))
 		battle.battlefield_height = max(1, int(battlefield.get("height", 5)))
 
-	# 写入战场地形矩阵：优先取 context.terrain_grid，缺失或非法时兜底全 grass 6×8。
+	# 写入战场地形矩阵：优先取 context.terrain_grid；缺失或非法时兜底全 grass 6×8。
 	var raw_grid = context.get("terrain_grid", null)
 	battle.terrain_grid = _normalize_terrain_grid(raw_grid)
+	if battle.terrain_grid.size() > 0 and typeof(battle.terrain_grid[0]) == TYPE_ARRAY:
+		battle.battlefield_height = battle.terrain_grid.size()
+		battle.battlefield_width = battle.terrain_grid[0].size()
 
 	var raw_units = context.get("units", [])
 	if typeof(raw_units) != TYPE_ARRAY:
@@ -366,7 +369,7 @@ func check_battle_finished(battle) -> void:
 		_log(battle, "敌人尽数败退。")
 		battle.finish(true)
 
-# 兜底地形矩阵：传入合法 6 行 × 8 列字符串数组则原样深拷贝；
+# 兜底地形矩阵：传入合法任意矩形字符串数组则原样深拷贝；
 # 否则回退默认全 grass 的 6×8 矩阵。
 func _normalize_terrain_grid(raw_grid) -> Array:
 	var fallback: Array = []
@@ -375,11 +378,16 @@ func _normalize_terrain_grid(raw_grid) -> Array:
 		for _c in range(8):
 			row.append("grass")
 		fallback.append(row)
-	if typeof(raw_grid) != TYPE_ARRAY or raw_grid.size() != 6:
+	if typeof(raw_grid) != TYPE_ARRAY or raw_grid.is_empty():
 		return fallback
+	var expected_cols := -1
 	var normalized: Array = []
 	for row in raw_grid:
-		if typeof(row) != TYPE_ARRAY or row.size() != 8:
+		if typeof(row) != TYPE_ARRAY or row.is_empty():
+			return fallback
+		if expected_cols < 0:
+			expected_cols = row.size()
+		elif row.size() != expected_cols:
 			return fallback
 		var clean_row: Array = []
 		for cell in row:

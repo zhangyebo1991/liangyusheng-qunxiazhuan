@@ -16,9 +16,9 @@ func run(assertions) -> void:
 	var bandit_gate = _find_object(mountain, "enemy_bandit_gate")
 	assertions.assert_true(bandit_gate.has("terrain_grid"), "山道战斗触发节点应含 terrain_grid 字段")
 	var raw_grid = bandit_gate.get("terrain_grid", [])
-	assertions.assert_eq(raw_grid.size(), 6, "terrain_grid 应有 6 行")
+	assertions.assert_eq(raw_grid.size(), 9, "terrain_grid 应有 9 行")
 	if raw_grid.size() >= 1:
-		assertions.assert_eq(raw_grid[0].size(), 8, "terrain_grid 每行应有 8 列")
+		assertions.assert_eq(raw_grid[0].size(), 16, "terrain_grid 每行应有 16 列")
 
 	# 2. create_battle 应把 terrain_grid 写到 battle 状态
 	var system = TacticalCombatSystemScript.new()
@@ -33,9 +33,9 @@ func run(assertions) -> void:
 	var battle = system.create_battle(state, context, repository)
 	assertions.assert_true(battle != null, "战斗对象应被创建")
 	assertions.assert_true(battle.terrain_grid != null, "battle.terrain_grid 应非 null")
-	assertions.assert_eq(battle.terrain_grid.size(), 6, "battle.terrain_grid 应有 6 行")
+	assertions.assert_eq(battle.terrain_grid.size(), 9, "battle.terrain_grid 应有 9 行")
 	if battle.terrain_grid.size() >= 1:
-		assertions.assert_eq(battle.terrain_grid[0].size(), 8, "battle.terrain_grid 每行应有 8 列")
+		assertions.assert_eq(battle.terrain_grid[0].size(), 16, "battle.terrain_grid 每行应有 16 列")
 
 	# 至少包含 1 块 grass
 	var has_grass := false

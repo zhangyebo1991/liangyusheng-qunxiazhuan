@@ -16,14 +16,14 @@ func run(assertions) -> void:
 	assertions.assert_eq(_find_object(mountain, "exit_to_foot_village").get("target_map_id", ""), "foot_village", "山道出口应指向山脚村镇")
 	var bandit_gate = _find_object(mountain, "enemy_bandit_gate")
 	assertions.assert_eq(bandit_gate.get("battle_mode", ""), "tactical", "山道强人应配置战棋战斗模式")
-	assertions.assert_eq(bandit_gate.get("battlefield", {}).get("width", 0), 7, "山道战棋战场宽度应为 7")
-	assertions.assert_eq(bandit_gate.get("battlefield", {}).get("height", 0), 5, "山道战棋战场高度应为 5")
+	assertions.assert_eq(bandit_gate.get("battlefield", {}).get("width", 0), 16, "山道战棋战场宽度应为 16")
+	assertions.assert_eq(bandit_gate.get("battlefield", {}).get("height", 0), 9, "山道战棋战场高度应为 9")
 	assertions.assert_eq(bandit_gate.get("time_mode", ""), "pause_on_action", "山道战棋应配置行动暂停集气")
-	# 山道战棋触发节点应配置 6 行 × 8 列地形矩阵
+	# 山道战棋触发节点应配置 9 行 × 16 列地形矩阵
 	var bandit_terrain = bandit_gate.get("terrain_grid", [])
-	assertions.assert_eq(bandit_terrain.size(), 6, "山道战棋应配置 6 行地形")
+	assertions.assert_eq(bandit_terrain.size(), 9, "山道战棋应配置 9 行地形")
 	if bandit_terrain.size() >= 1:
-		assertions.assert_eq(bandit_terrain[0].size(), 8, "山道战棋地形每行应有 8 列")
+		assertions.assert_eq(bandit_terrain[0].size(), 16, "山道战棋地形每行应有 16 列")
 	var bandit_units = bandit_gate.get("units", [])
 	assertions.assert_eq(bandit_units.size(), 3, "山道战棋应配置主角与 2 名敌人")
 	if bandit_units.size() >= 3:

@@ -15,8 +15,8 @@ const BattlePanelActorScript = preload("res://scripts/scenes/battle_panel_actor.
 const BattleLogScript = preload("res://scripts/scenes/battle_log.gd")
 const TACTICAL_CELL_SIZE := 80  # 与 battle_grid TILE_SIZE 一致
 const TACTICAL_GRID_OFFSET := Vector2.ZERO
-# v0.x: 8×6 棋盘 × 80px = 640×480，居中原点 = ((1280-640)/2, 100) = (320, 100)。
-const TACTICAL_GRID_ORIGIN := Vector2(320, 100)
+# v0.x: 16×9 棋盘 × 80px = 1280×720，铺满战斗视口。
+const TACTICAL_GRID_ORIGIN := Vector2.ZERO
 
 enum RangeMode { NONE = 0, MOVE = 1, ATTACK = 2, SKILL_DIR_PREVIEW = 3, SKILL_TARGET_PREVIEW = 4 }
 
@@ -371,7 +371,7 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 				break
 		if not hit:
 			return
-		var blast: Array = tactical_range_system.get_skill_target_blast_range(_pending_skill_id, clicked)
+		var blast: Array = tactical_range_system.get_skill_target_blast_range(_pending_skill_id, clicked, tactical_battle_state.terrain_grid)
 		_resolve_skill_action(_pending_skill_id, blast)
 		return
 	var cell = {"q": q, "r": r}
@@ -556,7 +556,7 @@ func _on_action_bar_selected(action_id: String) -> void:
 			_set_range_mode(RangeMode.MOVE, cells)
 			_refresh_tactical()
 		"attack":
-			var cells := tactical_range_system.get_attack_range_simple(view)
+			var cells := tactical_range_system.get_attack_range_simple(view, tactical_battle_state.terrain_grid)
 			_set_range_mode(RangeMode.ATTACK, cells)
 			_refresh_tactical()
 		"skill":
@@ -577,6 +577,7 @@ func _on_action_bar_selected(action_id: String) -> void:
 
 # Task 13: 把 tactical_battle_state.units 转成 charge_bar 期望的 dict 列表。
 # cur_charge 字段映射自 unit.charge；is_action 表示当前正在行动相位的角色。
+# v0.x: 额外传 sprite_tile_id，用于集气条绘制角色缩略徽章。
 func _refresh_charge_bar() -> void:
 	if charge_bar == null or tactical_battle_state == null:
 		return
@@ -590,6 +591,7 @@ func _refresh_charge_bar() -> void:
 			"unit_id": str(unit.unit_id),
 			"team": team,
 			"cur_charge": int(unit.charge),
+			"sprite_tile_id": str(unit.sprite_tile_id),
 			"is_action": tactical_battle_state.is_action_phase and str(unit.unit_id) == current_id,
 		})
 	charge_bar.set_units(dicts)
@@ -783,7 +785,7 @@ func _on_skill_chosen(skill_id: String) -> void:
 		var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
 		var view := _unit_view_for_range(unit)
 		var cast_range: int = int(data.get("cast_range", int(data.get("tactical", {}).get("range", 1))))
-		var centers: Array = tactical_range_system.get_skill_target_selection_range(view, skill_id, cast_range)
+		var centers: Array = tactical_range_system.get_skill_target_selection_range(view, skill_id, cast_range, tactical_battle_state.terrain_grid)
 		_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, centers)
 	else:
 		_pending_skill_id = ""
@@ -808,7 +810,8 @@ func _show_direction_arrows(skill_id: String) -> void:
 	for entry in dirs:
 		var d: Vector2i = entry["d"]
 		var nb := src + d
-		if nb.x < 0 or nb.x >= 8 or nb.y < 0 or nb.y >= 6:
+		var dims := _battlefield_dims()
+		if nb.x < 0 or nb.x >= dims.x or nb.y < 0 or nb.y >= dims.y:
 			continue
 		var btn := Button.new()
 		btn.text = str(entry["label"])
@@ -841,7 +844,7 @@ func _on_direction_chosen(skill_id: String, direction: Vector2i) -> void:
 		_set_range_mode(RangeMode.NONE, [])
 		return
 	var view := _unit_view_for_range(unit)
-	var cells: Array = tactical_range_system.get_skill_directional_range(view, skill_id, direction)
+	var cells: Array = tactical_range_system.get_skill_directional_range(view, skill_id, direction, tactical_battle_state.terrain_grid)
 	_resolve_skill_action(skill_id, cells)
 
 # Task 17/18 共用：执行招式 → 行动结束 → 刷新 UI → 检查战斗结算。
@@ -1076,3 +1079,10 @@ func _pick_enemy_target(enemy_unit):
 
 func _cell_distance_dict(a: Dictionary, b: Dictionary) -> int:
 	return abs(int(a.get("q", 0)) - int(b.get("q", 0))) + abs(int(a.get("r", 0)) - int(b.get("r", 0)))
+
+func _battlefield_dims() -> Vector2i:
+	if tactical_battle_state != null and typeof(tactical_battle_state.terrain_grid) == TYPE_ARRAY and tactical_battle_state.terrain_grid.size() > 0 and typeof(tactical_battle_state.terrain_grid[0]) == TYPE_ARRAY:
+		return Vector2i(int(tactical_battle_state.terrain_grid[0].size()), int(tactical_battle_state.terrain_grid.size()))
+	if tactical_battle_state != null:
+		return Vector2i(int(tactical_battle_state.battlefield_width), int(tactical_battle_state.battlefield_height))
+	return Vector2i(8, 6)
