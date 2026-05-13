@@ -13,6 +13,7 @@ const BattlePanelObjectiveScript = preload("res://scripts/scenes/battle_panel_ob
 const BattlePanelTerrainScript = preload("res://scripts/scenes/battle_panel_terrain.gd")
 const BattlePanelActorScript = preload("res://scripts/scenes/battle_panel_actor.gd")
 const BattleLogScript = preload("res://scripts/scenes/battle_log.gd")
+const BattleFeedbackDirectorScript = preload("res://scripts/systems/battle_feedback_director.gd")
 const TACTICAL_CELL_SIZE := 80  # 与 battle_grid TILE_SIZE 一致
 const TACTICAL_GRID_OFFSET := Vector2.ZERO
 # v0.x: 16×9 棋盘 × 80px = 1280×720，铺满战斗视口。
@@ -66,8 +67,10 @@ var _has_moved_this_action := false
 var _pre_move_cell: Dictionary = {}
 var _last_action_unit_id: String = ""
 var _pending_enemy_move_unit_id: String = ""
+var _feedback_director = null
 
 func _ready() -> void:
+	_feedback_director = BattleFeedbackDirectorScript.new()
 	context = GameState.peek_battle_context()
 	is_tactical_mode = str(context.get("battle_mode", "")) == "tactical"
 	if is_tactical_mode:
@@ -380,13 +383,16 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 	if target != null and target.team != current_unit.team:
 		if range_mode != RangeMode.ATTACK:
 			return
+		var target_hp_before := int(target.hp)
 		var result: Dictionary
 		if selected_tactical_action_id == "attack":
 			result = tactical_combat_system.attack_unit(tactical_battle_state, current_unit.unit_id, target.unit_id)
 		else:
 			result = tactical_combat_system.use_martial_art(tactical_battle_state, current_unit.unit_id, target.unit_id, selected_tactical_action_id, DataRepository)
-		if bool(result.get("success", false)) and not tactical_battle_state.is_finished:
-			tactical_combat_system.end_unit_action(tactical_battle_state, current_unit.unit_id)
+		if bool(result.get("success", false)):
+			_emit_damage_feedback(str(target.unit_id), target_hp_before, int(target.hp))
+			if not tactical_battle_state.is_finished:
+				tactical_combat_system.end_unit_action(tactical_battle_state, current_unit.unit_id)
 		_set_range_mode(RangeMode.NONE, [])
 		_refresh_tactical()
 		_return_if_tactical_finished()
@@ -514,6 +520,103 @@ func _set_range_mode(mode: int, cells: Array = []) -> void:
 	if battle_grid != null:
 		battle_grid.set_range_overlay(mode, cells)
 	EventBus.tactical_range_mode_changed.emit(mode)
+
+func _emit_feedback_event(event: Dictionary) -> void:
+	if _feedback_director == null:
+		return
+	_feedback_director.enqueue(event)
+	_apply_feedback_commands(_feedback_director.consume_commands())
+
+func _apply_feedback_commands(commands: Array) -> void:
+	if commands.is_empty():
+		return
+	for command in commands:
+		if typeof(command) != TYPE_DICTIONARY:
+			continue
+		var cmd := str(command.get("cmd", ""))
+		match cmd:
+			"hitstop":
+				# 当前版本先保持非阻塞命令，避免打断敌方行动链路。
+				continue
+			"flash_unit":
+				_flash_feedback_unit(str(command.get("unit_id", "")))
+			"pop_text":
+				_spawn_feedback_pop_text(str(command.get("unit_id", "")), int(command.get("delta", 0)))
+			_:
+				continue
+
+func _emit_damage_feedback(unit_id: String, hp_before: int, hp_after: int) -> void:
+	if unit_id.is_empty():
+		return
+	var delta := int(hp_after - hp_before)
+	if delta == 0:
+		return
+	_emit_feedback_event({"type": "hit_start", "unit_id": unit_id})
+	_emit_feedback_event({"type": "hp_changed", "unit_id": unit_id, "delta": delta})
+
+func _collect_hp_snapshot() -> Dictionary:
+	var snapshot: Dictionary = {}
+	if tactical_battle_state == null:
+		return snapshot
+	for unit in tactical_battle_state.units:
+		snapshot[str(unit.unit_id)] = int(unit.hp)
+	return snapshot
+
+func _emit_multi_hit_feedback(hits: Array, hp_before: Dictionary) -> void:
+	if tactical_battle_state == null:
+		return
+	for hit in hits:
+		var unit_id := str(hit)
+		if unit_id.is_empty() or not hp_before.has(unit_id):
+			continue
+		var unit: Variant = tactical_battle_state.get_unit(unit_id)
+		if unit == null:
+			continue
+		_emit_damage_feedback(unit_id, int(hp_before.get(unit_id, int(unit.hp))), int(unit.hp))
+
+func _flash_feedback_unit(unit_id: String) -> void:
+	if unit_id.is_empty():
+		return
+	var sprite: Node2D = _unit_sprites.get(unit_id)
+	if sprite == null or not is_instance_valid(sprite):
+		return
+	if get_tree() == null:
+		return
+	var base_modulate: Color = sprite.modulate
+	sprite.modulate = Color(1.0, 0.72, 0.72, 1.0)
+	var tween: Tween = create_tween()
+	tween.tween_property(sprite, "modulate", base_modulate, 0.12)
+
+func _spawn_feedback_pop_text(unit_id: String, delta: int) -> void:
+	if unit_id.is_empty() or delta == 0:
+		return
+	var sprite: Node2D = _unit_sprites.get(unit_id)
+	if sprite == null or not is_instance_valid(sprite):
+		return
+	if get_tree() == null:
+		return
+	var label: Label = Label.new()
+	var abs_delta: int = abs(delta)
+	var prefix: String = "+"
+	var color: Color = Color(0.50, 0.88, 0.50)
+	if delta < 0:
+		prefix = "-"
+		color = Color(1.0, 0.35, 0.30)
+	label.text = "%s%d" % [prefix, abs_delta]
+	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_color_override("font_color", color)
+	label.z_as_relative = false
+	label.z_index = 2600
+	var start_pos: Vector2 = (sprite.global_position - global_position) + Vector2(-18, -64)
+	label.position = start_pos
+	add_child(label)
+	var tween: Tween = create_tween()
+	tween.tween_property(label, "position", start_pos + Vector2(0, -20), 0.24)
+	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.24)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(label):
+			label.queue_free()
+	)
 
 # Task 11/12: 收集所有存活敌方单位的 Vector2i 坐标，给 tactical_range_system 用。
 func _enemy_positions() -> Array:
@@ -855,10 +958,14 @@ func _resolve_skill_action(skill_id: String, target_cells: Array) -> void:
 	if tactical_battle_state == null:
 		return
 	var current_id := str(tactical_battle_state.current_unit_id)
+	var hp_before := _collect_hp_snapshot()
 	var result: Dictionary = tactical_combat_system.resolve_action(tactical_battle_state, current_id, skill_id, target_cells)
 	# 招式失败（内力不足等）保留行动相位让玩家重选；成功才结束行动。
 	if bool(result.get("success", false)) and not tactical_battle_state.is_finished:
+		_emit_multi_hit_feedback(result.get("hits", []), hp_before)
 		tactical_combat_system.end_unit_action(tactical_battle_state, current_id)
+	elif bool(result.get("success", false)):
+		_emit_multi_hit_feedback(result.get("hits", []), hp_before)
 	_refresh_tactical()
 	_return_if_tactical_finished()
 
@@ -1013,7 +1120,10 @@ func _run_enemy_action_with_animation(unit) -> void:
 		_return_if_tactical_finished()
 		return
 	if _cell_distance_dict(unit.cell, target.cell) <= int(unit.attack_range):
-		tactical_combat_system.attack_unit(tactical_battle_state, enemy_id, str(target.unit_id))
+		var target_hp_before := int(target.hp)
+		var attack_result := tactical_combat_system.attack_unit(tactical_battle_state, enemy_id, str(target.unit_id))
+		if bool(attack_result.get("success", false)):
+			_emit_damage_feedback(str(target.unit_id), target_hp_before, int(target.hp))
 		if not tactical_battle_state.is_finished:
 			tactical_combat_system.end_unit_action(tactical_battle_state, enemy_id)
 		_refresh_tactical()
@@ -1056,7 +1166,10 @@ func _resolve_enemy_post_move(enemy_id: String) -> void:
 		return
 	var target = _pick_enemy_target(unit)
 	if target != null and _cell_distance_dict(unit.cell, target.cell) <= int(unit.attack_range):
-		tactical_combat_system.attack_unit(tactical_battle_state, enemy_id, str(target.unit_id))
+		var target_hp_before := int(target.hp)
+		var attack_result := tactical_combat_system.attack_unit(tactical_battle_state, enemy_id, str(target.unit_id))
+		if bool(attack_result.get("success", false)):
+			_emit_damage_feedback(str(target.unit_id), target_hp_before, int(target.hp))
 	if not tactical_battle_state.is_finished:
 		tactical_combat_system.end_unit_action(tactical_battle_state, enemy_id)
 	_set_range_mode(RangeMode.NONE, [])
