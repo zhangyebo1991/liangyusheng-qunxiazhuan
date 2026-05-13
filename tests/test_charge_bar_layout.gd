@@ -12,7 +12,7 @@ func run(assertions) -> void:
 		{"unit_id": "hero", "team": 0, "cur_charge": 250, "is_action": false},
 		{"unit_id": "e1", "team": 1, "cur_charge": 500, "is_action": false},
 		{"unit_id": "e2", "team": 1, "cur_charge": 1000, "is_action": true},
-		{"unit_id": "e3", "team": 1, "cur_charge": 750, "is_action": false},
+		{"unit_id": "e3", "team": 1, "cur_charge": 750, "is_action": false, "is_next_action": true},
 	]
 	bar.set_units(units)
 	assertions.assert_eq(bar.get_unit_x("hero"), 250, "250/1000 * 1000 = 250")
@@ -20,6 +20,9 @@ func run(assertions) -> void:
 	assertions.assert_eq(bar.get_unit_x("e2"), 1000, "1000/1000 * 1000 = 1000")
 	assertions.assert_eq(bar.get_unit_x("e3"), 750, "750/1000 * 1000 = 750")
 	assertions.assert_true(bar.is_highlighted("e2"), "e2 应被高亮")
+	assertions.assert_true(bar.is_secondary_highlighted("e3"), "e3 应为即将行动次高亮")
+	assertions.assert_false(bar.is_secondary_highlighted("e2"), "当前行动单位不应标记为次高亮")
 	assertions.assert_false(bar.is_highlighted("hero"), "hero 不应被高亮")
 	assertions.assert_false(bar.is_highlighted("e1"), "e1 不应被高亮")
+	assertions.assert_false(bar.is_secondary_highlighted("hero"), "hero 不应被次高亮")
 	bar.free()

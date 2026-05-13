@@ -702,19 +702,50 @@ func _refresh_charge_bar() -> void:
 	if charge_bar == null or tactical_battle_state == null:
 		return
 	var current_id := str(tactical_battle_state.current_unit_id)
+	var next_id := _predict_next_charge_actor_id(current_id)
 	var dicts: Array = []
 	for unit in tactical_battle_state.units:
 		if not unit.is_alive():
 			continue
+		var uid := str(unit.unit_id)
 		var team := 0 if unit.team == TacticalBattleStateScript.TEAM_PLAYER else 1
 		dicts.append({
-			"unit_id": str(unit.unit_id),
+			"unit_id": uid,
 			"team": team,
 			"cur_charge": int(unit.charge),
 			"sprite_tile_id": str(unit.sprite_tile_id),
-			"is_action": tactical_battle_state.is_action_phase and str(unit.unit_id) == current_id,
+			"is_action": tactical_battle_state.is_action_phase and uid == current_id,
+			"is_next_action": uid == next_id,
 		})
 	charge_bar.set_units(dicts)
+
+func _predict_next_charge_actor_id(current_id: String) -> String:
+	if tactical_battle_state == null:
+		return ""
+	var best_uid := ""
+	var best_charge := -1
+	var ready_player_uid := ""
+	var ready_enemy_uid := ""
+	for unit in tactical_battle_state.units:
+		if not unit.is_alive():
+			continue
+		var uid := str(unit.unit_id)
+		if uid == current_id:
+			continue
+		var charge := int(unit.charge)
+		if charge >= TacticalBattleStateScript.CHARGE_LIMIT:
+			if unit.team == TacticalBattleStateScript.TEAM_PLAYER and ready_player_uid.is_empty():
+				ready_player_uid = uid
+			elif unit.team == TacticalBattleStateScript.TEAM_ENEMY and ready_enemy_uid.is_empty():
+				ready_enemy_uid = uid
+		if charge > best_charge:
+			best_charge = charge
+			best_uid = uid
+	if not ready_player_uid.is_empty():
+		return ready_player_uid
+	if not ready_enemy_uid.is_empty():
+		return ready_enemy_uid
+	return best_uid
 
 # Task 14: 鼠标悬停某战棋格 → 刷新左下地形面板 + 左上战场信息面板。
 # 通过 Engine 输入位置反推 grid cell，去重避免每帧重复刷新。
