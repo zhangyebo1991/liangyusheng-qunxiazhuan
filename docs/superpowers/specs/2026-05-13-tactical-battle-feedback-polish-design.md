@@ -20,7 +20,7 @@
 ## 2. 设计范围
 
 ### 2.1 范围内
-- 命中停顿（hit stop）
+- 命中停顿（Hit Stop）
 - 受击闪白与轻回弹
 - 飘字与血条变化的节奏统一
 - 集气条当前行动单位头像强化（置顶显示，防覆盖）
@@ -57,7 +57,8 @@
 ### 4.1 BattleFeedbackDirector（新增）
 职责：
 - 订阅反馈事件
-- 产出短时表现命令（shake、flash、hitstop、pop_text、avatar_focus）
+- 产出短时表现命令（shake、flash、hit_stop、pop_text、avatar_focus）
+- 文档术语统一：`hit_stop` 命令对应“命中停顿（Hit Stop）”
 - 维护表现队列，避免同帧多次命中导致效果过叠
 
 接口草案：
@@ -74,7 +75,7 @@
 职责：
 - 在攻击命中关键节点发出反馈事件
 - 接收 Director 命令并调度具体 UI 执行
-- 控制 hit stop 上限，防止连续锁帧
+- 控制命中停顿（Hit Stop）上限，防止连续锁帧
 
 ### 4.4 ChargeBar（已增强，纳入本阶段）
 职责：
@@ -87,7 +88,7 @@
 单次攻击时序：
 1. 逻辑层完成命中与伤害计算
 2. 发出 `hp_changed` / `hit_start` 事件
-3. Director 生成命令队列（hit stop + flash + pop_text）
+3. Director 生成命令队列（命中停顿（Hit Stop） + flash + pop_text）
 4. UI 层按时序执行
 5. 战斗循环继续推进
 
@@ -133,11 +134,11 @@
 
 ### 8.1 实现参数基线（v1）
 
-- hitstop 单次：60ms
-- hitstop 同帧上限：120ms
+- 命中停顿（Hit Stop）单次：60ms
+- 命中停顿（Hit Stop）同帧上限：120ms
 - 受击闪白：100ms
 - 受击回弹：6px
-- 次高亮透明度：0.20
+- 次高亮透明度：0.20（作用对象：`charge_bar.gd` 中非当前行动单位头像的次高亮覆盖层；口径：绝对 alpha 值，范围 0.0-1.0，直接写入覆盖层颜色的 `a` 通道，不作为乘子叠加；作用时机：仅在“当前行动单位头像高亮置顶”状态下对其余头像生效，退出该状态立即恢复默认透明度）
 
 ## 9. 风险与应对
 
