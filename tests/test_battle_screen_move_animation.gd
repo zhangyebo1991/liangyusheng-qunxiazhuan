@@ -64,29 +64,26 @@ class TacticalCombatSystemStub:
 class FeedbackDirectorStub:
 	extends RefCounted
 	var enqueue_count := 0
-	var consume_count := 0
-	var _events: Array = []
+	var consume_history: Array = []
+	var _queue: Array = []
 
 	func enqueue(event: Dictionary) -> void:
 		enqueue_count += 1
-		_events.append(event.duplicate(true))
-
-	func consume_commands() -> Array:
-		consume_count += 1
-		if _events.is_empty():
-			return []
-		var event: Dictionary = _events.pop_front()
 		var event_type := str(event.get("type", ""))
 		if event_type == "hit_start":
-			return [{"cmd": "hitstop", "ms": 20}]
+			_queue.append({"cmd": "hitstop", "ms": 20})
+			return
 		if event_type == "hp_changed":
 			var unit_id := str(event.get("unit_id", ""))
 			var delta := int(event.get("delta", 0))
-			return [
-				{"cmd": "flash_unit", "unit_id": unit_id},
-				{"cmd": "pop_text", "unit_id": unit_id, "delta": delta},
-			]
-		return []
+			_queue.append({"cmd": "flash_unit", "unit_id": unit_id})
+			_queue.append({"cmd": "pop_text", "unit_id": unit_id, "delta": delta})
+
+	func consume_commands() -> Array:
+		var output := _queue.duplicate(true)
+		_queue.clear()
+		consume_history.append(output.duplicate(true))
+		return output
 
 func run(assertions) -> void:
 	var SpriteScript = load(SPRITE_PATH)
@@ -136,7 +133,15 @@ func _assert_feedback_does_not_break_enemy_followup(assertions, BattleScreenScri
 	assertions.assert_true(not state_stub.is_action_phase, "反馈执行后仍应推进到行动结束状态")
 	assertions.assert_eq(int(hero_unit.hp), 33, "敌方命中后应完成扣血结算")
 	assertions.assert_eq(feedback_stub.enqueue_count, 2, "敌方命中应发出 hit_start 与 hp_changed 两个反馈事件")
-	assertions.assert_eq(feedback_stub.consume_count, 2, "反馈事件应被消费并执行")
+	assertions.assert_eq(feedback_stub.consume_history.size(), 1, "同一动作反馈应在单次 consume 内完成")
+	var consumed_batch: Array = feedback_stub.consume_history[0]
+	assertions.assert_eq(consumed_batch.size(), 3, "单次 consume 应输出 hitstop/flash/pop_text 三条命令")
+	assertions.assert_eq(str(consumed_batch[0].get("cmd", "")), "hitstop", "第一条命令应为 hitstop")
+	assertions.assert_eq(str(consumed_batch[1].get("cmd", "")), "flash_unit", "第二条命令应为 flash_unit")
+	assertions.assert_eq(str(consumed_batch[2].get("cmd", "")), "pop_text", "第三条命令应为 pop_text")
+	assertions.assert_eq(str(consumed_batch[1].get("unit_id", "")), "hero_1", "flash_unit 目标应为受击单位")
+	assertions.assert_eq(str(consumed_batch[2].get("unit_id", "")), "hero_1", "pop_text 目标应为受击单位")
+	assertions.assert_eq(int(consumed_batch[2].get("delta", 0)), -7, "pop_text 应携带本次扣血 delta")
 	assertions.assert_eq(int(battle_screen.range_mode), int(BattleScreenScript.RangeMode.NONE), "反馈执行后不应破坏范围模式收敛")
 	battle_screen.free()
 

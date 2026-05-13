@@ -521,11 +521,19 @@ func _set_range_mode(mode: int, cells: Array = []) -> void:
 		battle_grid.set_range_overlay(mode, cells)
 	EventBus.tactical_range_mode_changed.emit(mode)
 
-func _emit_feedback_event(event: Dictionary) -> void:
+func _enqueue_feedback_event(event: Dictionary) -> void:
 	if _feedback_director == null:
 		return
 	_feedback_director.enqueue(event)
+
+func _consume_feedback_events() -> void:
+	if _feedback_director == null:
+		return
 	_apply_feedback_commands(_feedback_director.consume_commands())
+
+func _emit_feedback_event(event: Dictionary) -> void:
+	_enqueue_feedback_event(event)
+	_consume_feedback_events()
 
 func _apply_feedback_commands(commands: Array) -> void:
 	if commands.is_empty():
@@ -545,14 +553,19 @@ func _apply_feedback_commands(commands: Array) -> void:
 			_:
 				continue
 
-func _emit_damage_feedback(unit_id: String, hp_before: int, hp_after: int) -> void:
+func _enqueue_damage_feedback(unit_id: String, hp_before: int, hp_after: int) -> bool:
 	if unit_id.is_empty():
-		return
+		return false
 	var delta := int(hp_after - hp_before)
 	if delta == 0:
-		return
-	_emit_feedback_event({"type": "hit_start", "unit_id": unit_id})
-	_emit_feedback_event({"type": "hp_changed", "unit_id": unit_id, "delta": delta})
+		return false
+	_enqueue_feedback_event({"type": "hit_start", "unit_id": unit_id})
+	_enqueue_feedback_event({"type": "hp_changed", "unit_id": unit_id, "delta": delta})
+	return true
+
+func _emit_damage_feedback(unit_id: String, hp_before: int, hp_after: int) -> void:
+	if _enqueue_damage_feedback(unit_id, hp_before, hp_after):
+		_consume_feedback_events()
 
 func _collect_hp_snapshot() -> Dictionary:
 	var snapshot: Dictionary = {}
@@ -565,6 +578,7 @@ func _collect_hp_snapshot() -> Dictionary:
 func _emit_multi_hit_feedback(hits: Array, hp_before: Dictionary) -> void:
 	if tactical_battle_state == null:
 		return
+	var has_feedback := false
 	for hit in hits:
 		var unit_id := str(hit)
 		if unit_id.is_empty() or not hp_before.has(unit_id):
@@ -572,7 +586,10 @@ func _emit_multi_hit_feedback(hits: Array, hp_before: Dictionary) -> void:
 		var unit: Variant = tactical_battle_state.get_unit(unit_id)
 		if unit == null:
 			continue
-		_emit_damage_feedback(unit_id, int(hp_before.get(unit_id, int(unit.hp))), int(unit.hp))
+		if _enqueue_damage_feedback(unit_id, int(hp_before.get(unit_id, int(unit.hp))), int(unit.hp)):
+			has_feedback = true
+	if has_feedback:
+		_consume_feedback_events()
 
 func _flash_feedback_unit(unit_id: String) -> void:
 	if unit_id.is_empty():
