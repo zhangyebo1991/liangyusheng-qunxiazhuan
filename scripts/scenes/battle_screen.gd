@@ -65,6 +65,7 @@ var _move_anim_target_cell: Dictionary = {}  # 动画结束后 commit_move 用�
 var _has_moved_this_action := false
 var _pre_move_cell: Dictionary = {}
 var _last_action_unit_id: String = ""
+var _pending_enemy_move_unit_id: String = ""
 
 func _ready() -> void:
 	context = GameState.peek_battle_context()
@@ -92,9 +93,8 @@ func _process(delta: float) -> void:
 	if tactical_battle_state.is_action_phase:
 		var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
 		if unit != null and unit.team == TacticalBattleStateScript.TEAM_ENEMY:
-			tactical_combat_system.resolve_enemy_action(tactical_battle_state, unit.unit_id)
-			_refresh_tactical()
-			_return_if_tactical_finished()
+			if _pending_enemy_move_unit_id.is_empty():
+				_run_enemy_action_with_animation(unit)
 	_refresh_charge_bar()
 	_poll_terrain_hover()
 
@@ -212,7 +212,8 @@ func _build_unit_sprites() -> void:
 	for unit in tactical_battle_state.units:
 		var sprite = TacticalUnitSpriteScript.new()
 		battle_grid.add_child(sprite)
-		sprite.setup(str(unit.unit_id), str(unit.sprite_tile_id), int(unit.max_hp))
+		var is_enemy_unit := str(unit.team) == TacticalBattleStateScript.TEAM_ENEMY
+		sprite.setup(str(unit.unit_id), str(unit.sprite_tile_id), int(unit.max_hp), is_enemy_unit)
 		sprite.position = battle_grid.grid_to_pixel(Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0))))
 		_unit_sprites[str(unit.unit_id)] = sprite
 
@@ -305,15 +306,16 @@ func _sync_unit_sprites() -> void:
 		if sprite == null or not is_instance_valid(sprite):
 			sprite = TacticalUnitSpriteScript.new()
 			battle_grid.add_child(sprite)
-			sprite.setup(uid, str(unit.sprite_tile_id), int(unit.max_hp))
+			var is_enemy_unit := str(unit.team) == TacticalBattleStateScript.TEAM_ENEMY
+			sprite.setup(uid, str(unit.sprite_tile_id), int(unit.max_hp), is_enemy_unit)
 			_unit_sprites[uid] = sprite
 		sprite.position = battle_grid.grid_to_pixel(Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0))))
 		sprite.set_hp(int(unit.hp), int(unit.max_hp))
 		sprite.set_current_actor(uid == current_id and not tactical_battle_state.is_finished)
 		sprite.set_selected(uid == selected_unit_id)
 		sprite.visible = unit.is_alive()
-		# v0.x: z_index 按 r 排序，避免上一行 sprite 遮挡当前行 HP 条。
-		sprite.z_index = int(unit.cell.get("r", 0)) * 2
+		# 贴图层按 r 排序；HP 条与标记在 TacticalUnitSprite 内部固定为更高全局层。
+		sprite.set_world_sprite_z(int(unit.cell.get("r", 0)) * 2 + 20)
 		alive_ids[uid] = true
 	# 清理已不存在的单位精灵
 	for k in _unit_sprites.keys():
@@ -950,6 +952,10 @@ func _on_move_animation_done(unit_id: String, from_q: int, from_r: int) -> void:
 		EventBus.tactical_unit_moved.emit(unit_id, Vector2i(from_q, from_r), to_cell)
 		_has_moved_this_action = true
 		_pre_move_cell = {"q": from_q, "r": from_r}
+	if unit_id == _pending_enemy_move_unit_id:
+		_pending_enemy_move_unit_id = ""
+		_resolve_enemy_post_move(unit_id)
+		return
 	# v0.x: 移动落地后清 range_mode，避免高亮残留、避免玩家连点又动。
 	_set_range_mode(RangeMode.NONE, [])
 	_refresh_tactical()
@@ -991,3 +997,82 @@ func _cell_in_list(target_cell: Dictionary, list: Array) -> bool:
 		if int(c.get("q", -1000)) == tq and int(c.get("r", -1000)) == tr:
 			return true
 	return false
+
+func _run_enemy_action_with_animation(unit) -> void:
+	if unit == null or tactical_battle_state == null:
+		return
+	var enemy_id := str(unit.unit_id)
+	var target = _pick_enemy_target(unit)
+	if target == null:
+		if not tactical_battle_state.is_finished:
+			tactical_combat_system.end_unit_action(tactical_battle_state, enemy_id)
+		_refresh_tactical()
+		_return_if_tactical_finished()
+		return
+	if _cell_distance_dict(unit.cell, target.cell) <= int(unit.attack_range):
+		tactical_combat_system.attack_unit(tactical_battle_state, enemy_id, str(target.unit_id))
+		if not tactical_battle_state.is_finished:
+			tactical_combat_system.end_unit_action(tactical_battle_state, enemy_id)
+		_refresh_tactical()
+		_return_if_tactical_finished()
+		return
+	var movable_cells: Array = tactical_combat_system.get_movable_cells(tactical_battle_state, enemy_id)
+	var move_overlay: Array = []
+	for c in movable_cells:
+		if typeof(c) == TYPE_DICTIONARY:
+			move_overlay.append(Vector2i(int(c.get("q", 0)), int(c.get("r", 0))))
+	_set_range_mode(RangeMode.MOVE, move_overlay)
+	_refresh_tactical()
+	var best_cell: Dictionary = tactical_combat_system._best_enemy_move_cell(tactical_battle_state, unit, target)
+	_pending_enemy_move_unit_id = enemy_id
+	var timer := get_tree().create_timer(0.18)
+	timer.timeout.connect(func() -> void:
+		if tactical_battle_state == null:
+			_pending_enemy_move_unit_id = ""
+			return
+		var cur = tactical_battle_state.get_unit(enemy_id)
+		if cur == null or not cur.is_alive():
+			_pending_enemy_move_unit_id = ""
+			_set_range_mode(RangeMode.NONE, [])
+			_refresh_tactical()
+			return
+		var started := _start_move_animation(cur, best_cell)
+		if not started:
+			_pending_enemy_move_unit_id = ""
+			_resolve_enemy_post_move(enemy_id)
+	, CONNECT_ONE_SHOT)
+
+func _resolve_enemy_post_move(enemy_id: String) -> void:
+	if tactical_battle_state == null:
+		return
+	var unit = tactical_battle_state.get_unit(enemy_id)
+	if unit == null or not unit.is_alive():
+		_set_range_mode(RangeMode.NONE, [])
+		_refresh_tactical()
+		_return_if_tactical_finished()
+		return
+	var target = _pick_enemy_target(unit)
+	if target != null and _cell_distance_dict(unit.cell, target.cell) <= int(unit.attack_range):
+		tactical_combat_system.attack_unit(tactical_battle_state, enemy_id, str(target.unit_id))
+	if not tactical_battle_state.is_finished:
+		tactical_combat_system.end_unit_action(tactical_battle_state, enemy_id)
+	_set_range_mode(RangeMode.NONE, [])
+	_refresh_tactical()
+	_return_if_tactical_finished()
+
+func _pick_enemy_target(enemy_unit):
+	if tactical_battle_state == null or enemy_unit == null:
+		return null
+	var best = null
+	var best_dist := 1_000_000
+	for u in tactical_battle_state.units:
+		if str(u.team) != TacticalBattleStateScript.TEAM_PLAYER or not u.is_alive():
+			continue
+		var d := _cell_distance_dict(enemy_unit.cell, u.cell)
+		if d < best_dist:
+			best_dist = d
+			best = u
+	return best
+
+func _cell_distance_dict(a: Dictionary, b: Dictionary) -> int:
+	return abs(int(a.get("q", 0)) - int(b.get("q", 0))) + abs(int(a.get("r", 0)) - int(b.get("r", 0)))
