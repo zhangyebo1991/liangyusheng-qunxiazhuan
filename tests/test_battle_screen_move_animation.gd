@@ -154,8 +154,9 @@ func _collect_method_names(script) -> Dictionary:
 	return result
 
 func _assert_hit_feedback_usable(assertions, SpriteScript) -> void:
-	var sprite = SpriteScript.new()
 	var root = Engine.get_main_loop().root
+
+	var sprite = SpriteScript.new()
 	root.add_child(sprite)
 	sprite.setup("test_unit", "", 20, false)
 
@@ -171,12 +172,55 @@ func _assert_hit_feedback_usable(assertions, SpriteScript) -> void:
 
 	# flash_sec=0 走同步归位分支：验证接口可调用且关键状态能回到基准值。
 	sprite.play_hit_feedback(0.0, 6.0)
-
 	assertions.assert_eq(sprite.position, base_unit_pos, "受击反馈不应改写单位锚点 position")
 	assertions.assert_eq(inner_sprite.position, base_local_pos, "受击反馈结束后局部位置应归位")
 	assertions.assert_eq(inner_sprite.modulate, base_modulate, "受击反馈结束后颜色应归位")
 
+	# 非零时长分支：通过 custom_step 推进若干帧，覆盖 tween 主路径与方向分支。
+	var enemy_sprite = SpriteScript.new()
+	root.add_child(enemy_sprite)
+	enemy_sprite.setup("enemy_unit", "", 20, true)
+	var enemy_inner = enemy_sprite.get("_sprite")
+	assertions.assert_true(enemy_inner != null, "敌方受击反馈测试应能拿到内部 Sprite2D")
+	if enemy_inner == null:
+		enemy_sprite.queue_free()
+		sprite.queue_free()
+		return
+	var enemy_base_pos: Vector2 = enemy_inner.position
+	var enemy_base_modulate: Color = enemy_inner.modulate
+
+	sprite.play_hit_feedback(0.08, 6.0)
+	enemy_sprite.play_hit_feedback(0.08, 6.0)
+	var player_tween: Tween = sprite.get("_hit_feedback_tween")
+	var enemy_tween: Tween = enemy_sprite.get("_hit_feedback_tween")
+	assertions.assert_true(player_tween != null, "玩家受击反馈应创建 tween")
+	assertions.assert_true(enemy_tween != null, "敌方受击反馈应创建 tween")
+
+	if player_tween != null and enemy_tween != null:
+		_step_tween_frames(player_tween, 2, 0.016)
+		_step_tween_frames(enemy_tween, 2, 0.016)
+
+	assertions.assert_true(inner_sprite.position.x < base_local_pos.x, "玩家受击应向左回弹")
+	assertions.assert_true(enemy_inner.position.x > enemy_base_pos.x, "敌方受击应向右回弹")
+	assertions.assert_eq(inner_sprite.position.y, base_local_pos.y, "玩家受击回弹仅应改变 X 方向")
+	assertions.assert_eq(enemy_inner.position.y, enemy_base_pos.y, "敌方受击回弹仅应改变 X 方向")
+
+	if player_tween != null and enemy_tween != null:
+		_step_tween_frames(player_tween, 8, 0.016)
+		_step_tween_frames(enemy_tween, 8, 0.016)
+
+	assertions.assert_eq(sprite.position, base_unit_pos, "受击反馈 tween 完成后不应改写单位锚点")
+	assertions.assert_eq(inner_sprite.position, base_local_pos, "玩家受击反馈 tween 完成后局部位置应归位")
+	assertions.assert_eq(enemy_inner.position, enemy_base_pos, "敌方受击反馈 tween 完成后局部位置应归位")
+	assertions.assert_eq(inner_sprite.modulate, base_modulate, "玩家受击反馈 tween 完成后颜色应归位")
+	assertions.assert_eq(enemy_inner.modulate, enemy_base_modulate, "敌方受击反馈 tween 完成后颜色应归位")
+
+	enemy_sprite.queue_free()
 	sprite.queue_free()
+
+func _step_tween_frames(tween: Tween, frame_count: int, delta: float) -> void:
+	for _i in range(max(0, frame_count)):
+		tween.custom_step(max(0.001, delta))
 
 func _collect_signal_names(script) -> Dictionary:
 	var result: Dictionary = {}
