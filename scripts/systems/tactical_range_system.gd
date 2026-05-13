@@ -85,14 +85,12 @@ func get_skill_directional_range(unit: Dictionary, skill_id: String, direction: 
 	return result
 
 func _get_skill_line_length(skill_id: String) -> int:
-	# 当前硬编码 straight_sword_thrust = 2；Task 5 读 martial_arts.json 后改为按 shape 解析。
 	if skill_id == "straight_sword_thrust":
 		return 2
 	return 1
 
 # 目标型技能可选中心范围：返回 Array[Vector2i]，所有曼哈顿距离 ≤ cast_range 且
 # 不含主角自身格、未越棋盘边界的格子。
-# 当前不剔除盟友/敌方占据格（由 UI 层在选中时再行二次校验）。
 func get_skill_target_selection_range(unit: Dictionary, skill_id: String, cast_range: int, terrain_grid: Array = []) -> Array:
 	var src: Vector2i = unit.get("position", Vector2i(0, 0))
 	var dims := _grid_dims(terrain_grid)
@@ -110,7 +108,6 @@ func get_skill_target_selection_range(unit: Dictionary, skill_id: String, cast_r
 	return result
 
 # 目标型技能命中范围（爆炸/扩散）：当前仅 target_cross_1 = 中心 + 上下左右四向 1 格。
-# 边界外的格被裁剪。返回 Array[Vector2i]。
 func get_skill_target_blast_range(skill_id: String, center: Vector2i, terrain_grid: Array = []) -> Array:
 	var dims := _grid_dims(terrain_grid)
 	var cols: int = dims.x
@@ -123,11 +120,6 @@ func get_skill_target_blast_range(skill_id: String, center: Vector2i, terrain_gr
 		if p.x >= 0 and p.x < cols and p.y >= 0 and p.y < rows:
 			result.append(p)
 	return result
-
-func _grid_dims(terrain_grid: Array) -> Vector2i:
-	if typeof(terrain_grid) == TYPE_ARRAY and terrain_grid.size() > 0 and typeof(terrain_grid[0]) == TYPE_ARRAY and terrain_grid[0].size() > 0:
-		return Vector2i(int(terrain_grid[0].size()), int(terrain_grid.size()))
-	return Vector2i(DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS)
 
 # 扇形范围：从 unit.position 沿 direction 方向，夹角 ≤ 60 度（锥宽 120 度），
 # 曼哈顿距离 ≤ range 的格子。不含自身格。棋盘边界裁剪。
@@ -155,3 +147,57 @@ func get_fan_range(unit: Dictionary, direction: Vector2i, range: int, terrain_gr
 				continue
 			result.append(p)
 	return result
+
+# 周身范围：单位相邻 8 格（上下左右 + 四角），棋盘边界裁剪。
+func get_surround_range(unit: Dictionary, terrain_grid: Array = []) -> Array:
+	var src: Vector2i = unit.get("position", Vector2i(0, 0))
+	var dims := _grid_dims(terrain_grid)
+	var cols: int = dims.x
+	var rows: int = dims.y
+	var result: Array = []
+	for dr in [-1, 0, 1]:
+		for dc in [-1, 0, 1]:
+			if dr == 0 and dc == 0:
+				continue
+			var p := Vector2i(src.x + dc, src.y + dr)
+			if p.x >= 0 and p.x < cols and p.y >= 0 and p.y < rows:
+				result.append(p)
+	return result
+
+# 穿透范围：从 unit.position 沿 direction 延伸 range 格，
+# 路径上所有格全部返回（用于命中判定时遍历）。棋盘边界裁剪。
+func get_pierce_range(unit: Dictionary, direction: Vector2i, range: int, terrain_grid: Array = []) -> Array:
+	var src: Vector2i = unit.get("position", Vector2i(0, 0))
+	var dims := _grid_dims(terrain_grid)
+	var cols: int = dims.x
+	var rows: int = dims.y
+	var result: Array = []
+	for i in range(1, range + 1):
+		var nb: Vector2i = src + direction * i
+		if nb.x < 0 or nb.x >= cols or nb.y < 0 or nb.y >= rows:
+			break
+		result.append(nb)
+	return result
+
+# 环形范围：以 unit.position 为中心，曼哈顿距离 == distance 的所有格。
+# 棋盘边界裁剪。
+func get_ring_range(unit: Dictionary, distance: int, terrain_grid: Array = []) -> Array:
+	var src: Vector2i = unit.get("position", Vector2i(0, 0))
+	var dims := _grid_dims(terrain_grid)
+	var cols: int = dims.x
+	var rows: int = dims.y
+	var result: Array = []
+	for r in range(rows):
+		for c in range(cols):
+			var p := Vector2i(c, r)
+			if p == src:
+				continue
+			var dist: int = abs(p.x - src.x) + abs(p.y - src.y)
+			if dist == distance:
+				result.append(p)
+	return result
+
+func _grid_dims(terrain_grid: Array) -> Vector2i:
+	if typeof(terrain_grid) == TYPE_ARRAY and terrain_grid.size() > 0 and typeof(terrain_grid[0]) == TYPE_ARRAY and terrain_grid[0].size() > 0:
+		return Vector2i(int(terrain_grid[0].size()), int(terrain_grid.size()))
+	return Vector2i(DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS)
