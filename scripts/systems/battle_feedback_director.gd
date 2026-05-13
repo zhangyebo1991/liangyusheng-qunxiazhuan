@@ -26,5 +26,6 @@ func enqueue(event: Dictionary) -> void:
 func consume_commands() -> Array:
 	var output := _queue.duplicate(true)
 	_queue.clear()
+	# 命中停顿预算按每次 consume 周期（即一轮反馈结算）重置。
 	_remaining_hitstop_budget_ms = HITSTOP_FRAME_BUDGET_MS
 	return output

@@ -30,13 +30,20 @@ func run(assertions) -> void:
 	director.enqueue({"type": "hit_start", "unit_id": "hero"})
 	director.enqueue({"type": "hit_start", "unit_id": "hero"})
 	var capped_hitstop_commands: Array = director.consume_commands()
-	var total_hitstop_ms := 0
-	for command in capped_hitstop_commands:
-		if str(command.get("cmd", "")) == "hitstop":
-			var ms := int(command.get("ms", 0))
-			total_hitstop_ms += ms
-			assertions.assert_true(ms <= 60, "单次 hitstop 不应超过 60ms")
-	assertions.assert_true(total_hitstop_ms <= 120, "同帧 hitstop 总时长不应超过 120ms")
+	assertions.assert_eq(capped_hitstop_commands.size(), 2, "同帧连续 3 次 hit_start 仅应产出 2 条 hitstop")
+	assertions.assert_eq(str(capped_hitstop_commands[0].get("cmd", "")), "hitstop", "预算内命令应为 hitstop")
+	assertions.assert_eq(str(capped_hitstop_commands[1].get("cmd", "")), "hitstop", "预算内命令应为 hitstop")
+	assertions.assert_eq(int(capped_hitstop_commands[0].get("ms", 0)), 60, "第一条 hitstop 时长应精确为 60ms")
+	assertions.assert_eq(int(capped_hitstop_commands[1].get("ms", 0)), 60, "第二条 hitstop 时长应精确为 60ms")
+
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	var exhausted_budget_commands: Array = director.consume_commands()
+	assertions.assert_eq(exhausted_budget_commands.size(), 2, "预算耗尽后 clamped_ms <= 0 的 hit_start 不应入队")
+	assertions.assert_eq(int(exhausted_budget_commands[0].get("ms", 0)), 60, "预算耗尽分支前的首条 hitstop 应为 60ms")
+	assertions.assert_eq(int(exhausted_budget_commands[1].get("ms", 0)), 60, "预算耗尽分支前的次条 hitstop 应为 60ms")
 
 	director.enqueue({"type": "hit_start", "unit_id": "hero"})
 	director.enqueue({"type": "hit_start", "unit_id": "hero"})
