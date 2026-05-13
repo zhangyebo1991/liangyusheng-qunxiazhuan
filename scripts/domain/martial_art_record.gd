@@ -12,6 +12,7 @@ var tactical: Dictionary = {}
 var tactical_damage_bonus: int = 0
 var tactical_range: int = 0
 var tactical_range_shape: String = ""
+var proficiency_thresholds: Array = []
 var tactical_mp_cost: int = 0
 
 static func from_dictionary(data: Dictionary):
@@ -23,6 +24,7 @@ static func from_dictionary(data: Dictionary):
 	martial_art.cost = int(data.get("cost", 0))
 	martial_art.description = str(data.get("description", ""))
 	martial_art.proficiency_reward = max(0, int(data.get("proficiency_reward", 1)))
+	martial_art.proficiency_thresholds = _read_int_array(data.get("proficiency_thresholds", []))
 	martial_art.tactical = _read_tactical_config(data.get("tactical", {}), martial_art.cost)
 	martial_art.tactical_damage_bonus = int(martial_art.tactical.get("damage_bonus", 0))
 	martial_art.tactical_range = int(martial_art.tactical.get("range", 0))
@@ -46,3 +48,11 @@ static func _read_tactical_config(value: Variant, fallback_cost: int) -> Diction
 		"range_shape": range_shape,
 		"mp_cost": max(0, int(value.get("mp_cost", fallback_cost))),
 	}
+
+static func _read_int_array(value: Variant) -> Array:
+	if typeof(value) != TYPE_ARRAY:
+		return []
+	var result: Array = []
+	for v in value:
+		result.append(max(0, int(v)))
+	return result
