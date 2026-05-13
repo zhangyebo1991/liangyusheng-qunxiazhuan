@@ -8,7 +8,9 @@ func enqueue(event: Dictionary) -> void:
 		_queue.append({"cmd": "hitstop", "ms": 60})
 		return
 	if event_type == "hp_changed":
-		var unit_id := str(event.get("unit_id", ""))
+		var unit_id := str(event.get("unit_id", "")).strip_edges()
+		if unit_id == "":
+			return
 		var delta := int(event.get("delta", 0))
 		_queue.append({"cmd": "flash_unit", "unit_id": unit_id})
 		_queue.append({"cmd": "pop_text", "unit_id": unit_id, "delta": delta})
