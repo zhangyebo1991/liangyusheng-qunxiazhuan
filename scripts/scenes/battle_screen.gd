@@ -959,7 +959,8 @@ func _open_skill_menu() -> void:
 	menu.position = Vector2i(int(mouse_pos.x), int(mouse_pos.y))
 	menu.popup()
 
-# 根据招式 shape 切换到 SKILL_DIR_PREVIEW（方向箭头）或 SKILL_TARGET_PREVIEW（中心格）。
+# 根据招式 shape 切换到 SKILL_DIR_PREVIEW（方向箭头）或 SKILL_TARGET_PREVIEW（中心格），
+# 或 surround/ring 为自身中心释放直接执行。
 func _on_skill_chosen(skill_id: String) -> void:
 	_pending_skill_id = skill_id
 	var data: Dictionary = DataRepository.get_martial_art(skill_id)
@@ -973,6 +974,19 @@ func _on_skill_chosen(skill_id: String) -> void:
 		var cast_range: int = int(data.get("cast_range", int(data.get("tactical", {}).get("range", 1))))
 		var centers: Array = tactical_range_system.get_skill_target_selection_range(view, skill_id, cast_range, tactical_battle_state.terrain_grid)
 		_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, centers)
+	elif shape == "fan" or shape == "pierce":
+		_set_range_mode(RangeMode.SKILL_DIR_PREVIEW, [])
+		_show_direction_arrows(skill_id)
+	elif shape == "surround" or shape == "ring":
+		var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+		var view := _unit_view_for_range(unit)
+		var cells: Array
+		if shape == "surround":
+			cells = tactical_range_system.get_surround_range(view, tactical_battle_state.terrain_grid)
+		else:
+			var range_val: int = int(data.get("tactical", {}).get("range", 2))
+			cells = tactical_range_system.get_ring_range(view, range_val, tactical_battle_state.terrain_grid)
+		_resolve_skill_action(skill_id, cells)
 	else:
 		_pending_skill_id = ""
 		_set_range_mode(RangeMode.NONE, [])
@@ -1017,7 +1031,7 @@ func _clear_direction_arrows() -> void:
 			b.queue_free()
 	_direction_buttons.clear()
 
-# 玩家点了某方向 → 计算线性范围 → 走通用 resolve_action 路径释放。
+# 玩家点了某方向 → 根据招式 shape 调用对应范围算法 → 释放。
 func _on_direction_chosen(skill_id: String, direction: Vector2i) -> void:
 	_clear_direction_arrows()
 	if tactical_battle_state == null:
@@ -1030,7 +1044,16 @@ func _on_direction_chosen(skill_id: String, direction: Vector2i) -> void:
 		_set_range_mode(RangeMode.NONE, [])
 		return
 	var view := _unit_view_for_range(unit)
-	var cells: Array = tactical_range_system.get_skill_directional_range(view, skill_id, direction, tactical_battle_state.terrain_grid)
+	var data: Dictionary = DataRepository.get_martial_art(skill_id)
+	var shape := str(data.get("shape", ""))
+	var tactical_range: int = int(data.get("tactical", {}).get("range", 2))
+	var cells: Array
+	if shape == "fan":
+		cells = tactical_range_system.get_fan_range(view, direction, tactical_range, tactical_battle_state.terrain_grid)
+	elif shape == "pierce":
+		cells = tactical_range_system.get_pierce_range(view, direction, tactical_range, tactical_battle_state.terrain_grid)
+	else:
+		cells = tactical_range_system.get_skill_directional_range(view, skill_id, direction, tactical_battle_state.terrain_grid)
 	_resolve_skill_action(skill_id, cells)
 
 # Task 17/18 共用：执行招式 → 行动结束 → 刷新 UI → 检查战斗结算。
