@@ -22,4 +22,8 @@ func run(assertions) -> void:
 	assertions.assert_true(repository.get_terrain("grass").has("name"), "草地应有 name 字段")
 	assertions.assert_eq(repository.get_martial_art("sword_aura_swirl").get("name", ""), "剑气漩", "应按编号读取剑气漩")
 	assertions.assert_eq(int(repository.get_martial_art("sword_aura_swirl").get("mp_cost", 0)), 8, "剑气漩应消耗 8 点内力")
+	assertions.assert_true(repository.get_martial_art("basic_sword").get("proficiency_thresholds", []) is Array, "基础剑法应有 proficiency_thresholds 数组")
+	assertions.assert_eq(int(repository.get_martial_art("basic_sword").get("proficiency_thresholds", [10,25,50])[0]), 10, "基础剑法首阈值应为 10")
+	assertions.assert_eq(int(repository.get_martial_art("basic_sword").get("proficiency_thresholds", [10,25,50])[2]), 50, "基础剑法末阈值应为 50")
+	assertions.assert_eq(int(repository.get_martial_art("sword_aura_swirl").get("proficiency_thresholds", [12,30,60])[0]), 12, "剑气漩首阈值应为 12")
 	repository.free()

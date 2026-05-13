@@ -7,6 +7,7 @@
     "cost": 3,
     "description": "入门剑招，胜在稳妥。",
     "proficiency_reward": 1,
+    "proficiency_thresholds": [10, 25, 50],
     "tactical": {
       "damage_bonus": 6,
       "range": 1,
@@ -22,6 +23,7 @@
     "cost": 5,
     "description": "挺剑直进，可隔一身位刺敌。",
     "proficiency_reward": 0,
+    "proficiency_thresholds": [10, 25, 50],
     "shape": "line_2",
     "tactical": {
       "damage_bonus": 4,
@@ -38,6 +40,7 @@
     "cost": 8,
     "description": "凝聚内力一掷，目标处剑气漩起，伤及周遭。",
     "proficiency_reward": 1,
+    "proficiency_thresholds": [12, 30, 60],
     "shape": "target_cross_1",
     "cast_range": 3,
     "base_damage": 14,
