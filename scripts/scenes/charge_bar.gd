@@ -27,6 +27,8 @@ func set_units(units: Array) -> void:
 			_highlight[uid] = true
 		elif bool(u.get("is_next_action", u.get("is_secondary", false))):
 			_secondary[uid] = true
+	if _highlight.is_empty():
+		_secondary.clear()
 	queue_redraw()
 
 func get_unit_x(uid: String) -> int:
@@ -78,7 +80,7 @@ func _draw_unit_badge(u: Dictionary) -> void:
 		draw_circle(center, radius * 0.62, ring_color)
 
 	if is_secondary:
-		draw_circle(center, radius + 2.2, Color(0.88, 0.93, 1.0, 0.26), false, 1.4)
+		draw_circle(center, radius + 2.2, Color(0.88, 0.93, 1.0, 0.20), false, 1.4)
 
 	if is_primary:
 		draw_circle(center, radius + 3.0, Color(1.0, 0.93, 0.45, 0.35), false, 2.0)

@@ -68,6 +68,7 @@ var _pre_move_cell: Dictionary = {}
 var _last_action_unit_id: String = ""
 var _pending_enemy_move_unit_id: String = ""
 var _feedback_director = null
+var _feedback_hitstop_sec := 0.0
 
 func _ready() -> void:
 	_feedback_director = BattleFeedbackDirectorScript.new()
@@ -89,6 +90,11 @@ func _process(delta: float) -> void:
 		return
 	# Task 19: 动画期间冻结集气推进与敌方 AI，避免动画未完角色已"被攻击/被切换"。
 	if is_animating:
+		return
+	if _feedback_hitstop_sec > 0.0:
+		_feedback_hitstop_sec = max(0.0, _feedback_hitstop_sec - delta)
+		_refresh_charge_bar()
+		_poll_terrain_hover()
 		return
 	if not tactical_battle_state.is_action_phase:
 		tactical_combat_system.advance_charge(tactical_battle_state, delta)
@@ -544,12 +550,14 @@ func _apply_feedback_commands(commands: Array) -> void:
 		var cmd := str(command.get("cmd", ""))
 		match cmd:
 			"hitstop":
-				# 当前版本先保持非阻塞命令，避免打断敌方行动链路。
-				continue
+				var ms: int = max(0, int(command.get("ms", 0)))
+				if ms > 0:
+					_feedback_hitstop_sec = max(_feedback_hitstop_sec, float(ms) / 1000.0)
 			"flash_unit":
 				_flash_feedback_unit(str(command.get("unit_id", "")))
 			"pop_text":
-				_spawn_feedback_pop_text(str(command.get("unit_id", "")), int(command.get("delta", 0)))
+				# TacticalUnitSprite.set_hp 已自带受击数字，避免双飘字。
+				continue
 			_:
 				continue
 
@@ -596,6 +604,9 @@ func _flash_feedback_unit(unit_id: String) -> void:
 		return
 	var sprite: Node2D = _unit_sprites.get(unit_id)
 	if sprite == null or not is_instance_valid(sprite):
+		return
+	if sprite.has_method("play_hit_feedback"):
+		sprite.call("play_hit_feedback", 0.10, 6.0)
 		return
 	if get_tree() == null:
 		return

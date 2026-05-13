@@ -61,6 +61,13 @@ class TacticalCombatSystemStub:
 		battle.is_action_phase = false
 		return {"success": true}
 
+class TacticalCombatAdvanceStub:
+	extends RefCounted
+	var advance_calls := 0
+
+	func advance_charge(_battle, _delta: float) -> void:
+		advance_calls += 1
+
 class FeedbackDirectorStub:
 	extends RefCounted
 	var enqueue_count := 0
@@ -106,6 +113,7 @@ func run(assertions) -> void:
 		assertions.assert_true(bs_props.has("is_animating"), "BattleScreen 应含字段 is_animating")
 		assertions.assert_true(bs_props.has("_feedback_director"), "BattleScreen 应含字段 _feedback_director")
 		_assert_feedback_does_not_break_enemy_followup(assertions, BattleScreenScript)
+		_assert_hitstop_freezes_charge_progress(assertions, BattleScreenScript)
 
 	var EventBusScript = load(EVENT_BUS_PATH)
 	assertions.assert_true(EventBusScript != null, "应存在 event_bus.gd")
@@ -145,6 +153,23 @@ func _assert_feedback_does_not_break_enemy_followup(assertions, BattleScreenScri
 	assertions.assert_eq(str(consumed_batch[2].get("unit_id", "")), "hero_1", "pop_text 目标应为受击单位")
 	assertions.assert_eq(int(consumed_batch[2].get("delta", 0)), -7, "pop_text 应携带本次扣血 delta")
 	assertions.assert_eq(int(battle_screen.range_mode), int(BattleScreenScript.RangeMode.NONE), "反馈执行后不应破坏范围模式收敛")
+	battle_screen.free()
+
+func _assert_hitstop_freezes_charge_progress(assertions, BattleScreenScript) -> void:
+	var battle_screen = BattleScreenScript.new()
+	var state_stub = TacticalBattleStateStub.new()
+	state_stub.is_action_phase = false
+	var combat_stub = TacticalCombatAdvanceStub.new()
+
+	battle_screen.is_tactical_mode = true
+	battle_screen.tactical_battle_state = state_stub
+	battle_screen.tactical_combat_system = combat_stub
+	battle_screen._feedback_hitstop_sec = 0.05
+
+	battle_screen._process(0.016)
+
+	assertions.assert_eq(combat_stub.advance_calls, 0, "hitstop 窗口内不应推进集气")
+	assertions.assert_true(float(battle_screen._feedback_hitstop_sec) < 0.05, "hitstop 计时应随 _process 递减")
 	battle_screen.free()
 
 func _collect_method_names(script) -> Dictionary:
