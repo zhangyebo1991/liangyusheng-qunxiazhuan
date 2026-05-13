@@ -52,6 +52,7 @@ const TestBattleScreenMoveAnimationScript = preload("res://tests/test_battle_scr
 const TestBattlePanelActorScript = preload("res://tests/test_battle_panel_actor.gd")
 const TestBattleScreenActorPanelScript = preload("res://tests/test_battle_screen_actor_panel.gd")
 const TestBattleFeedbackDirectorScript = preload("res://tests/test_battle_feedback_director.gd")
+const TestProficiencySystemScript = preload("res://tests/test_proficiency_system.gd")
 
 func _initialize() -> void:
 	# _initialize 阶段 root 尚未进入树；deferred 后执行可让依赖 SceneTree 的测试稳定运行。
@@ -111,6 +112,7 @@ func _run_all_suites() -> void:
 		TestBattlePanelActorScript.new(),
 		TestBattleScreenActorPanelScript.new(),
 		TestBattleFeedbackDirectorScript.new(),
+		TestProficiencySystemScript.new(),
 	]
 
 	for suite in suites:
