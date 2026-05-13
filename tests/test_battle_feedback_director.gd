@@ -27,6 +27,28 @@ func run(assertions) -> void:
 	assertions.assert_eq(missing_unit_id_commands.size(), 0, "缺失 unit_id 的 hp_changed 不应产生命令")
 
 	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	var capped_hitstop_commands: Array = director.consume_commands()
+	var total_hitstop_ms := 0
+	for command in capped_hitstop_commands:
+		if str(command.get("cmd", "")) == "hitstop":
+			var ms := int(command.get("ms", 0))
+			total_hitstop_ms += ms
+			assertions.assert_true(ms <= 60, "单次 hitstop 不应超过 60ms")
+	assertions.assert_true(total_hitstop_ms <= 120, "同帧 hitstop 总时长不应超过 120ms")
+
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
+	var reset_hitstop_commands: Array = director.consume_commands()
+	var total_reset_hitstop_ms := 0
+	for command in reset_hitstop_commands:
+		if str(command.get("cmd", "")) == "hitstop":
+			total_reset_hitstop_ms += int(command.get("ms", 0))
+	assertions.assert_true(total_reset_hitstop_ms <= 120, "consume 后应重置预算，下一帧仍不超过 120ms")
+
+	director.enqueue({"type": "hit_start", "unit_id": "hero"})
 	var commands_after_enqueue: Array = director.consume_commands()
 	assertions.assert_eq(commands_after_enqueue.size(), 1, "首次 consume 应返回已入队命令")
 	var commands_after_second_consume: Array = director.consume_commands()
