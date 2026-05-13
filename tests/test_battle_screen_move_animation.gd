@@ -91,8 +91,10 @@ func run(assertions) -> void:
 	if SpriteScript != null:
 		var sprite_methods := _collect_method_names(SpriteScript)
 		assertions.assert_true(sprite_methods.has("animate_to"), "TacticalUnitSprite 应含 animate_to")
+		assertions.assert_true(sprite_methods.has("play_hit_feedback"), "TacticalUnitSprite 应含 play_hit_feedback")
 		var sprite_signals := _collect_signal_names(SpriteScript)
 		assertions.assert_true(sprite_signals.has("animation_finished"), "TacticalUnitSprite 应含 animation_finished 信号")
+		_assert_hit_feedback_usable(assertions, SpriteScript)
 
 	var BattleScreenScript = load(BATTLE_SCREEN_PATH)
 	assertions.assert_true(BattleScreenScript != null, "应存在 battle_screen.gd")
@@ -150,6 +152,31 @@ func _collect_method_names(script) -> Dictionary:
 	for m in script.get_script_method_list():
 		result[str(m.get("name", ""))] = true
 	return result
+
+func _assert_hit_feedback_usable(assertions, SpriteScript) -> void:
+	var sprite = SpriteScript.new()
+	var root = Engine.get_main_loop().root
+	root.add_child(sprite)
+	sprite.setup("test_unit", "", 20, false)
+
+	var inner_sprite = sprite.get("_sprite")
+	assertions.assert_true(inner_sprite != null, "受击反馈测试应能拿到内部 Sprite2D")
+	if inner_sprite == null:
+		sprite.queue_free()
+		return
+
+	var base_unit_pos: Vector2 = sprite.position
+	var base_local_pos: Vector2 = inner_sprite.position
+	var base_modulate: Color = inner_sprite.modulate
+
+	# flash_sec=0 走同步归位分支：验证接口可调用且关键状态能回到基准值。
+	sprite.play_hit_feedback(0.0, 6.0)
+
+	assertions.assert_eq(sprite.position, base_unit_pos, "受击反馈不应改写单位锚点 position")
+	assertions.assert_eq(inner_sprite.position, base_local_pos, "受击反馈结束后局部位置应归位")
+	assertions.assert_eq(inner_sprite.modulate, base_modulate, "受击反馈结束后颜色应归位")
+
+	sprite.queue_free()
 
 func _collect_signal_names(script) -> Dictionary:
 	var result: Dictionary = {}

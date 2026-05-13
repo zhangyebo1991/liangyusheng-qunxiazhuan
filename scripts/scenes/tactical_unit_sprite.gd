@@ -32,6 +32,7 @@ var _max_hp := 1
 var _target_hp := 0
 var _display_hp := 0.0
 var _hp_tween: Tween
+var _hit_feedback_tween: Tween
 var _opaque_bounds: Rect2i = Rect2i(0, 0, 16, 16)
 
 func setup(uid: String, sprite_tile_id: String, max_hp: int, is_enemy: bool = false) -> void:
@@ -165,6 +166,48 @@ func animate_along_path(points: Array, per_step_duration: float) -> void:
 		if typeof(p) == TYPE_VECTOR2:
 			tween.tween_property(self, "position", p, dur)
 	tween.tween_callback(func() -> void: animation_finished.emit())
+
+# Task4: 受击反馈接口。短暂闪白并轻微回弹后归位。
+# 约定：flash_sec<=0 时走同步归位分支，便于无帧推进的单测稳定验证。
+func play_hit_feedback(flash_sec: float = 0.10, recoil_px: float = 6.0) -> void:
+	if _sprite == null:
+		return
+	if _hit_feedback_tween != null and _hit_feedback_tween.is_running():
+		_hit_feedback_tween.kill()
+
+	_apply_sprite_layout()
+	var base_pos: Vector2 = _sprite.position
+	var base_modulate: Color = _sprite.modulate
+	var safe_flash: float = max(0.0, flash_sec)
+	var safe_recoil: float = max(0.0, recoil_px)
+
+	if safe_flash <= 0.0 or get_tree() == null:
+		_sprite.position = base_pos
+		_sprite.modulate = base_modulate
+		return
+
+	var recoil_dir := -1.0
+	if _is_enemy:
+		recoil_dir = 1.0
+	var recoil_pos: Vector2 = base_pos + Vector2(recoil_dir * safe_recoil, 0.0)
+	var total_flash: float = max(0.02, safe_flash)
+	var recoil_out: float = max(0.01, total_flash * 0.35)
+	var recoil_back: float = max(0.01, total_flash - recoil_out)
+
+	_sprite.modulate = Color(1.0, 1.0, 1.0, base_modulate.a)
+	_hit_feedback_tween = create_tween()
+	if safe_recoil > 0.0:
+		_hit_feedback_tween.tween_property(_sprite, "position", recoil_pos, recoil_out)
+		_hit_feedback_tween.tween_property(_sprite, "position", base_pos, recoil_back)
+	else:
+		_hit_feedback_tween.tween_interval(total_flash)
+	_hit_feedback_tween.parallel().tween_property(_sprite, "modulate", base_modulate, total_flash)
+	_hit_feedback_tween.tween_callback(func() -> void:
+		if not is_instance_valid(_sprite):
+			return
+		_sprite.position = base_pos
+		_sprite.modulate = base_modulate
+	)
 
 func _scale_to_display_box(texture: Texture2D) -> Vector2:
 	if texture == null:
