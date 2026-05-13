@@ -2,7 +2,6 @@ extends Node2D
 
 # v0.x: TILE_SIZE 80，8×6 棋盘 → 640×480，靠近「铺满」中部可用区。
 const TILE_SIZE := 80
-const TILE_SCALE := 5  # Kenney tile 16 × 5 = 80
 const GRID_COLS := 8
 const GRID_ROWS := 6
 const TILES_DIR := "res://assets/kenney_tiny-battle/Tiles/"
@@ -39,13 +38,21 @@ func _build_tiles() -> void:
 				continue
 			var sprite := Sprite2D.new()
 			sprite.texture = load(tex_path)
-			sprite.scale = Vector2(TILE_SCALE, TILE_SCALE)
+			sprite.scale = _scale_to_tile(sprite.texture)
 			sprite.position = Vector2(c * TILE_SIZE + TILE_SIZE / 2, r * TILE_SIZE + TILE_SIZE / 2)
 			add_child(sprite)
 			_tile_sprites[Vector2i(c, r)] = sprite
 
 func grid_to_pixel(cell: Vector2i) -> Vector2:
 	return Vector2(cell.x * TILE_SIZE + TILE_SIZE / 2, cell.y * TILE_SIZE + TILE_SIZE / 2)
+
+func _scale_to_tile(texture: Texture2D) -> Vector2:
+	if texture == null:
+		return Vector2.ONE
+	var tex_size := texture.get_size()
+	if tex_size.x <= 0 or tex_size.y <= 0:
+		return Vector2.ONE
+	return Vector2(TILE_SIZE / float(tex_size.x), TILE_SIZE / float(tex_size.y))
 
 # Task 11: 范围 overlay。mode = 0 清空；其余按颜色绘制半透明覆盖。
 # MOVE = 蓝半透；ATTACK / SKILL_DIR / SKILL_TARGET = 红半透。

@@ -8,7 +8,7 @@
     "attack": 18,
     "defense": 8,
     "martial_arts": ["basic_sword", "straight_sword_thrust"],
-    "sprite_tile_id": "tile_0098"
+    "sprite_tile_id": "tile_hero_yun_hd"
   },
   {
     "id": "qingshanke",
@@ -30,7 +30,7 @@
     "attack": 12,
     "defense": 4,
     "martial_arts": ["rough_fist"],
-    "sprite_tile_id": "tile_0107"
+    "sprite_tile_id": "tile_bandit_boss_hd"
   },
   {
     "id": "bandit_lackey_01",
@@ -41,7 +41,7 @@
     "attack": 10,
     "defense": 3,
     "martial_arts": ["rough_fist"],
-    "sprite_tile_id": "tile_0108"
+    "sprite_tile_id": "tile_bandit_lackey_hd"
   },
   {
     "id": "innkeeper_lu",

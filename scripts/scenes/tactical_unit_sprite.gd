@@ -6,10 +6,10 @@ extends Node2D
 # Task 19: 滑动动画完成后 emit；battle_screen 用 CONNECT_ONE_SHOT 接它再 commit move。
 signal animation_finished
 
-# v0.x: TILE_SIZE 80，精灵 scale 5（Kenney 16×5=80），HP 条/括号/倒三角 完全同步放大。
+# v0.x: 战棋格显示尺寸固定为 80px，单位贴图按实际分辨率自适应缩放到该显示盒内。
 const HP_BAR_WIDTH := 70
 const HP_BAR_HEIGHT := 7
-const SPRITE_SCALE := 5
+const SPRITE_DISPLAY_SIZE := Vector2(80, 80)
 const TILES_DIR := "res://assets/kenney_tiny-battle/Tiles/"
 
 var unit_id: String = ""
@@ -29,7 +29,9 @@ func setup(uid: String, sprite_tile_id: String, max_hp: int) -> void:
 	var tex_path := TILES_DIR + sprite_tile_id + ".png"
 	if sprite_tile_id != "" and ResourceLoader.exists(tex_path):
 		_sprite.texture = load(tex_path)
-	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
+	else:
+		_sprite.texture = null
+	_sprite.scale = _scale_to_display_box(_sprite.texture)
 	queue_redraw()
 
 func set_hp(cur: int, mx: int) -> void:
@@ -112,3 +114,15 @@ func animate_along_path(points: Array, per_step_duration: float) -> void:
 		if typeof(p) == TYPE_VECTOR2:
 			tween.tween_property(self, "position", p, dur)
 	tween.tween_callback(func() -> void: animation_finished.emit())
+
+func _scale_to_display_box(texture: Texture2D) -> Vector2:
+	if texture == null:
+		return Vector2.ONE
+	var tex_size := texture.get_size()
+	if tex_size.x <= 0 or tex_size.y <= 0:
+		return Vector2.ONE
+	var scale_ratio: float = float(min(
+		SPRITE_DISPLAY_SIZE.x / float(tex_size.x),
+		SPRITE_DISPLAY_SIZE.y / float(tex_size.y)
+	))
+	return Vector2.ONE * scale_ratio

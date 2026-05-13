@@ -183,7 +183,7 @@ func _create_tactical_ui() -> void:
 	panel_terrain.size = Vector2(200, 230)
 	panel_terrain.custom_minimum_size = Vector2(200, 230)
 	add_child(panel_terrain)
-	# Task 15: 右上主角信息卡。
+	# Task 15: 右上当前行动角色状态卡。
 	panel_actor = BattlePanelActorScript.new()
 	panel_actor.position = Vector2(1072, 8)
 	panel_actor.size = Vector2(200, 240)
@@ -698,23 +698,22 @@ func _focus_next_distinct_terrain() -> void:
 			_show_terrain_at(_last_hover_cell)
 			return
 
-# Task 15: 在右上主角信息卡上同步显示「当前正在行动的角色」状态；
-# 若无行动单位则回退到首位玩家单位（一般是主角云游少侠）。
+# Task 15: 右上状态卡只显示「当前正在行动的角色」；
+# 若无行动单位（例如尚未轮到任何人 / 战斗结束），则隐藏状态卡。
 func _refresh_actor_panel() -> void:
 	if panel_actor == null or tactical_battle_state == null:
 		return
 	var unit = _pick_actor_panel_unit()
+	panel_actor.visible = unit != null
 	panel_actor.set_actor(unit)
 
 func _pick_actor_panel_unit():
-	var current = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
-	if current != null and current.team == TacticalBattleStateScript.TEAM_PLAYER:
-		return current
-	for unit in tactical_battle_state.units:
-		if unit.team == TacticalBattleStateScript.TEAM_PLAYER and unit.is_alive():
-			return unit
-	# 全队覆灭兜底：返回 current 或 null。
-	return current
+	if tactical_battle_state == null:
+		return null
+	var current_id := str(tactical_battle_state.current_unit_id)
+	if current_id.is_empty():
+		return null
+	return tactical_battle_state.get_unit(current_id)
 
 func _on_hero_mp_changed_for_actor_panel(_cur_mp: int, _max_mp: int) -> void:
 	_refresh_actor_panel()

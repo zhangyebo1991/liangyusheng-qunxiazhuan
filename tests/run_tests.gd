@@ -49,6 +49,8 @@ const TestChargeBarLayoutScript = preload("res://tests/test_charge_bar_layout.gd
 const TestBattleScreenSkillMenuScript = preload("res://tests/test_battle_screen_skill_menu.gd")
 const TestBattleScreenTargetSkillScript = preload("res://tests/test_battle_screen_target_skill.gd")
 const TestBattleScreenMoveAnimationScript = preload("res://tests/test_battle_screen_move_animation.gd")
+const TestBattlePanelActorScript = preload("res://tests/test_battle_panel_actor.gd")
+const TestBattleScreenActorPanelScript = preload("res://tests/test_battle_screen_actor_panel.gd")
 
 func _initialize() -> void:
 	var assertions = TestAssertionsScript.new()
@@ -101,6 +103,8 @@ func _initialize() -> void:
 		TestBattleScreenSkillMenuScript.new(),
 		TestBattleScreenTargetSkillScript.new(),
 		TestBattleScreenMoveAnimationScript.new(),
+		TestBattlePanelActorScript.new(),
+		TestBattleScreenActorPanelScript.new(),
 	]
 
 	for suite in suites:

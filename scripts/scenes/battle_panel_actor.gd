@@ -1,6 +1,6 @@
 extends PanelContainer
 
-# Task 15: 右上「主角信息卡」面板。
+# Task 15: 右上「当前行动角色状态卡」面板。
 # 显示当前 actor 的头像、名字、HP/MP 进度条、攻防移动等基础属性。
 
 const COLOR_PANEL := Color(0.06, 0.08, 0.10, 0.62)
@@ -12,6 +12,7 @@ const COLOR_MP := Color(0.30, 0.56, 0.86)
 const COLOR_CHARGE := Color(0.86, 0.78, 0.36)
 const TILES_DIR := "res://assets/kenney_tiny-battle/Tiles/"
 const CHARGE_LIMIT := 1000
+const AVATAR_BOX_SIZE := Vector2(96, 96)
 
 var _avatar_rect: TextureRect
 var _name_label: Label
@@ -34,8 +35,9 @@ func _ready() -> void:
 	box.add_child(head)
 
 	_avatar_rect = TextureRect.new()
-	_avatar_rect.custom_minimum_size = Vector2(40, 40)
+	_avatar_rect.custom_minimum_size = AVATAR_BOX_SIZE
 	_avatar_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_avatar_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	head.add_child(_avatar_rect)
 
 	_name_label = Label.new()
