@@ -30,7 +30,8 @@ func run(assertions) -> void:
 	assertions.assert_true(panel.member_buttons.size() >= 1, "应生成队友按钮")
 	assertions.assert_true(panel._equipment_list.get_child_count() >= 1, "应生成可装备物品行")
 	assertions.assert_true(panel._detail_label.text.find("等级 2") >= 0, "队伍面板应显示等级")
-	assertions.assert_true(panel._detail_label.text.find("经验 5/50") >= 0, "队伍面板应显示到下一级经验进度")
+	assertions.assert_true(panel._detail_label.text.find("本级经验 5/50") >= 0, "队伍面板应显示本级经验进度")
+	assertions.assert_true(panel._detail_label.text.find("累计 35") >= 0, "队伍面板应显示累计经验")
 
 	var equipment_row = panel._equipment_list.get_child(0)
 	var equip_button = equipment_row.get_child(1)

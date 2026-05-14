@@ -540,7 +540,7 @@ func _reward_text(reward_result: Dictionary) -> String:
 				continue
 			var actor_id = str(item.get("actor_id", ""))
 			var gained = int(item.get("exp_gained", 0))
-			var line = "%s +%d 经验" % [actor_id, gained]
+			var line = "%s +%d 经验" % [_actor_display_name(actor_id), gained]
 			if bool(item.get("leveled_up", false)):
 				line += "，升至 %d 级，气血内力已回满" % int(item.get("new_level", 0))
 			lines.append(line)
@@ -558,8 +558,26 @@ func _reward_text(reward_result: Dictionary) -> String:
 			var amount = max(1, int(drop.get("amount", 1)))
 			if item_id.is_empty():
 				continue
-			lines.append("%s x%d" % [item_id, amount])
+			lines.append("%s x%d" % [_item_display_name(item_id), amount])
 	return "\n".join(lines) if not lines.is_empty() else "没有额外奖励。"
+
+func _actor_display_name(actor_id: String) -> String:
+	if actor_id.is_empty():
+		return "未知侠客"
+	if DataRepository != null and DataRepository.has_method("get_actor"):
+		var actor = DataRepository.get_actor(actor_id)
+		if typeof(actor) == TYPE_DICTIONARY and not actor.is_empty():
+			return str(actor.get("name", actor_id))
+	return actor_id
+
+func _item_display_name(item_id: String) -> String:
+	if item_id.is_empty():
+		return "未知物品"
+	if DataRepository != null and DataRepository.has_method("get_item"):
+		var item = DataRepository.get_item(item_id)
+		if typeof(item) == TYPE_DICTIONARY and not item.is_empty():
+			return str(item.get("name", item_id))
+	return item_id
 
 func _on_reward_return_pressed() -> void:
 	if reward_panel != null:

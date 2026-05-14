@@ -22,11 +22,11 @@ func run(assertions) -> void:
 		"coins": 15,
 		"items": [{"item_id": "herb_small", "amount": 1}]
 	})
-	assertions.assert_true(text.find("hero_yun +20 经验") >= 0, "奖励文本应显示经验")
+	assertions.assert_true(text.find("云游少侠 +20 经验") >= 0, "奖励文本应显示中文角色名和经验")
 	assertions.assert_true(text.find("升至 2 级") >= 0, "奖励文本应显示升级")
 	assertions.assert_true(text.find("气血内力已回满") >= 0, "奖励文本应显示升级回满")
 	assertions.assert_true(text.find("15 文") >= 0, "奖励文本应显示铜钱")
-	assertions.assert_true(text.find("herb_small x1") >= 0, "奖励文本应显示掉落明细")
+	assertions.assert_true(text.find("小还丹 x1") >= 0, "奖励文本应显示中文物品名和掉落明细")
 	screen.free()
 
 func _collect_method_names(script) -> Dictionary:

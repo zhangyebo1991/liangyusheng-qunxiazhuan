@@ -139,7 +139,7 @@ func _exp_progress_line(stats: Dictionary) -> String:
 	var total_exp = max(0, int(stats.get("total_exp", 0)))
 	var level_start = max(0, total_exp - exp)
 	var required = max(0, next_level_total - level_start)
-	return "经验 %d/%d" % [exp, required]
+	return "本级经验 %d/%d  累计 %d" % [exp, required, total_exp]
 
 func _refresh_equipment_rows() -> void:
 	_clear_equipment_rows()
