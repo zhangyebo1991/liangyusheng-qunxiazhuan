@@ -7,6 +7,7 @@ const JournalStateScript = preload("res://scripts/domain/journal_state.gd")
 const SaveSystemScript = preload("res://scripts/systems/save_system.gd")
 const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
 const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
+const GrowthSystemScript = preload("res://scripts/systems/growth_system.gd")
 
 const DEFAULT_HERO_MAX_HP := 120
 const DEFAULT_HERO_MAX_MP := 20
@@ -25,6 +26,7 @@ var hero_max_mp := DEFAULT_HERO_MAX_MP
 var hero_cur_mp := DEFAULT_HERO_MAX_MP
 var last_inn_id: String = ""
 var martial_proficiency: Dictionary = {}
+var last_reward_result: Dictionary = {}
 
 func start_new_game() -> void:
 	party = PartyStateScript.new()
@@ -41,6 +43,7 @@ func start_new_game() -> void:
 	party.set_member_status("hero_yun", {"hp": hero_hp, "mp": hero_cur_mp})
 	last_inn_id = ""
 	martial_proficiency = {}
+	last_reward_result = {}
 	set_current_map("mountain_pass", Vector2(160, 320))
 	flags = {"current_map": "mountain_pass"}
 	battle_context = {}
@@ -210,7 +213,9 @@ func apply_battle_result(result: Dictionary) -> void:
 		_normalize_hero_hp()
 		var effect_system = EffectSystemScript.new()
 		effect_system.apply_effects(self, _battle_victory_effects(result), result)
+		last_reward_result = _apply_victory_rewards(result)
 	else:
+		last_reward_result = {}
 		if has_bound_inn():
 			var inn = _resolve_bound_inn()
 			if not inn.is_empty():
@@ -248,6 +253,73 @@ func _battle_victory_effects(result: Dictionary) -> Array:
 	if not martial_art_id.is_empty() and reward > 0:
 		effects.append({"type": "add_martial_proficiency", "martial_art_id": martial_art_id, "amount": reward})
 	return effects
+
+func apply_growth_results(experience: Array) -> void:
+	_apply_growth_results_to_hero(experience)
+
+func _apply_victory_rewards(result: Dictionary) -> Dictionary:
+	var rewards = result.get("victory_rewards", {})
+	if typeof(rewards) != TYPE_DICTIONARY or rewards.is_empty():
+		return {}
+	var summary: Dictionary = {"experience": [], "coins": 0, "items": []}
+	var repository = _get_data_repository_for_rewards()
+	var exp_amount = int(rewards.get("exp", 0))
+	if exp_amount > 0 and repository != null:
+		var growth = GrowthSystemScript.new()
+		var participants = result.get("participating_party_members", [])
+		if typeof(participants) == TYPE_ARRAY:
+			for actor_id in participants:
+				var growth_result = growth.add_exp(party, str(actor_id), exp_amount, repository)
+				if bool(growth_result.get("success", false)):
+					summary["experience"].append(growth_result)
+	var coins = int(rewards.get("coins", 0))
+	if coins > 0:
+		party.add_coins(coins)
+		summary["coins"] = coins
+	var items = rewards.get("items", [])
+	if typeof(items) == TYPE_ARRAY:
+		for item in items:
+			if typeof(item) != TYPE_DICTIONARY:
+				continue
+			var item_id = str(item.get("item_id", ""))
+			var amount = max(1, int(item.get("amount", 1)))
+			if item_id.is_empty():
+				continue
+			party.add_item(item_id, amount)
+			summary["items"].append({"item_id": item_id, "id": item_id, "amount": amount})
+	_apply_growth_results_to_hero(summary["experience"])
+	return summary
+
+func _apply_growth_results_to_hero(experience: Array) -> void:
+	if party == null or not party.has_member("hero_yun"):
+		return
+	var changed := false
+	for member_result in experience:
+		if typeof(member_result) != TYPE_DICTIONARY or str(member_result.get("actor_id", "")) != "hero_yun":
+			continue
+		var next_max_hp = max(1, int(member_result.get("max_hp", hero_max_hp)))
+		var next_max_mp = max(0, int(member_result.get("max_mp", hero_max_mp)))
+		changed = changed or next_max_hp != hero_max_hp or next_max_mp != hero_max_mp
+		hero_max_hp = next_max_hp
+		hero_max_mp = next_max_mp
+	var status = party.get_member_status("hero_yun")
+	if status.is_empty():
+		return
+	var next_hp = clamp(int(status.get("hp", hero_hp)), 0, hero_max_hp)
+	var next_mp = clamp(int(status.get("mp", hero_cur_mp)), 0, hero_max_mp)
+	changed = changed or next_hp != hero_hp or next_mp != hero_cur_mp
+	hero_hp = next_hp
+	hero_cur_mp = next_mp
+	_sync_hero_member_status()
+	if changed and is_inside_tree() and has_node("/root/EventBus"):
+		get_node("/root/EventBus").hero_mp_changed.emit(hero_cur_mp, hero_max_mp)
+
+func _get_data_repository_for_rewards():
+	if is_inside_tree() and has_node("/root/DataRepository"):
+		return get_node("/root/DataRepository")
+	var repository = DataRepositoryScript.new()
+	repository.load_all()
+	return repository
 
 func save_to_path(path: String) -> bool:
 	return SaveSystemScript.new().save_to_path(path, to_dictionary())
@@ -297,6 +369,7 @@ func from_dictionary(data: Dictionary) -> void:
 	last_inn_id = str(data.get("last_inn_id", ""))
 	hero_hp = int(data.get("hero_hp", hero_max_hp))
 	martial_proficiency = _read_martial_proficiency(data.get("martial_proficiency", {}))
+	last_reward_result = {}
 	_normalize_hero_hp()
 	_normalize_hero_mp()
 	_sync_hero_member_status()

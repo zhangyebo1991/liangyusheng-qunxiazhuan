@@ -30,6 +30,13 @@
         "battle_mode": "tactical",
         "encounter_id": "mountain_bandit_tutorial",
         "battlefield": {"width": 16, "height": 9},
+        "victory_rewards": {
+          "exp": 20,
+          "coins": 15,
+          "items": [
+            {"item_id": "herb_small", "amount": 1}
+          ]
+        },
         "time_mode": "pause_on_action",
         "terrain_grid": [
           ["mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain"],

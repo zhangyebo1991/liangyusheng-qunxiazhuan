@@ -56,6 +56,8 @@ func run(assertions) -> void:
 	assertions.assert_eq(exp_members.size(), 2, "经验结果应记录所有队友")
 	assertions.assert_eq(state.party.get_member_status("hero_yun").get("level", 0), 2, "主角应因任务经验升到 2 级")
 	assertions.assert_eq(state.party.get_member_status("hero_yun").get("hp", 0), 128, "升级后主角气血应回满到成长后上限")
+	assertions.assert_eq(state.hero_hp, 128, "任务经验升级后主角旧 HP 字段应同步")
+	assertions.assert_eq(state.hero_max_hp, 128, "任务经验升级后主角旧最大 HP 字段应同步")
 	assertions.assert_eq(state.party.get_member_status("qingshanke").get("level", 0), 2, "青衫客应因任务经验升到 2 级")
 
 	var remove_result = effect_system.apply_effects(state, [

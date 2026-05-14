@@ -208,6 +208,8 @@ func _apply_add_party_exp(result: Dictionary, game_state, effect: Dictionary) ->
 	var experience: Array = result["experience"]
 	for member_result in growth_result.get("members", []):
 		experience.append(member_result)
+	if game_state.has_method("apply_growth_results"):
+		game_state.apply_growth_results(experience)
 	_mark_applied(result, "全队获得经验：%d" % amount)
 
 func _apply_add_rumor(result: Dictionary, game_state, effect: Dictionary, context: Dictionary) -> void:

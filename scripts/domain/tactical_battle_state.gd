@@ -23,6 +23,7 @@ var source_object_id: String = ""
 var quest_id: String = ""
 var reward_martial_art_id: String = "basic_sword"
 var proficiency_reward: int = 1
+var victory_rewards: Dictionary = {}
 
 func add_unit(unit) -> void:
 	if unit == null:
@@ -66,9 +67,11 @@ func to_result_dictionary() -> Dictionary:
 		"hero_hp": hero_hp,
 		"hero_final_mp": _get_hero_final_mp(),
 		"party_member_results": _party_member_results(),
+		"participating_party_members": _participating_party_members(),
 		"source_map_id": source_map_id,
 		"source_object_id": source_object_id,
 		"quest_id": quest_id,
+		"victory_rewards": victory_rewards.duplicate(true),
 		"martial_art_id": reward_martial_art_id,
 		"proficiency_reward": max(0, proficiency_reward),
 		"log": log.duplicate(),
@@ -86,6 +89,15 @@ func _party_member_results() -> Dictionary:
 		if unit.team != TEAM_PLAYER or unit.actor_id.is_empty():
 			continue
 		result[unit.actor_id] = {"hp": max(0, int(unit.hp)), "mp": max(0, int(unit.mp))}
+	return result
+
+func _participating_party_members() -> Array:
+	var result: Array = []
+	for unit in units:
+		if unit.team != TEAM_PLAYER or unit.actor_id.is_empty():
+			continue
+		if not result.has(unit.actor_id):
+			result.append(unit.actor_id)
 	return result
 
 func to_dictionary() -> Dictionary:
@@ -106,6 +118,7 @@ func to_dictionary() -> Dictionary:
 		"source_map_id": source_map_id,
 		"source_object_id": source_object_id,
 		"quest_id": quest_id,
+		"victory_rewards": victory_rewards.duplicate(true),
 		"reward_martial_art_id": reward_martial_art_id,
 		"proficiency_reward": proficiency_reward,
 	}
