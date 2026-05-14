@@ -10,6 +10,7 @@ var _terrain_grid: Array = []
 var _terrain_system = null
 var _tile_sprites: Dictionary = {}  # Vector2i → Sprite2D
 var _range_overlays: Array = []  # ColorRect 节点列表，用于范围三态可视化
+var _hover_overlays: Array = []  # hover 爆炸预览层，叠加在 range_overlay 之上
 var _range_mode: int = 0  # 当前范围模式（NONE=0/MOVE=1/ATTACK=2/SKILL_DIR=3/SKILL_TARGET=4）
 
 func setup(terrain_grid: Array, terrain_system) -> void:
@@ -79,3 +80,24 @@ func set_range_overlay(mode: int, cells: Array) -> void:
 		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(rect)
 		_range_overlays.append(rect)
+
+# hover 爆炸预览层：独立于 range_overlay，红色半透，叠加在最前。
+func set_hover_overlay(cells: Array) -> void:
+	clear_hover_overlay()
+	var color := Color(1.0, 0.25, 0.25, 0.42)
+	for c in cells:
+		if typeof(c) != TYPE_VECTOR2I:
+			continue
+		var rect := ColorRect.new()
+		rect.color = color
+		rect.size = Vector2(TILE_SIZE, TILE_SIZE)
+		rect.position = Vector2(c.x * TILE_SIZE, c.y * TILE_SIZE)
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(rect)
+		_hover_overlays.append(rect)
+
+func clear_hover_overlay() -> void:
+	for n in _hover_overlays:
+		if is_instance_valid(n):
+			n.queue_free()
+	_hover_overlays.clear()

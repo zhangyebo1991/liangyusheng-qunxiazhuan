@@ -806,12 +806,9 @@ func _poll_terrain_hover() -> void:
 				break
 		if in_centers:
 			var blast: Array = tactical_range_system.get_skill_target_blast_range(_pending_skill_id, cell, tactical_battle_state.terrain_grid)
-			var merged: Array = range_cells.duplicate(true)
-			for b in blast:
-				if typeof(b) == TYPE_VECTOR2I and not merged.has(b):
-					merged.append(b)
-			battle_grid.set_range_overlay(RangeMode.SKILL_AIM, merged)
+			battle_grid.set_hover_overlay(blast)
 			return
+	battle_grid.clear_hover_overlay()
 
 func _mouse_to_grid_cell() -> Vector2i:
 	# battle_grid 是 Node2D，position 是其全局原点；TILE_SIZE 与 BattleGrid.TILE_SIZE 一致。
