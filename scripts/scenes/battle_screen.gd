@@ -1075,9 +1075,13 @@ func _clear_direction_arrows() -> void:
 			b.queue_free()
 	_direction_buttons.clear()
 
-# 玩家点了某方向 → 根据招式 shape 调用对应范围算法 → 释放。
+# 玩家点了某方向 → 根据招式 shape 调用对应范围算法 → 进入 SKILL_AIM 确认。
 func _on_direction_chosen(skill_id: String, direction: Vector2i) -> void:
-	_clear_direction_arrows()
+	# 隐藏箭头立即，deferred 释放避免同帧鼠标捕获干扰 cell button 点击
+	for b in _direction_buttons:
+		if is_instance_valid(b):
+			b.visible = false
+	call_deferred("_clear_direction_arrows")
 	if tactical_battle_state == null:
 		_pending_skill_id = ""
 		_set_range_mode(RangeMode.NONE, [])
