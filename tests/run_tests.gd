@@ -5,6 +5,7 @@ const TestDataLoaderScript = preload("res://tests/test_data_loader.gd")
 const TestDomainModelsScript = preload("res://tests/test_domain_models.gd")
 const TestPartyStateScript = preload("res://tests/test_party_state.gd")
 const TestEquipmentSystemScript = preload("res://tests/test_equipment_system.gd")
+const TestActorStatsSystemScript = preload("res://tests/test_actor_stats_system.gd")
 const TestJournalStateScript = preload("res://tests/test_journal_state.gd")
 const TestJournalSystemScript = preload("res://tests/test_journal_system.gd")
 const TestQuestAndDialogueScript = preload("res://tests/test_quest_and_dialogue.gd")
@@ -72,6 +73,7 @@ func _run_all_suites() -> void:
 		TestDomainModelsScript.new(),
 		TestPartyStateScript.new(),
 		TestEquipmentSystemScript.new(),
+		TestActorStatsSystemScript.new(),
 		TestJournalStateScript.new(),
 		TestJournalSystemScript.new(),
 		TestQuestAndDialogueScript.new(),
