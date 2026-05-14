@@ -12,10 +12,44 @@
   {
     "id": "iron_sword",
     "name": "铁剑",
-    "type": "weapon",
+    "type": "equipment",
     "description": "寻常江湖人常用的长剑。",
     "value": 120,
-    "effects": {}
+    "effects": {},
+    "equipment": {
+      "slot": "weapon",
+      "stat_bonus": {
+        "attack": 4
+      }
+    }
+  },
+  {
+    "id": "cloth_armor",
+    "name": "布衣",
+    "type": "equipment",
+    "description": "粗布缝制的短打衣衫，胜在轻便。",
+    "value": 80,
+    "effects": {},
+    "equipment": {
+      "slot": "armor",
+      "stat_bonus": {
+        "defense": 2
+      }
+    }
+  },
+  {
+    "id": "jade_talisman",
+    "name": "青玉坠",
+    "type": "equipment",
+    "description": "温润青玉贴身佩戴，有助凝神调息。",
+    "value": 160,
+    "effects": {},
+    "equipment": {
+      "slot": "accessory",
+      "stat_bonus": {
+        "max_mp": 5
+      }
+    }
   },
   {
     "id": "herb_focus",
