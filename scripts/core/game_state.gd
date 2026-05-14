@@ -38,6 +38,7 @@ func start_new_game() -> void:
 	hero_max_mp = DEFAULT_HERO_MAX_MP
 	hero_hp = hero_max_hp
 	hero_cur_mp = hero_max_mp
+	party.set_member_status("hero_yun", {"hp": hero_hp, "mp": hero_cur_mp})
 	last_inn_id = ""
 	martial_proficiency = {}
 	set_current_map("mountain_pass", Vector2(160, 320))
