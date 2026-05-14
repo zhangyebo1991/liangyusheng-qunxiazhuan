@@ -12,6 +12,15 @@
     "attack_range": 1,
     "charge_speed": 200,
     "martial_arts": ["basic_sword", "straight_sword_thrust", "sword_aura_swirl", "sword_willow_sweep", "sword_all_directions", "sword_rainbow_pierce", "sword_ring_aura"],
+    "growth": {
+      "exp_curve": [0, 30, 80, 150, 240],
+      "per_level": {
+        "max_hp": 8,
+        "max_mp": 2,
+        "attack": 1,
+        "defense": 1
+      }
+    },
     "sprite_tile_id": "tile_hero_yun_hd"
   },
   {
@@ -27,6 +36,15 @@
     "attack_range": 1,
     "charge_speed": 200,
     "martial_arts": ["basic_sword"],
+    "growth": {
+      "exp_curve": [0, 30, 80, 150, 240],
+      "per_level": {
+        "max_hp": 10,
+        "max_mp": 2,
+        "attack": 1,
+        "defense": 2
+      }
+    },
     "sprite_tile_id": "tile_0099"
   },
   {
