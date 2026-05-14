@@ -29,6 +29,17 @@ func run(assertions) -> void:
 	assertions.assert_eq(game_state.hero_cur_mp, game_state.hero_max_mp, "使用后内力应满")
 	assertions.assert_eq(game_state.party.get_item_count("herb_focus"), 1, "应消耗 1 颗")
 
+	# 队伍面板读取 PartyState.member_status，吃药后必须与 HUD 使用的 hero_cur_mp 同步。
+	var panel_source_state = GameStateScript.new()
+	panel_source_state.start_new_game()
+	panel_source_state.set_hero_cur_mp(1)
+	panel_source_state.party.set_member_status("hero_yun", {"hp": panel_source_state.hero_hp, "mp": 1})
+	panel_source_state.party.add_item("herb_focus", 1)
+	var panel_sync_result = inventory.use_item(panel_source_state, "herb_focus")
+	assertions.assert_true(bool(panel_sync_result.get("success", false)), "低内力时使用凝神丹应成功")
+	assertions.assert_eq(panel_source_state.hero_cur_mp, 11, "HUD 源值应恢复到 11/20")
+	assertions.assert_eq(panel_source_state.party.get_member_status("hero_yun").get("mp", 0), 11, "队伍面板源值也应恢复到 11/20")
+
 	# 满内力时使用应失败且不消耗
 	var result_full = inventory.use_item(game_state, "herb_focus")
 	assertions.assert_false(bool(result_full.get("success", false)), "满内力使用应失败")
