@@ -140,7 +140,7 @@
         "position": {"x": 980, "y": 320},
         "radius": 72,
         "shop_id": "foot_village_pharmacy",
-        "items": ["herb_small", "herb_focus"]
+        "items": ["herb_small", "herb_focus", "cloth_armor", "jade_talisman"]
       },
       {
         "id": "exit_to_road_outskirts",

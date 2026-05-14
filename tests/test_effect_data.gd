@@ -11,9 +11,11 @@ func run(assertions) -> void:
 
 	var mountain = repository.get_quest("quest_mountain_trial")
 	var mountain_effects = mountain.get("complete_effects", [])
-	assertions.assert_eq(mountain_effects.size(), 2, "山道试剑应声明两个完成效果")
+	assertions.assert_eq(mountain_effects.size(), 5, "山道试剑应声明任务完成、物品、铜钱、队友入队效果")
 	assertions.assert_eq(_count_effect(mountain_effects, "set_quest_status"), 1, "山道试剑完成效果应设置任务完成")
-	assertions.assert_eq(_count_effect(mountain_effects, "add_item"), 1, "山道试剑完成效果应发放小还丹")
+	assertions.assert_eq(_count_effect(mountain_effects, "add_item"), 2, "山道试剑完成效果应发放小还丹和铁剑")
+	assertions.assert_eq(_count_effect(mountain_effects, "add_coins"), 1, "山道试剑完成效果应发放铜钱")
+	assertions.assert_eq(_count_effect(mountain_effects, "add_party_member"), 1, "山道试剑完成效果应让青衫客入队")
 
 	var delivery = repository.get_quest("quest_deliver_letter")
 	var delivery_effects = delivery.get("complete_effects", [])
@@ -42,10 +44,14 @@ func run(assertions) -> void:
 	mountain_state.quest_system.start_quest("quest_mountain_trial")
 	mountain_state.quest_system.mark_ready_to_complete("quest_mountain_trial")
 	var mountain_initial_herbs = mountain_state.party.get_item_count("herb_small")
+	var mountain_initial_coins = mountain_state.party.coins
 	var mountain_result = effect_system.apply_effects(mountain_state, mountain_effects)
 	assertions.assert_true(mountain_result.get("success", false), "山道试剑完成效果应可执行")
 	assertions.assert_eq(mountain_state.quest_system.get_status("quest_mountain_trial"), "completed", "山道试剑完成效果应完成任务")
 	assertions.assert_eq(mountain_state.party.get_item_count("herb_small"), mountain_initial_herbs + 1, "山道试剑完成效果应奖励小还丹")
+	assertions.assert_eq(mountain_state.party.get_item_count("iron_sword"), 1, "山道试剑完成效果应奖励铁剑")
+	assertions.assert_eq(mountain_state.party.coins, mountain_initial_coins + 80, "山道试剑完成效果应奖励 80 文")
+	assertions.assert_true(mountain_state.party.has_member("qingshanke"), "山道试剑完成效果应让青衫客加入队伍")
 	mountain_state.free()
 
 	state.free()

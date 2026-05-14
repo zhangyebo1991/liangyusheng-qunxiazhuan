@@ -27,4 +27,38 @@ func run(assertions) -> void:
 	assertions.assert_eq(int(repository.get_martial_art("basic_sword").get("proficiency_thresholds", [10,25,50])[0]), 10, "基础剑法首阈值应为 10")
 	assertions.assert_eq(int(repository.get_martial_art("basic_sword").get("proficiency_thresholds", [10,25,50])[2]), 50, "基础剑法末阈值应为 50")
 	assertions.assert_eq(int(repository.get_martial_art("sword_aura_swirl").get("proficiency_thresholds", [12,30,60])[0]), 12, "剑气漩首阈值应为 12")
+
+	var mountain_trial = repository.get_quest("quest_mountain_trial")
+	var trial_effects: Array = mountain_trial.get("complete_effects", [])
+	assertions.assert_true(_has_effect(trial_effects, "add_party_member", "actor_id", "qingshanke"), "山道试剑完成后应让青衫客入队")
+	assertions.assert_true(_has_effect(trial_effects, "add_item", "item_id", "iron_sword"), "山道试剑完成后应奖励铁剑")
+	assertions.assert_true(_has_effect(trial_effects, "add_coins", "amount", 80), "山道试剑完成后应奖励足够铜钱购买饰品")
+
+	var foot_village = repository.get_map("foot_village")
+	var pharmacy_items: Array = _map_object_items(foot_village, "shop_foot_village_pharmacy")
+	assertions.assert_true(pharmacy_items.has("cloth_armor"), "山脚药铺应售卖布衣以测试衣甲槽")
+	assertions.assert_true(pharmacy_items.has("jade_talisman"), "山脚药铺应售卖青玉坠以测试饰品槽")
 	repository.free()
+
+func _has_effect(effects: Array, effect_type: String, key: String, expected_value: Variant) -> bool:
+	for effect in effects:
+		if typeof(effect) != TYPE_DICTIONARY:
+			continue
+		if str(effect.get("type", "")) != effect_type:
+			continue
+		if effect.get(key) == expected_value:
+			return true
+	return false
+
+func _map_object_items(map_data: Dictionary, object_id: String) -> Array:
+	var objects = map_data.get("objects", [])
+	if typeof(objects) != TYPE_ARRAY:
+		return []
+	for object in objects:
+		if typeof(object) != TYPE_DICTIONARY:
+			continue
+		if str(object.get("id", "")) != object_id:
+			continue
+		var items = object.get("items", [])
+		return items if typeof(items) == TYPE_ARRAY else []
+	return []
