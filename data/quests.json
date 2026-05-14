@@ -14,12 +14,12 @@
     "complete_dialogue": "mountain_pass_complete",
     "reward_items": ["herb_small", "iron_sword"],
     "reward_item_amounts": {"herb_small": 1, "iron_sword": 1},
-    "reward_coins": 80,
+    "reward_coins": 160,
     "complete_effects": [
       {"type": "set_quest_status", "quest_id": "quest_mountain_trial", "status": "completed"},
       {"type": "add_item", "item_id": "herb_small", "amount": 1},
       {"type": "add_item", "item_id": "iron_sword", "amount": 1},
-      {"type": "add_coins", "amount": 80},
+      {"type": "add_coins", "amount": 160},
       {"type": "add_party_member", "actor_id": "qingshanke"}
     ]
   },

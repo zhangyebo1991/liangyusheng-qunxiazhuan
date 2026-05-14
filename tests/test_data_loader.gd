@@ -32,7 +32,7 @@ func run(assertions) -> void:
 	var trial_effects: Array = mountain_trial.get("complete_effects", [])
 	assertions.assert_true(_has_effect(trial_effects, "add_party_member", "actor_id", "qingshanke"), "山道试剑完成后应让青衫客入队")
 	assertions.assert_true(_has_effect(trial_effects, "add_item", "item_id", "iron_sword"), "山道试剑完成后应奖励铁剑")
-	assertions.assert_true(_has_effect(trial_effects, "add_coins", "amount", 80), "山道试剑完成后应奖励足够铜钱购买饰品")
+	assertions.assert_true(_has_effect(trial_effects, "add_coins", "amount", 160), "山道试剑完成后应奖励足够铜钱购买衣甲与饰品")
 
 	var foot_village = repository.get_map("foot_village")
 	var pharmacy_items: Array = _map_object_items(foot_village, "shop_foot_village_pharmacy")
