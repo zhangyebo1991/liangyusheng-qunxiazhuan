@@ -1003,6 +1003,7 @@ func _on_skill_chosen(skill_id: String) -> void:
 			var range_val: int = int(data.get("tactical", {}).get("range", 2))
 			cells = tactical_range_system.get_ring_range(view, range_val, tactical_battle_state.terrain_grid)
 		_set_range_mode(RangeMode.SKILL_AIM, cells)
+		_refresh_tactical()
 	else:
 		_pending_skill_id = ""
 		_set_range_mode(RangeMode.NONE, [])
@@ -1017,6 +1018,10 @@ func _show_direction_arrows(skill_id: String) -> void:
 	if unit == null:
 		return
 	var src := Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0)))
+	var view := _unit_view_for_range(unit)
+	var data: Dictionary = DataRepository.get_martial_art(skill_id)
+	var shape := str(data.get("shape", ""))
+	var tactical_range: int = int(data.get("tactical", {}).get("range", 2))
 	var dirs := [
 		{"d": Vector2i(0, -1), "label": "↑"},
 		{"d": Vector2i(0, 1), "label": "↓"},
@@ -1036,9 +1041,32 @@ func _show_direction_arrows(skill_id: String) -> void:
 		btn.add_theme_font_size_override("font_size", 32)
 		btn.add_theme_color_override("font_color", Color(1, 0.92, 0.45))
 		btn.focus_mode = Control.FOCUS_NONE
+		btn.mouse_entered.connect(_on_direction_hovered.bind(skill_id, shape, tactical_range, d))
+		btn.mouse_exited.connect(_on_direction_unhovered)
 		btn.pressed.connect(_on_direction_chosen.bind(skill_id, d))
 		add_child(btn)
 		_direction_buttons.append(btn)
+
+func _on_direction_hovered(skill_id: String, shape: String, tactical_range: int, direction: Vector2i) -> void:
+	if tactical_battle_state == null:
+		return
+	var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+	if unit == null:
+		return
+	var view := _unit_view_for_range(unit)
+	var cells: Array
+	if shape == "fan":
+		cells = tactical_range_system.get_fan_range(view, direction, tactical_range, tactical_battle_state.terrain_grid)
+	elif shape == "pierce":
+		cells = tactical_range_system.get_pierce_range(view, direction, tactical_range, tactical_battle_state.terrain_grid)
+	else:
+		cells = tactical_range_system.get_skill_directional_range(view, skill_id, direction, tactical_battle_state.terrain_grid)
+	if battle_grid != null:
+		battle_grid.set_range_overlay(RangeMode.SKILL_AIM, cells)
+
+func _on_direction_unhovered() -> void:
+	if battle_grid != null and range_mode == RangeMode.SKILL_DIR_PREVIEW:
+		battle_grid.set_range_overlay(RangeMode.SKILL_DIR_PREVIEW, [])
 
 # 清空当前 4 方向箭头按钮（释放招式或切换模式时调用）。
 func _clear_direction_arrows() -> void:
