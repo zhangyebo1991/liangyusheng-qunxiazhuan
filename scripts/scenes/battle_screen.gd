@@ -788,13 +788,30 @@ func _poll_terrain_hover() -> void:
 	if tactical_battle_state == null or typeof(tactical_battle_state.terrain_grid) != TYPE_ARRAY:
 		return
 	var cell := _mouse_to_grid_cell()
-	if cell == _last_hover_cell:
-		return
+	var hover_changed := cell != _last_hover_cell
 	_last_hover_cell = cell
 	if cell.x < 0:
 		_refresh_terrain_panels_for_current_actor()
+		if range_mode == RangeMode.SKILL_TARGET_PREVIEW and battle_grid != null:
+			battle_grid.set_range_overlay(RangeMode.SKILL_TARGET_PREVIEW, range_cells)
 		return
-	_show_terrain_at(cell)
+	if hover_changed:
+		_show_terrain_at(cell)
+	# SKILL_TARGET_PREVIEW 模式下鼠标悬停预览爆炸范围
+	if range_mode == RangeMode.SKILL_TARGET_PREVIEW and not _pending_skill_id.is_empty() and battle_grid != null:
+		var in_centers := false
+		for c in range_cells:
+			if typeof(c) == TYPE_VECTOR2I and Vector2i(c) == cell:
+				in_centers = true
+				break
+		if in_centers:
+			var blast: Array = tactical_range_system.get_skill_target_blast_range(_pending_skill_id, cell, tactical_battle_state.terrain_grid)
+			var merged: Array = range_cells.duplicate(true)
+			for b in blast:
+				if typeof(b) == TYPE_VECTOR2I and not merged.has(b):
+					merged.append(b)
+			battle_grid.set_range_overlay(RangeMode.SKILL_AIM, merged)
+			return
 
 func _mouse_to_grid_cell() -> Vector2i:
 	# battle_grid 是 Node2D，position 是其全局原点；TILE_SIZE 与 BattleGrid.TILE_SIZE 一致。
@@ -990,6 +1007,7 @@ func _on_skill_chosen(skill_id: String) -> void:
 		var cast_range: int = int(data.get("cast_range", int(data.get("tactical", {}).get("range", 1))))
 		var centers: Array = tactical_range_system.get_skill_target_selection_range(view, skill_id, cast_range, tactical_battle_state.terrain_grid)
 		_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, centers)
+		_refresh_tactical()
 	elif shape == "fan" or shape == "pierce":
 		_set_range_mode(RangeMode.SKILL_DIR_PREVIEW, [])
 		_show_direction_arrows(skill_id)

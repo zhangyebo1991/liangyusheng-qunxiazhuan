@@ -65,7 +65,7 @@ func set_range_overlay(mode: int, cells: Array) -> void:
 	if _range_mode == 0:
 		return
 	var color: Color
-	if _range_mode == 1:
+	if _range_mode == 1 or _range_mode == 4:
 		color = Color(0.25, 0.55, 1.0, 0.35)
 	else:
 		color = Color(1.0, 0.3, 0.3, 0.35)
