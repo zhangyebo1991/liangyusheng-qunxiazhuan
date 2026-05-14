@@ -373,6 +373,13 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 	var current_unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
 	if current_unit == null:
 		return
+	# SKILL_DIR_PREVIEW 模式下点格子 → 取消技能（方向只能点箭头确认）
+	if range_mode == RangeMode.SKILL_DIR_PREVIEW:
+		_pending_skill_id = ""
+		_clear_direction_arrows()
+		_set_range_mode(RangeMode.NONE, [])
+		_refresh_tactical()
+		return
 	# SKILL_AIM 模式：范围内点击确认释放，范围外点击取消。
 	if range_mode == RangeMode.SKILL_AIM and not _pending_skill_id.is_empty():
 		var clicked := Vector2i(q, r)
