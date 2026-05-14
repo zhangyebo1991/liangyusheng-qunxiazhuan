@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const PartyPanelScript = preload("res://scripts/scenes/party_panel.gd")
+
 signal item_use_requested(item_id: String)
 signal shop_buy_requested(item_id: String)
 signal journal_requested
@@ -13,6 +15,7 @@ var inventory_panel: Panel
 var inventory_list: VBoxContainer
 var inventory_empty_label: Label
 var inventory_is_open := false
+var party_panel: PanelContainer
 var shop_panel: Panel
 var shop_title_label: Label
 var shop_coins_label: Label
@@ -114,6 +117,26 @@ func show_inventory(items: Array) -> void:
 func hide_inventory() -> void:
 	inventory_is_open = false
 	inventory_panel.visible = false
+
+func show_party_panel(party, repository) -> void:
+	if party_panel == null:
+		party_panel = PartyPanelScript.new()
+		add_child(party_panel)
+	party_panel.visible = true
+	party_panel.set_party_context(party, repository)
+
+func hide_party_panel() -> void:
+	if party_panel != null:
+		party_panel.visible = false
+
+func toggle_party_panel(party, repository) -> void:
+	if party_panel != null and party_panel.visible:
+		hide_party_panel()
+	else:
+		show_party_panel(party, repository)
+
+func is_party_panel_open() -> bool:
+	return party_panel != null and party_panel.visible
 
 func toggle_inventory(items: Array) -> void:
 	if inventory_is_open:

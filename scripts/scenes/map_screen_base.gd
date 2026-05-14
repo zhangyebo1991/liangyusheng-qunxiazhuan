@@ -66,6 +66,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if journal_is_open:
 		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_P:
+		_toggle_party_panel()
+		return
 	if event.is_action_pressed("inventory"):
 		_toggle_inventory()
 	elif event.is_action_pressed("cancel"):
@@ -236,6 +239,7 @@ func _on_dialogue_option_selected(option: Dictionary) -> void:
 		hud.show_message(_build_effect_message(effect_result, "已处理。"))
 	_refresh_inventory_if_open()
 	_refresh_shop_if_open()
+	_refresh_party_panel_if_open()
 	_update_quest_text()
 	_refresh_tracked_tasks()
 
@@ -355,6 +359,7 @@ func _claim_pickup(record: Dictionary) -> void:
 		_remove_interactable_by_id(str(record.get("id", "")))
 		_refresh_inventory_if_open()
 		_refresh_shop_if_open()
+		_refresh_party_panel_if_open()
 		_refresh_tracked_tasks()
 
 func _apply_quest_complete_effects(quest_id: String) -> Dictionary:
@@ -378,6 +383,7 @@ func _apply_quest_complete_effects(quest_id: String) -> Dictionary:
 	var effects = _quest_complete_effects(quest_id, quest)
 	var result = effect_system.apply_effects(game_state, effects, {"source": "quest_complete", "quest_id": quest_id})
 	_mark_triggered_rumors_from_effect_result(result)
+	_refresh_party_panel_if_open()
 	_refresh_tracked_tasks()
 	return result
 
@@ -489,6 +495,12 @@ func _build_shop_items(record: Dictionary) -> Array:
 func _toggle_inventory() -> void:
 	hud.toggle_inventory(_build_inventory_items())
 
+func _toggle_party_panel() -> void:
+	var game_state = _get_game_state()
+	if game_state == null:
+		return
+	hud.toggle_party_panel(game_state.party, _get_data_repository())
+
 func _build_inventory_items() -> Array:
 	var game_state = _get_game_state()
 	if game_state == null:
@@ -526,6 +538,12 @@ func _refresh_inventory_if_open() -> void:
 	if hud.is_inventory_open():
 		hud.refresh_inventory(_build_inventory_items())
 
+func _refresh_party_panel_if_open() -> void:
+	if hud.is_party_panel_open():
+		var game_state = _get_game_state()
+		if game_state != null:
+			hud.show_party_panel(game_state.party, _get_data_repository())
+
 func _refresh_shop_if_open() -> void:
 	if hud.is_shop_open():
 		var game_state = _get_game_state()
@@ -536,12 +554,14 @@ func _on_item_use_requested(item_id: String) -> void:
 	var result = inventory_system.use_item(_get_game_state(), item_id)
 	hud.show_message(str(result.get("message", "此物暂时不能使用。")))
 	_refresh_inventory_if_open()
+	_refresh_party_panel_if_open()
 
 func _on_shop_buy_requested(item_id: String) -> void:
 	var result = shop_system.buy_item(_get_game_state(), item_id)
 	hud.show_message(str(result.get("message", "此商品暂时不能购买。")))
 	_refresh_shop_if_open()
 	_refresh_inventory_if_open()
+	_refresh_party_panel_if_open()
 
 func _on_interactable_clicked(interactable) -> void:
 	var radius = float(interactable.record.get("radius", 48.0))
