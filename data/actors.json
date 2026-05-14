@@ -70,6 +70,48 @@
     "sprite_tile_id": "tile_bandit_lackey_hd"
   },
   {
+    "id": "training_dummy_easy",
+    "name": "初档木桩",
+    "level": 1,
+    "hp": 40,
+    "max_hp": 40,
+    "attack": 6,
+    "defense": 0,
+    "move_range": 0,
+    "attack_range": 1,
+    "charge_speed": 160,
+    "martial_arts": [],
+    "sprite_tile_id": "tile_mountain_tree_hd"
+  },
+  {
+    "id": "training_dummy_middle",
+    "name": "中档木桩",
+    "level": 8,
+    "hp": 180,
+    "max_hp": 180,
+    "attack": 32,
+    "defense": 18,
+    "move_range": 1,
+    "attack_range": 1,
+    "charge_speed": 240,
+    "martial_arts": [],
+    "sprite_tile_id": "tile_mountain_tree_hd"
+  },
+  {
+    "id": "training_dummy_hard",
+    "name": "高档木桩",
+    "level": 99,
+    "hp": 999,
+    "max_hp": 999,
+    "attack": 999,
+    "defense": 120,
+    "move_range": 3,
+    "attack_range": 1,
+    "charge_speed": 520,
+    "martial_arts": [],
+    "sprite_tile_id": "tile_mountain_tree_hd"
+  },
+  {
     "id": "innkeeper_lu",
     "name": "陆掌柜",
     "level": 3,

@@ -160,8 +160,8 @@ func _refresh_formation_rows() -> void:
 		empty.custom_minimum_size = Vector2(460, 28)
 		_formation_list.add_child(empty)
 		return
-	for actor_id_value in order:
-		var actor_id = str(actor_id_value)
+	for order_index in range(order.size()):
+		var actor_id = str(order[order_index])
 		var row = HBoxContainer.new()
 		row.custom_minimum_size = Vector2(460, 32)
 		_formation_list.add_child(row)
@@ -181,12 +181,18 @@ func _refresh_formation_rows() -> void:
 		var up_button = Button.new()
 		up_button.text = "上移"
 		up_button.custom_minimum_size = Vector2(72, 28)
+		up_button.disabled = order_index <= 1
+		if up_button.disabled:
+			up_button.tooltip_text = "主角固定第一位。"
 		up_button.pressed.connect(_move_formation_member.bind(actor_id, -1))
 		row.add_child(up_button)
 
 		var down_button = Button.new()
 		down_button.text = "下移"
 		down_button.custom_minimum_size = Vector2(72, 28)
+		down_button.disabled = order_index >= order.size() - 1
+		if down_button.disabled:
+			down_button.tooltip_text = "已经在队尾。"
 		down_button.pressed.connect(_move_formation_member.bind(actor_id, 1))
 		row.add_child(down_button)
 

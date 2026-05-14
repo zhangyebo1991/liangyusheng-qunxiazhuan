@@ -23,6 +23,84 @@
     ]
   },
   {
+    "id": "training_dummy_intro",
+    "title": "练功木桩",
+    "lines": [
+      {"speaker": "练功木桩", "text": "木桩机关分三档，可试招，也可试命。"}
+    ],
+    "options": [
+      {
+        "id": "training_dummy_easy",
+        "text": "初档木桩",
+        "conditions": [],
+        "effects": [],
+        "battle_context": {
+          "battle_mode": "tactical",
+          "encounter_id": "training_dummy_easy",
+          "battlefield": {"width": 8, "height": 6},
+          "player_deploy": {
+            "max_members": 2,
+            "start_cells": [
+              {"q": 1, "r": 2},
+              {"q": 1, "r": 3}
+            ]
+          },
+          "time_mode": "pause_on_action",
+          "proficiency_reward": 0,
+          "units": [
+            {"unit_id": "training_dummy_easy", "actor_id": "training_dummy_easy", "team": "enemy", "start_cell": {"q": 5, "r": 2}, "move_range": 0, "attack_range": 1, "charge_speed": 160}
+          ]
+        }
+      },
+      {
+        "id": "training_dummy_middle",
+        "text": "中档木桩",
+        "conditions": [],
+        "effects": [],
+        "battle_context": {
+          "battle_mode": "tactical",
+          "encounter_id": "training_dummy_middle",
+          "battlefield": {"width": 8, "height": 6},
+          "player_deploy": {
+            "max_members": 2,
+            "start_cells": [
+              {"q": 1, "r": 2},
+              {"q": 1, "r": 3}
+            ]
+          },
+          "time_mode": "pause_on_action",
+          "proficiency_reward": 0,
+          "units": [
+            {"unit_id": "training_dummy_middle", "actor_id": "training_dummy_middle", "team": "enemy", "start_cell": {"q": 5, "r": 2}, "move_range": 1, "attack_range": 1, "charge_speed": 240}
+          ]
+        }
+      },
+      {
+        "id": "training_dummy_hard",
+        "text": "高档木桩",
+        "conditions": [],
+        "effects": [],
+        "battle_context": {
+          "battle_mode": "tactical",
+          "encounter_id": "training_dummy_hard",
+          "battlefield": {"width": 8, "height": 6},
+          "player_deploy": {
+            "max_members": 2,
+            "start_cells": [
+              {"q": 1, "r": 2},
+              {"q": 1, "r": 3}
+            ]
+          },
+          "time_mode": "pause_on_action",
+          "proficiency_reward": 0,
+          "units": [
+            {"unit_id": "training_dummy_hard", "actor_id": "training_dummy_hard", "team": "enemy", "start_cell": {"q": 2, "r": 2}, "move_range": 3, "attack_range": 1, "charge_speed": 520}
+          ]
+        }
+      }
+    ]
+  },
+  {
     "id": "foot_village_porter_intro",
     "title": "村口托信",
     "lines": [

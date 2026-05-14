@@ -6,7 +6,7 @@ func run(assertions) -> void:
 	var repository = DataRepositoryScript.new()
 	var content = repository.load_all()
 
-	assertions.assert_eq(content.get("actors", []).size(), 6, "应加载 6 个示例角色")
+	assertions.assert_eq(content.get("actors", []).size(), 9, "应加载 9 个示例角色")
 	assertions.assert_eq(content.get("martial_arts", []).size(), 8, "应加载 8 门武学（含 4 门新）")
 	assertions.assert_eq(repository.get_actor("hero_yun").get("name", ""), "云游少侠", "应按编号读取角色")
 	assertions.assert_eq(repository.get_actor("innkeeper_lu").get("name", ""), "陆掌柜", "应读取客栈掌柜角色")

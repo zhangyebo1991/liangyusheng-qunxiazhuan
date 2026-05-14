@@ -29,6 +29,8 @@ func create_battle(game_state, context: Dictionary, data_source = null):
 	var rewards = context.get("victory_rewards", {})
 	if typeof(rewards) == TYPE_DICTIONARY:
 		battle.victory_rewards = rewards.duplicate(true)
+	battle.reward_martial_art_id = str(context.get("martial_art_id", battle.reward_martial_art_id))
+	battle.proficiency_reward = max(0, int(context.get("proficiency_reward", battle.proficiency_reward)))
 	battle.time_mode = str(context.get("time_mode", TacticalBattleStateScript.TIME_MODE_PAUSE_ON_ACTION))
 	if battle.time_mode.is_empty():
 		battle.time_mode = TacticalBattleStateScript.TIME_MODE_PAUSE_ON_ACTION

@@ -232,6 +232,10 @@ func _on_dialogue_option_selected(option: Dictionary) -> void:
 
 	var effect_result = result.get("effect_result", {})
 	_mark_triggered_rumors_from_effect_result(effect_result)
+	var battle_context = option.get("battle_context", {})
+	if typeof(battle_context) == TYPE_DICTIONARY and not battle_context.is_empty():
+		_start_dialogue_battle(battle_context)
+		return
 	var next_dialogue_id = str(option.get("next_dialogue_id", ""))
 	if not next_dialogue_id.is_empty():
 		_open_dialogue(next_dialogue_id)
@@ -242,6 +246,21 @@ func _on_dialogue_option_selected(option: Dictionary) -> void:
 	_refresh_party_panel_if_open()
 	_update_quest_text()
 	_refresh_tracked_tasks()
+
+func _start_dialogue_battle(raw_context: Dictionary) -> void:
+	var game_state = _get_game_state()
+	var scene_loader = _get_scene_loader()
+	if game_state == null or scene_loader == null:
+		return
+	var context = raw_context.duplicate(true)
+	if str(context.get("source_map_id", "")).is_empty():
+		context["source_map_id"] = map_id
+	context["return_position"] = {
+		"x": player.global_position.x,
+		"y": player.global_position.y,
+	}
+	game_state.set_battle_context(context)
+	scene_loader.change_scene("res://scenes/battle.tscn")
 
 func _on_dialogue_closed() -> void:
 	_record_dialogue_rumor(active_dialogue_state)

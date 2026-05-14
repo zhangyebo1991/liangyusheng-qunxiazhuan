@@ -26,6 +26,9 @@ func _interact_with(interactable) -> void:
 
 func _talk_to_npc(record: Dictionary) -> void:
 	var quest_id = str(record.get("quest_id", ""))
+	if quest_id.is_empty():
+		_open_dialogue(str(record.get("dialogue_id", "")))
+		return
 	var status = GameState.quest_system.get_status(quest_id)
 	if status == "not_started":
 		GameState.quest_system.start_quest(quest_id)

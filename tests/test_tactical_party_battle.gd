@@ -57,6 +57,21 @@ func run(assertions) -> void:
 	assertions.assert_true(gate_battle.get_unit("hero_yun") != null, "真实山道强人战应生成主角")
 	assertions.assert_true(gate_battle.get_unit("qingshanke") != null, "真实山道强人战应生成已入队的青衫客")
 
+	var hard_dummy_context = _dialogue_option_battle_context(repository, "training_dummy_intro", "training_dummy_hard")
+	assertions.assert_eq(hard_dummy_context.get("battle_mode", ""), "tactical", "高档木桩应提供战棋上下文")
+	var hard_dummy_state = GameStateScript.new()
+	hard_dummy_state.start_new_game()
+	var hard_dummy_battle = system.create_battle(hard_dummy_state, hard_dummy_context, repository)
+	var hard_dummy = hard_dummy_battle.get_unit("training_dummy_hard")
+	assertions.assert_true(hard_dummy != null, "高档木桩战应生成木桩敌人")
+	assertions.assert_eq(hard_dummy_battle.proficiency_reward, 0, "木桩训练胜利不应发放武学熟练度")
+	if hard_dummy != null:
+		assertions.assert_true(hard_dummy.attack >= 900, "高档木桩攻击应足以秒杀测试")
+		system.attack_unit(hard_dummy_battle, "training_dummy_hard", "hero_yun")
+		assertions.assert_true(hard_dummy_battle.is_finished, "高档木桩击倒主角后战斗应失败结束")
+		hard_dummy_state.apply_battle_result(hard_dummy_battle.to_result_dictionary())
+		assertions.assert_eq(hard_dummy_state.party.get_member_status("hero_yun").get("hp", 0), 1, "高档木桩击倒主角后回到队伍状态应保留 1 点气血")
+
 	battle.get_unit("hero_yun").hp = 88
 	battle.get_unit("hero_yun").mp = 6
 	battle.get_unit("qingshanke").hp = 120
@@ -105,6 +120,7 @@ func run(assertions) -> void:
 	assertions.assert_eq(downed_failure_state.party.get_member_status("qingshanke").get("hp", 0), 1, "失败后倒下队友应保留 1 点气血")
 
 	repository.free()
+	hard_dummy_state.free()
 	reward_state.free()
 	fail_state.free()
 	downed_victory_state.free()
@@ -152,6 +168,18 @@ func _map_object(repository, map_id: String, object_id: String) -> Dictionary:
 	for object in objects:
 		if typeof(object) == TYPE_DICTIONARY and str(object.get("id", "")) == object_id:
 			return object
+	return {}
+
+func _dialogue_option_battle_context(repository, dialogue_id: String, option_id: String) -> Dictionary:
+	var dialogue = repository.get_dialogue(dialogue_id)
+	var options = dialogue.get("options", [])
+	if typeof(options) != TYPE_ARRAY:
+		return {}
+	for option in options:
+		if typeof(option) != TYPE_DICTIONARY or str(option.get("id", "")) != option_id:
+			continue
+		var context = option.get("battle_context", {})
+		return context if typeof(context) == TYPE_DICTIONARY else {}
 	return {}
 
 func _state_with_ally():

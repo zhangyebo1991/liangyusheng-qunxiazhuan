@@ -41,6 +41,14 @@ func run(assertions) -> void:
 	assertions.assert_true(_node_text_has(panel._formation_list, "必出战"), "主角行应标记必出战")
 	assertions.assert_true(_node_text_has(panel._formation_list, "青衫客"), "编队列表应显示队友中文名")
 	assertions.assert_false(_node_text_has(panel._formation_list, "qingshanke"), "编队列表不应显示内部角色编号")
+	var qing_buttons = _formation_buttons_for_name(panel._formation_list, "青衫客")
+	assertions.assert_eq(qing_buttons.size(), 2, "青衫客行应生成上移和下移按钮")
+	assertions.assert_true(qing_buttons[0].disabled, "紧挨主角的队友上移按钮应禁用")
+	assertions.assert_false(qing_buttons[1].disabled, "非队尾队友下移按钮应可用")
+	var porter_buttons = _formation_buttons_for_name(panel._formation_list, "陈脚夫")
+	assertions.assert_eq(porter_buttons.size(), 2, "队尾队友行应生成上移和下移按钮")
+	assertions.assert_false(porter_buttons[0].disabled, "队尾队友上移按钮应可用")
+	assertions.assert_true(porter_buttons[1].disabled, "队尾队友下移按钮应禁用")
 	panel._move_formation_member("porter_chen", -1)
 	assertions.assert_eq(party.get_formation_order(), ["hero_yun", "porter_chen", "qingshanke"], "点击上移后应调整默认出战顺序")
 	panel._move_formation_member("porter_chen", -1)
@@ -73,3 +81,12 @@ func _node_text_has(node, expected: String) -> bool:
 		if _node_text_has(child, expected):
 			return true
 	return false
+
+func _formation_buttons_for_name(list, actor_name: String) -> Array:
+	for child in list.get_children():
+		if not (child is HBoxContainer) or child.get_child_count() < 3:
+			continue
+		var name_label = child.get_child(0)
+		if name_label is Label and name_label.text == actor_name:
+			return [child.get_child(1), child.get_child(2)]
+	return []

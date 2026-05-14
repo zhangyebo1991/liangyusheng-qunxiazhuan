@@ -32,6 +32,19 @@ func run(assertions) -> void:
 		assertions.assert_true(false, "山道战棋应包含山道喽啰单位")
 	assertions.assert_eq(repository.get_actor("bandit_lackey_01").get("name", ""), "山道喽啰", "应读取山道喽啰角色")
 
+	var training_dummy = _find_object(mountain, "npc_training_dummy")
+	assertions.assert_eq(training_dummy.get("type", ""), "npc", "山道应配置练功木桩交互点")
+	assertions.assert_eq(training_dummy.get("name", ""), "练功木桩", "练功木桩应显示中文名称")
+	assertions.assert_eq(training_dummy.get("dialogue_id", ""), "training_dummy_intro", "练功木桩应绑定训练对白")
+	var dummy_dialogue = repository.get_dialogue("training_dummy_intro")
+	var dummy_options = dummy_dialogue.get("options", [])
+	assertions.assert_eq(dummy_options.size(), 3, "练功木桩应提供初中高三档")
+	var hard_option = _find_option(dummy_options, "training_dummy_hard")
+	assertions.assert_eq(hard_option.get("text", ""), "高档木桩", "高档木桩选项应使用中文文本")
+	assertions.assert_true(typeof(hard_option.get("battle_context", {})) == TYPE_DICTIONARY, "高档木桩选项应携带战斗上下文")
+	assertions.assert_eq(hard_option.get("battle_context", {}).get("battle_mode", ""), "tactical", "高档木桩应进入战棋战斗")
+	assertions.assert_true(repository.get_actor("training_dummy_hard").get("attack", 0) >= 900, "高档木桩攻击应足够高，便于测试倒下回流")
+
 	var village = repository.get_map("foot_village")
 	assertions.assert_eq(village.get("name", ""), "山脚村镇", "应按编号读取山脚村镇")
 	assertions.assert_eq(village.get("scene_path", ""), "res://scenes/foot_village.tscn", "村镇应声明场景路径")
@@ -81,4 +94,10 @@ func _find_object(map_data: Dictionary, object_id: String) -> Dictionary:
 	for object in map_data.get("objects", []):
 		if object.get("id", "") == object_id:
 			return object
+	return {}
+
+func _find_option(options: Array, option_id: String) -> Dictionary:
+	for option in options:
+		if typeof(option) == TYPE_DICTIONARY and str(option.get("id", "")) == option_id:
+			return option
 	return {}
