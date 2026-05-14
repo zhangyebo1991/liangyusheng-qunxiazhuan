@@ -1103,6 +1103,7 @@ func _on_direction_chosen(skill_id: String, direction: Vector2i) -> void:
 	else:
 		cells = tactical_range_system.get_skill_directional_range(view, skill_id, direction, tactical_battle_state.terrain_grid)
 	_set_range_mode(RangeMode.SKILL_AIM, cells)
+	_refresh_tactical()
 
 # Task 17/18 共用：执行招式 → 行动结束 → 刷新 UI → 检查战斗结算。
 func _resolve_skill_action(skill_id: String, target_cells: Array) -> void:
