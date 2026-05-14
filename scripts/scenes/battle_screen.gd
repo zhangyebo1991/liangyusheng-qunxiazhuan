@@ -79,6 +79,7 @@ func _ready() -> void:
 	is_tactical_mode = str(context.get("battle_mode", "")) == "tactical"
 	if is_tactical_mode:
 		tactical_combat_system.set_repository(DataRepository)
+		_connect_tactical_proficiency()
 		tactical_battle_state = tactical_combat_system.create_battle(GameState, context, DataRepository)
 		_create_tactical_ui()
 		_refresh_tactical()
@@ -389,7 +390,12 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 				hit = true
 				break
 		if hit:
-			_resolve_skill_action(_pending_skill_id, range_cells)
+			var skill_data: Dictionary = DataRepository.get_martial_art(_pending_skill_id)
+			var shape := _skill_shape_for_data(skill_data)
+			var target_cells := range_cells
+			if shape != "surround" and shape != "ring":
+				target_cells = [clicked]
+			_resolve_skill_action(_pending_skill_id, target_cells)
 		else:
 			_pending_skill_id = ""
 			_clear_direction_arrows()
@@ -457,6 +463,11 @@ func _can_current_unit_use_tactical_art(current_unit, martial_art_id: String) ->
 		return false
 	var mp_cost = max(0, int(tactical.get("mp_cost", martial_art.get("cost", 0))))
 	return current_unit.mp >= mp_cost
+
+func _connect_tactical_proficiency() -> void:
+	if _proficiency_system == null:
+		_proficiency_system = ProficiencySystemScript.new()
+	tactical_combat_system.set_proficiency(_proficiency_system, GameState.martial_proficiency)
 
 func _on_tactical_retreat_pressed() -> void:
 	tactical_combat_system.resolve_retreat(tactical_battle_state)
@@ -803,6 +814,7 @@ func _poll_terrain_hover() -> void:
 	if cell.x < 0:
 		_refresh_terrain_panels_for_current_actor()
 		if range_mode == RangeMode.SKILL_TARGET_PREVIEW and battle_grid != null:
+			battle_grid.clear_hover_overlay()
 			battle_grid.set_range_overlay(RangeMode.SKILL_TARGET_PREVIEW, range_cells)
 		return
 	if hover_changed:
@@ -964,9 +976,9 @@ func _open_skill_menu() -> void:
 		var data: Dictionary = DataRepository.get_martial_art(sid_s)
 		if data.is_empty():
 			continue
-		var shape := str(data.get("shape", ""))
+		var shape := _skill_shape_for_data(data)
 		if shape.is_empty():
-			continue  # 仅展示方向/目标型招式（基础剑法等近身招式仍走旧攻击按钮）
+			continue
 		if not _can_current_unit_use_tactical_art(unit, sid_s):
 			var skill_name: String = str(data.get("name", sid_s))
 			var thresholds: Array = data.get("proficiency_thresholds", [])
@@ -1014,7 +1026,7 @@ func _open_skill_menu() -> void:
 func _on_skill_chosen(skill_id: String) -> void:
 	_pending_skill_id = skill_id
 	var data: Dictionary = DataRepository.get_martial_art(skill_id)
-	var shape := str(data.get("shape", ""))
+	var shape := _skill_shape_for_data(data)
 	if shape.begins_with("line_"):
 		_set_range_mode(RangeMode.SKILL_DIR_PREVIEW, [])
 		_show_direction_arrows(skill_id)
@@ -1039,9 +1051,25 @@ func _on_skill_chosen(skill_id: String) -> void:
 			cells = tactical_range_system.get_ring_range(view, range_val, tactical_battle_state.terrain_grid)
 		_set_range_mode(RangeMode.SKILL_AIM, cells)
 		_refresh_tactical()
+	elif shape == "diamond":
+		var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
+		var view := _unit_view_for_range(unit)
+		var range_val: int = int(data.get("tactical", {}).get("range", 1))
+		var cells: Array = tactical_range_system.get_skill_target_selection_range(view, skill_id, range_val, tactical_battle_state.terrain_grid)
+		_set_range_mode(RangeMode.SKILL_AIM, cells)
+		_refresh_tactical()
 	else:
 		_pending_skill_id = ""
 		_set_range_mode(RangeMode.NONE, [])
+
+func _skill_shape_for_data(data: Dictionary) -> String:
+	var shape := str(data.get("shape", ""))
+	if not shape.is_empty():
+		return shape
+	var tactical = data.get("tactical", {})
+	if typeof(tactical) == TYPE_DICTIONARY:
+		return str(tactical.get("range_shape", ""))
+	return ""
 
 # 在主角四向相邻格放 4 个箭头按钮。边界外的方向不显示。
 # 简化版：用 Button + 文本箭头（→/←/↑/↓），后续可换 Kenney TextureButton 资源。

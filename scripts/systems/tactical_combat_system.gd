@@ -228,6 +228,8 @@ func resolve_action(battle, unit_id: String, action_id: String, target_cells: Ar
 	var unit = battle.get_unit(unit_id)
 	if unit == null or not unit.is_alive():
 		return {"success": false, "message": "行动单位不存在。"}
+	if action_id != "attack" and not unit.martial_art_ids.has(action_id):
+		return {"success": false, "message": "不能使用未学会的武学。"}
 	var result: Dictionary = {}
 	if action_id == "sword_aura_swirl":
 		result = _resolve_sword_aura_swirl(battle, unit, target_cells)
@@ -255,11 +257,9 @@ func resolve_action(battle, unit_id: String, action_id: String, target_cells: Ar
 func _resolve_generic_skill(battle, attacker, action_id: String, target_cells: Array, skill_data: Dictionary) -> Dictionary:
 	var tactical = skill_data.get("tactical", {})
 	var mp_cost: int = int(tactical.get("mp_cost", skill_data.get("mp_cost", 0)))
-	var damage_bonus: int = int(tactical.get("damage_bonus", 0))
-	if _proficiency_system != null and not _proficiency_map.is_empty():
-		var thresholds: Array = skill_data.get("proficiency_thresholds", [])
-		if typeof(thresholds) == TYPE_ARRAY and not thresholds.is_empty():
-			damage_bonus += _proficiency_system.get_bonus(int(_proficiency_map.get(action_id, 0)), thresholds)
+	var damage_bonus: int = int(tactical.get("damage_bonus", 0)) + _proficiency_bonus(action_id, skill_data)
+	if not _are_target_cells_valid_for_skill(battle, attacker, target_cells, skill_data):
+		return {"success": false, "message": "目标格不在招式范围内。"}
 	if attacker.mp < mp_cost:
 		return {"success": false, "message": "内力不足。"}
 	attacker.mp = max(0, attacker.mp - mp_cost)
@@ -287,9 +287,11 @@ func _resolve_sword_aura_swirl(battle, attacker, target_cells: Array) -> Diction
 	var mp_cost = int(skill_data.get("mp_cost", 8))
 	var base_damage = int(skill_data.get("base_damage", 0))
 	var scale_ratio = float(skill_data.get("scale_ratio", 0.0))
+	if not _are_target_cells_valid_for_skill(battle, attacker, target_cells, skill_data):
+		return {"success": false, "message": "目标格不在招式范围内。"}
 	if attacker.mp < mp_cost:
 		return {"success": false, "message": "内力不足。"}
-	var damage_each = int(base_damage + attacker.attack * scale_ratio)
+	var damage_each = int(base_damage + attacker.attack * scale_ratio) + _proficiency_bonus("sword_aura_swirl", skill_data)
 	if damage_each < 1:
 		damage_each = 1
 	var hits: Array = []
@@ -307,6 +309,178 @@ func _resolve_sword_aura_swirl(battle, attacker, target_cells: Array) -> Diction
 		_log(battle, "%s剑气漩起，未击中目标。" % attacker.display_name)
 	check_battle_finished(battle)
 	return {"success": true, "message": "剑气漩已发动。", "damage": damage_each, "hits": hits}
+
+func _proficiency_bonus(action_id: String, skill_data: Dictionary) -> int:
+	if _proficiency_system == null:
+		return 0
+	var thresholds: Array = skill_data.get("proficiency_thresholds", [])
+	if typeof(thresholds) != TYPE_ARRAY or thresholds.is_empty():
+		return 0
+	return _proficiency_system.get_bonus(int(_proficiency_map.get(action_id, 0)), thresholds)
+
+func _are_target_cells_valid_for_skill(battle, attacker, target_cells: Array, skill_data: Dictionary) -> bool:
+	if target_cells.is_empty():
+		return true
+	var tactical = skill_data.get("tactical", {})
+	if typeof(tactical) != TYPE_DICTIONARY:
+		return false
+	var shape := _skill_shape(skill_data)
+	var range_val: int = max(1, int(tactical.get("range", skill_data.get("cast_range", 1))))
+	if shape.begins_with("line_") or shape == "line" or shape == "pierce":
+		return _target_cells_fit_line(battle, attacker, target_cells, range_val)
+	if shape == "fan":
+		return _target_cells_fit_fan(battle, attacker, target_cells, range_val)
+	if shape == "surround":
+		return _target_cells_fit_surround(battle, attacker, target_cells)
+	if shape == "ring":
+		return _target_cells_fit_ring(battle, attacker, target_cells, range_val)
+	if shape == "target_cross_1":
+		var cast_range: int = max(1, int(skill_data.get("cast_range", range_val)))
+		return _target_cells_fit_target_cross(battle, attacker, target_cells, cast_range)
+	if shape == "diamond":
+		return _target_cells_fit_diamond(battle, attacker, target_cells, range_val)
+	return false
+
+func _skill_shape(skill_data: Dictionary) -> String:
+	var shape := str(skill_data.get("shape", ""))
+	if not shape.is_empty():
+		return shape
+	var tactical: Variant = skill_data.get("tactical", {})
+	if typeof(tactical) == TYPE_DICTIONARY:
+		return str(tactical.get("range_shape", ""))
+	return ""
+
+func _target_cells_fit_diamond(battle, attacker, target_cells: Array, range_val: int) -> bool:
+	for target_cell_value in target_cells:
+		if not _is_valid_target_cell(battle, target_cell_value):
+			return false
+		var target_cell: Vector2i = target_cell_value
+		var distance: int = _cell_distance_to_vector(attacker.cell, target_cell)
+		if distance <= 0 or distance > range_val:
+			return false
+	return true
+
+func _target_cells_fit_line(battle, attacker, target_cells: Array, range_val: int) -> bool:
+	var expected_direction := Vector2i.ZERO
+	for target_cell_value in target_cells:
+		if not _is_valid_target_cell(battle, target_cell_value):
+			return false
+		var target_cell: Vector2i = target_cell_value
+		var delta: Vector2i = _cell_delta_to_vector(attacker.cell, target_cell)
+		var distance: int = abs(delta.x) + abs(delta.y)
+		if distance <= 0 or distance > range_val:
+			return false
+		if delta.x != 0 and delta.y != 0:
+			return false
+		var direction := Vector2i(_axis_sign(delta.x), _axis_sign(delta.y))
+		if expected_direction == Vector2i.ZERO:
+			expected_direction = direction
+		elif expected_direction != direction:
+			return false
+	return true
+
+func _target_cells_fit_fan(battle, attacker, target_cells: Array, range_val: int) -> bool:
+	for direction_value in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var direction: Vector2i = direction_value
+		var all_fit := true
+		for target_cell_value in target_cells:
+			if not _is_valid_target_cell(battle, target_cell_value):
+				all_fit = false
+				break
+			var target_cell: Vector2i = target_cell_value
+			if not _cell_in_fan(attacker.cell, target_cell, direction, range_val):
+				all_fit = false
+				break
+		if all_fit:
+			return true
+	return false
+
+func _target_cells_fit_surround(battle, attacker, target_cells: Array) -> bool:
+	for target_cell_value in target_cells:
+		if not _is_valid_target_cell(battle, target_cell_value):
+			return false
+		var target_cell: Vector2i = target_cell_value
+		var delta: Vector2i = _cell_delta_to_vector(attacker.cell, target_cell)
+		if max(abs(delta.x), abs(delta.y)) != 1:
+			return false
+	return true
+
+func _target_cells_fit_ring(battle, attacker, target_cells: Array, range_val: int) -> bool:
+	for target_cell_value in target_cells:
+		if not _is_valid_target_cell(battle, target_cell_value):
+			return false
+		var target_cell: Vector2i = target_cell_value
+		if _cell_distance_to_vector(attacker.cell, target_cell) != range_val:
+			return false
+	return true
+
+func _target_cells_fit_target_cross(battle, attacker, target_cells: Array, cast_range: int) -> bool:
+	var centers := _target_cross_centers(battle, attacker, cast_range)
+	for center in centers:
+		var allowed: Dictionary = {}
+		for blast_cell in _target_cross_cells(battle, center):
+			allowed[blast_cell] = true
+		var all_fit := true
+		for target_cell_value in target_cells:
+			if not _is_valid_target_cell(battle, target_cell_value):
+				all_fit = false
+				break
+			var target_cell: Vector2i = target_cell_value
+			if not allowed.has(target_cell):
+				all_fit = false
+				break
+		if all_fit:
+			return true
+	return false
+
+func _target_cross_centers(battle, attacker, cast_range: int) -> Array:
+	var centers: Array = []
+	for row_index in range(battle.battlefield_height):
+		for col_index in range(battle.battlefield_width):
+			var center := Vector2i(col_index, row_index)
+			var distance: int = _cell_distance_to_vector(attacker.cell, center)
+			if distance > 0 and distance <= cast_range:
+				centers.append(center)
+	return centers
+
+func _target_cross_cells(battle, center: Vector2i) -> Array:
+	var cells: Array = [center]
+	for direction_value in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var direction: Vector2i = direction_value
+		var target_cell: Vector2i = center + direction
+		if _is_valid_target_cell(battle, target_cell):
+			cells.append(target_cell)
+	return cells
+
+func _cell_in_fan(attacker_cell: Dictionary, target_cell: Vector2i, direction: Vector2i, range_val: int) -> bool:
+	var delta: Vector2i = _cell_delta_to_vector(attacker_cell, target_cell)
+	var distance: int = abs(delta.x) + abs(delta.y)
+	if distance <= 0 or distance > range_val:
+		return false
+	var projection: int = delta.x * direction.x + delta.y * direction.y
+	if projection <= 0:
+		return false
+	var cross: int = abs(delta.x * direction.y - delta.y * direction.x)
+	return cross <= projection * 2
+
+func _is_valid_target_cell(battle, target_cell) -> bool:
+	if typeof(target_cell) != TYPE_VECTOR2I:
+		return false
+	return target_cell.x >= 0 and target_cell.x < battle.battlefield_width and target_cell.y >= 0 and target_cell.y < battle.battlefield_height
+
+func _cell_delta_to_vector(attacker_cell: Dictionary, target_cell: Vector2i) -> Vector2i:
+	return Vector2i(target_cell.x - int(attacker_cell.get("q", 0)), target_cell.y - int(attacker_cell.get("r", 0)))
+
+func _cell_distance_to_vector(attacker_cell: Dictionary, target_cell: Vector2i) -> int:
+	var delta: Vector2i = _cell_delta_to_vector(attacker_cell, target_cell)
+	return abs(delta.x) + abs(delta.y)
+
+func _axis_sign(value: int) -> int:
+	if value > 0:
+		return 1
+	if value < 0:
+		return -1
+	return 0
 
 # 普攻：单格选中。target_cells 为 1 格则尝试命中该格敌人；为空（空放）也接受，
 # 不扣资源、不造成伤害，仅推进行动结束。

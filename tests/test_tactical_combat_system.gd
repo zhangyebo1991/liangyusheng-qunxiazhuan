@@ -172,6 +172,27 @@ func run(assertions) -> void:
 	assertions.assert_eq(fan_battle.get_unit("hero").mp, fan_mp_before - 6, "回风拂柳应扣 6 点内力")
 	assertions.assert_eq(fan_battle.get_unit("bandit").hp, 60 - (18 + 5 - 4), "回风拂柳伤害 = atk + bonus - def")
 
+	var unlearned_battle = system.create_battle(state, _sample_context(), repository)
+	unlearned_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	unlearned_battle.get_unit("hero").martial_art_ids.erase("sword_willow_sweep")
+	unlearned_battle.get_unit("bandit").cell = {"q": 5, "r": 2}
+	var unlearned_mp_before = unlearned_battle.get_unit("hero").mp
+	var unlearned_hp_before = unlearned_battle.get_unit("bandit").hp
+	var unlearned_result = system.resolve_action(unlearned_battle, "hero", "sword_willow_sweep", [Vector2i(5, 2)])
+	assertions.assert_true(not bool(unlearned_result.get("success", false)), "未学会回风拂柳时 resolve_action 应拒绝释放")
+	assertions.assert_eq(unlearned_battle.get_unit("hero").mp, unlearned_mp_before, "未学会招式失败不应扣内力")
+	assertions.assert_eq(unlearned_battle.get_unit("bandit").hp, unlearned_hp_before, "未学会招式失败不应造成伤害")
+
+	var invalid_target_battle = system.create_battle(state, _sample_context(), repository)
+	invalid_target_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	invalid_target_battle.get_unit("bandit").cell = {"q": 0, "r": 0}
+	var invalid_target_mp_before = invalid_target_battle.get_unit("hero").mp
+	var invalid_target_hp_before = invalid_target_battle.get_unit("bandit").hp
+	var invalid_target_result = system.resolve_action(invalid_target_battle, "hero", "sword_willow_sweep", [Vector2i(0, 0)])
+	assertions.assert_true(not bool(invalid_target_result.get("success", false)), "回风拂柳不应命中范围外任意传入格")
+	assertions.assert_eq(invalid_target_battle.get_unit("hero").mp, invalid_target_mp_before, "非法目标格失败不应扣内力")
+	assertions.assert_eq(invalid_target_battle.get_unit("bandit").hp, invalid_target_hp_before, "非法目标格失败不应造成伤害")
+
 	# 八方风雨多格命中
 	var sur_battle = system.create_battle(state, _sample_context(), repository)
 	sur_battle.get_unit("hero").cell = {"q": 4, "r": 2}
@@ -222,6 +243,16 @@ func run(assertions) -> void:
 	# 基础剑法：atk=18, tactical.damage_bonus=6, def=4 → 18+6-4=20
 	# 熟练度 bonus = Lv.2 × 2 = +4 → 总伤害 = 24
 	assertions.assert_eq(bonus_battle.get_unit("bandit").hp, 60 - 24, "熟练度 Lv.2 时基础剑法伤害应为 24")
+
+	var swirl_bonus_battle = system.create_battle(state, _sample_context(), repository)
+	swirl_bonus_battle.get_unit("hero").cell = {"q": 4, "r": 2}
+	swirl_bonus_battle.get_unit("bandit").cell = {"q": 5, "r": 2}
+	swirl_bonus_battle.get_unit("bandit").hp = 60
+	state.martial_proficiency["sword_aura_swirl"] = 12
+	var swirl_bonus_result = system.resolve_action(swirl_bonus_battle, "hero", "sword_aura_swirl", [Vector2i(5, 2)])
+	# 剑气漩：base=14 + atk 18*0.6 = 24；熟练度 Lv.1 bonus +2 → 总伤害 26
+	assertions.assert_eq(int(swirl_bonus_result.get("damage", 0)), 26, "熟练度 Lv.1 时剑气漩单格伤害应为 26")
+	assertions.assert_eq(swirl_bonus_battle.get_unit("bandit").hp, 60 - 26, "剑气漩应应用熟练度伤害加成")
 
 	repository.free()
 	state.free()
