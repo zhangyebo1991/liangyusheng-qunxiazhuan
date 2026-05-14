@@ -44,6 +44,15 @@ func run(assertions) -> void:
 	screen.journal_panel = JournalPanelScript.new()
 	screen.journal_panel._ready()
 
+	var party_key = InputEventKey.new()
+	party_key.keycode = KEY_P
+	party_key.pressed = true
+	screen._unhandled_input(party_key)
+	assertions.assert_true(screen.hud.is_party_panel_open(), "地图场景按 P 应打开队伍面板")
+	assertions.assert_eq(screen.hud.party_panel.selected_actor_id, "hero_yun", "队伍面板打开后应默认选中主角")
+	screen._unhandled_input(party_key)
+	assertions.assert_true(not screen.hud.is_party_panel_open(), "再次按 P 应关闭队伍面板")
+
 	screen._toggle_tracked_quest("quest_deliver_letter")
 	assertions.assert_true(not game_state.journal_state.tracked_quest_ids.has("quest_deliver_letter"), "地图场景不应追踪已完成任务")
 	assertions.assert_eq(screen.hud.message_label.text, "已完成任务不能追踪。", "尝试追踪已完成任务应显示提示")

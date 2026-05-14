@@ -28,7 +28,14 @@ func run(assertions) -> void:
 	panel.refresh()
 	assertions.assert_eq(panel.selected_actor_id, "hero_yun", "刷新后应默认选中第一个队友")
 	assertions.assert_true(panel.member_buttons.size() >= 1, "应生成队友按钮")
+	assertions.assert_true(panel._equipment_list.get_child_count() >= 1, "应生成可装备物品行")
 
+	var equipment_row = panel._equipment_list.get_child(0)
+	var equip_button = equipment_row.get_child(1)
+	equip_button.pressed.emit()
+	assertions.assert_eq(party.get_equipped_item("hero_yun", "weapon"), "iron_sword", "点击装备按钮应写入 PartyState")
+
+	party.clear_equipment("hero_yun", "weapon")
 	var result = panel.equip_selected("iron_sword")
 	assertions.assert_true(bool(result.get("success", false)), "面板应能给选中角色装备铁剑")
 	assertions.assert_eq(party.get_equipped_item("hero_yun", "weapon"), "iron_sword", "装备结果应写入 PartyState")
