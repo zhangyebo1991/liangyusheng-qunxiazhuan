@@ -1,7 +1,10 @@
 class_name PartyState
 extends RefCounted
 
+const HERO_ACTOR_ID := "hero_yun"
+
 var members: Array[String] = []
+var formation_order: Array[String] = []
 var inventory: Dictionary = {}
 var coins := 0
 var equipment: Dictionary = {}
@@ -12,9 +15,53 @@ func add_member(actor_id: String) -> void:
 		return
 	if not members.has(actor_id):
 		members.append(actor_id)
+	normalize_formation()
 
 func has_member(actor_id: String) -> bool:
 	return members.has(actor_id)
+
+func get_formation_order() -> Array[String]:
+	normalize_formation()
+	return formation_order.duplicate()
+
+func set_formation_order(actor_ids: Array) -> void:
+	formation_order = _to_string_array(actor_ids)
+	normalize_formation()
+
+func move_formation_member(actor_id: String, direction: int) -> void:
+	if actor_id.is_empty() or actor_id == HERO_ACTOR_ID or direction == 0:
+		return
+	normalize_formation()
+	var index: int = formation_order.find(actor_id)
+	if index <= 0:
+		return
+	var step: int = 1 if direction > 0 else -1
+	var target_index: int = index + step
+	if target_index <= 0 or target_index >= formation_order.size():
+		return
+	var previous = formation_order[target_index]
+	formation_order[target_index] = formation_order[index]
+	formation_order[index] = previous
+
+func get_deployable_members(max_members: int) -> Array[String]:
+	var result: Array[String] = []
+	if max_members <= 0:
+		return result
+	normalize_formation()
+	var limit = mini(max_members, formation_order.size())
+	for index in range(limit):
+		result.append(formation_order[index])
+	return result
+
+func normalize_formation() -> void:
+	var normalized: Array[String] = []
+	if has_member(HERO_ACTOR_ID):
+		normalized.append(HERO_ACTOR_ID)
+	for actor_id in formation_order:
+		_append_formation_member(normalized, actor_id)
+	for actor_id in members:
+		_append_formation_member(normalized, actor_id)
+	formation_order = normalized
 
 func set_member_status(actor_id: String, status: Dictionary) -> void:
 	if actor_id.is_empty() or not has_member(actor_id):
@@ -127,8 +174,10 @@ func spend_coins(amount: int) -> bool:
 	return true
 
 func to_dictionary() -> Dictionary:
+	normalize_formation()
 	return {
 		"members": members.duplicate(),
+		"formation_order": formation_order.duplicate(),
 		"inventory": inventory.duplicate(true),
 		"coins": coins,
 		"equipment": equipment.duplicate(true),
@@ -137,17 +186,18 @@ func to_dictionary() -> Dictionary:
 
 func from_dictionary(data: Dictionary) -> void:
 	members = _to_string_array(data.get("members", []))
+	formation_order = _to_string_array(data.get("formation_order", []))
 	inventory = {}
 	coins = max(0, int(data.get("coins", 0)))
 	equipment = _read_nested_string_dictionary(data.get("equipment", {}))
 	member_status = _read_member_status(data.get("member_status", {}))
 	var raw_inventory = data.get("inventory", {})
-	if typeof(raw_inventory) != TYPE_DICTIONARY:
-		return
-	for item_id in raw_inventory.keys():
-		var amount = int(raw_inventory[item_id])
-		if amount > 0:
-			inventory[str(item_id)] = amount
+	if typeof(raw_inventory) == TYPE_DICTIONARY:
+		for item_id in raw_inventory.keys():
+			var amount = int(raw_inventory[item_id])
+			if amount > 0:
+				inventory[str(item_id)] = amount
+	normalize_formation()
 
 func _to_string_array(values: Array) -> Array[String]:
 	var result: Array[String] = []
@@ -192,3 +242,9 @@ func _read_member_status(value: Variant) -> Dictionary:
 			status["mp"] = max(0, int(raw_status.get("mp", 0)))
 		result[str(actor_id)] = status
 	return result
+
+func _append_formation_member(result: Array[String], actor_id: String) -> void:
+	var normalized_actor_id := str(actor_id)
+	if normalized_actor_id.is_empty() or not has_member(normalized_actor_id) or result.has(normalized_actor_id):
+		return
+	result.append(normalized_actor_id)
