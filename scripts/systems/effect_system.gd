@@ -1,6 +1,8 @@
 extends RefCounted
 
 const JournalSystemScript = preload("res://scripts/systems/journal_system.gd")
+const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
+const GrowthSystemScript = preload("res://scripts/systems/growth_system.gd")
 
 const VALID_QUEST_STATUSES := [
 	"not_started",
@@ -54,6 +56,8 @@ func apply_effect(game_state, effect: Variant, _context: Dictionary = {}) -> Dic
 			_apply_add_martial_proficiency(result, game_state, effect)
 		"add_party_member":
 			_apply_add_party_member(result, game_state, effect)
+		"add_party_exp":
+			_apply_add_party_exp(result, game_state, effect)
 		"restore_mp":
 			_apply_restore_mp(result, game_state, effect)
 		"rest_at_inn":
@@ -187,6 +191,25 @@ func _apply_add_party_member(result: Dictionary, game_state, effect: Dictionary)
 	members.append(actor_id)
 	_mark_applied(result, "队友加入：%s" % actor_id)
 
+func _apply_add_party_exp(result: Dictionary, game_state, effect: Dictionary) -> void:
+	var amount = int(effect.get("amount", 0))
+	if amount <= 0:
+		_add_error(result, "经验效果数量必须大于 0。")
+		return
+	if game_state.party == null:
+		_add_error(result, "队伍状态缺失。")
+		return
+	var repository = _get_repository(game_state)
+	var growth = GrowthSystemScript.new()
+	var growth_result = growth.add_party_exp(game_state.party, amount, repository)
+	if not bool(growth_result.get("success", false)):
+		_add_error(result, "全队经验发放失败。")
+		return
+	var experience: Array = result["experience"]
+	for member_result in growth_result.get("members", []):
+		experience.append(member_result)
+	_mark_applied(result, "全队获得经验：%d" % amount)
+
 func _apply_add_rumor(result: Dictionary, game_state, effect: Dictionary, context: Dictionary) -> void:
 	var journal_state = _get_journal_state(game_state)
 	if journal_state == null:
@@ -272,6 +295,13 @@ func _get_journal_state(game_state):
 		return null
 	return game_state.get("journal_state")
 
+func _get_repository(game_state):
+	if game_state != null and game_state.is_inside_tree() and game_state.has_node("/root/DataRepository"):
+		return game_state.get_node("/root/DataRepository")
+	var repository = DataRepositoryScript.new()
+	repository.load_all()
+	return repository
+
 func _empty_result() -> Dictionary:
 	return {
 		"success": false,
@@ -287,6 +317,7 @@ func _empty_result() -> Dictionary:
 		"resolved_objects": [],
 		"martial_proficiency": [],
 		"party_members": [],
+		"experience": [],
 		"rumors": [],
 		"triggered_rumors": [],
 	}
@@ -306,7 +337,7 @@ func _merge_result(target: Dictionary, source: Dictionary) -> void:
 	target["applied"] = int(target.get("applied", 0)) + int(source.get("applied", 0))
 	target["failed"] = int(target.get("failed", 0)) + int(source.get("failed", 0))
 	target["coins"] = int(target.get("coins", 0)) + int(source.get("coins", 0))
-	for key in ["messages", "errors", "items", "removed_items", "flags", "quests", "resolved_objects", "martial_proficiency", "party_members", "rumors", "triggered_rumors"]:
+	for key in ["messages", "errors", "items", "removed_items", "flags", "quests", "resolved_objects", "martial_proficiency", "party_members", "experience", "rumors", "triggered_rumors"]:
 		var target_values: Array = target[key]
 		for value in source.get(key, []):
 			target_values.append(value)

@@ -48,6 +48,16 @@ func run(assertions) -> void:
 	assertions.assert_true(bool(duplicate_recruit.get("success", false)), "重复招募应幂等成功")
 	assertions.assert_eq(state.party.members.count("qingshanke"), 1, "重复招募不应重复添加成员")
 
+	var party_exp_result = effect_system.apply_effects(state, [
+		{"type": "add_party_exp", "amount": 35}
+	])
+	var exp_members: Array = party_exp_result.get("experience", [])
+	assertions.assert_true(bool(party_exp_result.get("success", false)), "add_party_exp 应给全队经验")
+	assertions.assert_eq(exp_members.size(), 2, "经验结果应记录所有队友")
+	assertions.assert_eq(state.party.get_member_status("hero_yun").get("level", 0), 2, "主角应因任务经验升到 2 级")
+	assertions.assert_eq(state.party.get_member_status("hero_yun").get("hp", 0), 128, "升级后主角气血应回满到成长后上限")
+	assertions.assert_eq(state.party.get_member_status("qingshanke").get("level", 0), 2, "青衫客应因任务经验升到 2 级")
+
 	var remove_result = effect_system.apply_effects(state, [
 		{"type": "remove_item", "item_id": "herb_small", "amount": 1}
 	])
@@ -101,6 +111,10 @@ func run(assertions) -> void:
 	var invalid_amount = effect_system.apply_effects(state, [{"type": "add_coins", "amount": 0}])
 	assertions.assert_true(not invalid_amount.get("success", true), "非正数铜钱奖励应失败")
 	assertions.assert_eq(invalid_amount.get("errors", [])[0], "铜钱效果数量必须大于 0。", "非正数铜钱应返回中文错误")
+
+	var invalid_exp = effect_system.apply_effects(state, [{"type": "add_party_exp", "amount": 0}])
+	assertions.assert_true(not invalid_exp.get("success", true), "非正数经验奖励应失败")
+	assertions.assert_eq(invalid_exp.get("errors", [])[0], "经验效果数量必须大于 0。", "非正数经验应返回中文错误")
 
 	var invalid_status = effect_system.apply_effects(state, [{"type": "set_quest_status", "quest_id": "quest_mountain_trial", "status": "done"}])
 	assertions.assert_true(not invalid_status.get("success", true), "非法任务状态应失败")

@@ -11,17 +11,19 @@ func run(assertions) -> void:
 
 	var mountain = repository.get_quest("quest_mountain_trial")
 	var mountain_effects = mountain.get("complete_effects", [])
-	assertions.assert_eq(mountain_effects.size(), 5, "山道试剑应声明任务完成、物品、铜钱、队友入队效果")
+	assertions.assert_eq(mountain_effects.size(), 6, "山道试剑应声明任务完成、物品、铜钱、队友入队和经验效果")
 	assertions.assert_eq(_count_effect(mountain_effects, "set_quest_status"), 1, "山道试剑完成效果应设置任务完成")
 	assertions.assert_eq(_count_effect(mountain_effects, "add_item"), 2, "山道试剑完成效果应发放小还丹和铁剑")
 	assertions.assert_eq(_count_effect(mountain_effects, "add_coins"), 1, "山道试剑完成效果应发放铜钱")
 	assertions.assert_eq(_count_effect(mountain_effects, "add_party_member"), 1, "山道试剑完成效果应让青衫客入队")
+	assertions.assert_eq(_count_effect(mountain_effects, "add_party_exp"), 1, "山道试剑完成效果应发放全队经验")
 
 	var delivery = repository.get_quest("quest_deliver_letter")
 	var delivery_effects = delivery.get("complete_effects", [])
-	assertions.assert_eq(delivery_effects.size(), 2, "送信任务应声明两个完成效果")
+	assertions.assert_eq(delivery_effects.size(), 3, "送信任务应声明三个完成效果")
 	assertions.assert_eq(_count_effect(delivery_effects, "set_quest_status"), 1, "送信任务完成效果应设置任务完成")
 	assertions.assert_eq(_count_effect(delivery_effects, "set_flag"), 1, "送信任务完成效果应写入线索 flag")
+	assertions.assert_eq(_count_effect(delivery_effects, "add_party_exp"), 1, "送信任务完成效果应发放全队经验")
 
 	var road = repository.get_map("road_outskirts")
 	var bundle = _find_object(road, "pickup_roadside_bundle")
@@ -52,6 +54,8 @@ func run(assertions) -> void:
 	assertions.assert_eq(mountain_state.party.get_item_count("iron_sword"), 1, "山道试剑完成效果应奖励铁剑")
 	assertions.assert_eq(mountain_state.party.coins, mountain_initial_coins + 160, "山道试剑完成效果应奖励 160 文")
 	assertions.assert_true(mountain_state.party.has_member("qingshanke"), "山道试剑完成效果应让青衫客加入队伍")
+	assertions.assert_eq(mountain_state.party.get_member_status("hero_yun").get("level", 0), 2, "山道试剑完成效果应让主角获得经验升级")
+	assertions.assert_eq(mountain_state.party.get_member_status("qingshanke").get("level", 0), 2, "山道试剑完成效果应让新队友获得经验升级")
 	mountain_state.free()
 
 	state.free()

@@ -20,7 +20,8 @@
       {"type": "add_item", "item_id": "herb_small", "amount": 1},
       {"type": "add_item", "item_id": "iron_sword", "amount": 1},
       {"type": "add_coins", "amount": 160},
-      {"type": "add_party_member", "actor_id": "qingshanke"}
+      {"type": "add_party_member", "actor_id": "qingshanke"},
+      {"type": "add_party_exp", "amount": 35}
     ]
   },
   {
@@ -32,7 +33,8 @@
     "reward_flags": {"clue_foot_village": "掌柜提到飞红巾踪迹"},
     "complete_effects": [
       {"type": "set_quest_status", "quest_id": "quest_deliver_letter", "status": "completed"},
-      {"type": "set_flag", "key": "clue_foot_village", "value": "掌柜提到飞红巾踪迹"}
+      {"type": "set_flag", "key": "clue_foot_village", "value": "掌柜提到飞红巾踪迹"},
+      {"type": "add_party_exp", "amount": 15}
     ]
   }
 ]
