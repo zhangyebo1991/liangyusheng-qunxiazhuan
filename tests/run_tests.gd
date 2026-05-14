@@ -38,6 +38,7 @@ const TestTacticalBattleStateScript = preload("res://tests/test_tactical_battle_
 const TestTacticalCombatSystemScript = preload("res://tests/test_tactical_combat_system.gd")
 const TestTacticalPartyBattleScript = preload("res://tests/test_tactical_party_battle.gd")
 const TestTacticalBattleScreenScript = preload("res://tests/test_tactical_battle_screen.gd")
+const TestBattleScreenRewardPanelScript = preload("res://tests/test_battle_screen_reward_panel.gd")
 const TestBattleStateScript = preload("res://tests/test_battle_state.gd")
 const TestTurnBasedCombatSystemScript = preload("res://tests/test_turn_based_combat_system.gd")
 const TestLongTermMpSaveScript = preload("res://tests/test_long_term_mp_save.gd")
@@ -110,6 +111,7 @@ func _run_all_suites() -> void:
 		TestTacticalCombatSystemScript.new(),
 		TestTacticalPartyBattleScript.new(),
 		TestTacticalBattleScreenScript.new(),
+		TestBattleScreenRewardPanelScript.new(),
 		TestBattleStateScript.new(),
 		TestTurnBasedCombatSystemScript.new(),
 		TestLongTermMpSaveScript.new(),

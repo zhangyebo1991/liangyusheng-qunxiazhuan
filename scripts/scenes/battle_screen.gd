@@ -71,6 +71,9 @@ var _last_action_unit_id: String = ""
 var _pending_enemy_move_unit_id: String = ""
 var _feedback_director = null
 var _feedback_hitstop_sec := 0.0
+var reward_panel: PanelContainer
+var reward_label: Label
+var reward_return_button: Button
 
 func _ready() -> void:
 	_feedback_director = BattleFeedbackDirectorScript.new()
@@ -477,17 +480,90 @@ func _on_tactical_retreat_pressed() -> void:
 func _return_if_tactical_finished() -> void:
 	if tactical_battle_state == null or not tactical_battle_state.is_finished:
 		return
+	if reward_panel != null and reward_panel.visible:
+		return
 	var payload = tactical_battle_state.to_result_dictionary()
 	GameState.apply_battle_result(payload)
 	EventBus.battle_finished.emit(payload)
+	if bool(payload.get("victory", false)) and typeof(GameState.last_reward_result) == TYPE_DICTIONARY and not GameState.last_reward_result.is_empty():
+		_show_reward_panel(GameState.last_reward_result)
+		return
 	call_deferred("_return_to_map")
 
 func _return_if_finished() -> void:
 	if not battle_state.is_finished:
 		return
+	if reward_panel != null and reward_panel.visible:
+		return
 	var payload = battle_state.to_result_dictionary()
 	GameState.apply_battle_result(payload)
 	EventBus.battle_finished.emit(payload)
+	if bool(payload.get("victory", false)) and typeof(GameState.last_reward_result) == TYPE_DICTIONARY and not GameState.last_reward_result.is_empty():
+		_show_reward_panel(GameState.last_reward_result)
+		return
+	call_deferred("_return_to_map")
+
+func _show_reward_panel(reward_result: Dictionary) -> void:
+	if reward_panel == null:
+		reward_panel = PanelContainer.new()
+		reward_panel.name = "RewardPanel"
+		reward_panel.position = Vector2(300, 120)
+		reward_panel.custom_minimum_size = Vector2(440, 300)
+		reward_panel.z_index = 200
+		add_child(reward_panel)
+		var box = VBoxContainer.new()
+		box.add_theme_constant_override("separation", 10)
+		box.custom_minimum_size = Vector2(420, 280)
+		reward_panel.add_child(box)
+		var title = Label.new()
+		title.text = "胜利奖励"
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(title)
+		reward_label = Label.new()
+		reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		reward_label.custom_minimum_size = Vector2(400, 210)
+		box.add_child(reward_label)
+		reward_return_button = Button.new()
+		reward_return_button.text = "返回地图"
+		reward_return_button.pressed.connect(_on_reward_return_pressed)
+		box.add_child(reward_return_button)
+	reward_label.text = _reward_text(reward_result)
+	reward_panel.visible = true
+
+func _reward_text(reward_result: Dictionary) -> String:
+	var lines: Array[String] = []
+	var experience = reward_result.get("experience", [])
+	if typeof(experience) == TYPE_ARRAY and not experience.is_empty():
+		lines.append("经验")
+		for item in experience:
+			if typeof(item) != TYPE_DICTIONARY:
+				continue
+			var actor_id = str(item.get("actor_id", ""))
+			var gained = int(item.get("exp_gained", 0))
+			var line = "%s +%d 经验" % [actor_id, gained]
+			if bool(item.get("leveled_up", false)):
+				line += "，升至 %d 级，气血内力已回满" % int(item.get("new_level", 0))
+			lines.append(line)
+	var coins = int(reward_result.get("coins", 0))
+	if coins > 0:
+		lines.append("铜钱")
+		lines.append("获得 %d 文" % coins)
+	var drops = reward_result.get("items", [])
+	if typeof(drops) == TYPE_ARRAY and not drops.is_empty():
+		lines.append("掉落明细")
+		for drop in drops:
+			if typeof(drop) != TYPE_DICTIONARY:
+				continue
+			var item_id = str(drop.get("item_id", drop.get("id", "")))
+			var amount = max(1, int(drop.get("amount", 1)))
+			if item_id.is_empty():
+				continue
+			lines.append("%s x%d" % [item_id, amount])
+	return "\n".join(lines) if not lines.is_empty() else "没有额外奖励。"
+
+func _on_reward_return_pressed() -> void:
+	if reward_panel != null:
+		reward_panel.visible = false
 	call_deferred("_return_to_map")
 
 func _return_to_map() -> void:
