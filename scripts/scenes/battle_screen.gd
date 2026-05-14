@@ -20,7 +20,7 @@ const TACTICAL_GRID_OFFSET := Vector2.ZERO
 # v0.x: 16×9 棋盘 × 80px = 1280×720，铺满战斗视口。
 const TACTICAL_GRID_ORIGIN := Vector2.ZERO
 
-enum RangeMode { NONE = 0, MOVE = 1, ATTACK = 2, SKILL_DIR_PREVIEW = 3, SKILL_TARGET_PREVIEW = 4 }
+enum RangeMode { NONE = 0, MOVE = 1, ATTACK = 2, SKILL_DIR_PREVIEW = 3, SKILL_TARGET_PREVIEW = 4, SKILL_AIM = 5 }
 
 var title_label: Label
 var hero_hp_label: Label
@@ -295,7 +295,7 @@ func _refresh_tactical() -> void:
 			var target_key = _cell_key(target.cell)
 			if cell_buttons.has(target_key):
 				cell_buttons[target_key].disabled = false
-	elif range_mode == RangeMode.SKILL_TARGET_PREVIEW:
+	elif range_mode == RangeMode.SKILL_TARGET_PREVIEW or range_mode == RangeMode.SKILL_AIM:
 		for v in range_cells:
 			if typeof(v) != TYPE_VECTOR2I:
 				continue
@@ -372,6 +372,22 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 		return
 	var current_unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
 	if current_unit == null:
+		return
+	# SKILL_AIM 模式：范围内点击确认释放，范围外点击取消。
+	if range_mode == RangeMode.SKILL_AIM and not _pending_skill_id.is_empty():
+		var clicked := Vector2i(q, r)
+		var hit := false
+		for c in range_cells:
+			if typeof(c) == TYPE_VECTOR2I and Vector2i(c) == clicked:
+				hit = true
+				break
+		if hit:
+			_resolve_skill_action(_pending_skill_id, range_cells)
+		else:
+			_pending_skill_id = ""
+			_clear_direction_arrows()
+			_set_range_mode(RangeMode.NONE, [])
+			_refresh_tactical()
 		return
 	# Task 18: SKILL_TARGET_PREVIEW 模式下点中心格 → 计算十字爆炸 → resolve_action。
 	if range_mode == RangeMode.SKILL_TARGET_PREVIEW and not _pending_skill_id.is_empty():
@@ -986,7 +1002,7 @@ func _on_skill_chosen(skill_id: String) -> void:
 		else:
 			var range_val: int = int(data.get("tactical", {}).get("range", 2))
 			cells = tactical_range_system.get_ring_range(view, range_val, tactical_battle_state.terrain_grid)
-		_resolve_skill_action(skill_id, cells)
+		_set_range_mode(RangeMode.SKILL_AIM, cells)
 	else:
 		_pending_skill_id = ""
 		_set_range_mode(RangeMode.NONE, [])
@@ -1054,7 +1070,7 @@ func _on_direction_chosen(skill_id: String, direction: Vector2i) -> void:
 		cells = tactical_range_system.get_pierce_range(view, direction, tactical_range, tactical_battle_state.terrain_grid)
 	else:
 		cells = tactical_range_system.get_skill_directional_range(view, skill_id, direction, tactical_battle_state.terrain_grid)
-	_resolve_skill_action(skill_id, cells)
+	_set_range_mode(RangeMode.SKILL_AIM, cells)
 
 # Task 17/18 共用：执行招式 → 行动结束 → 刷新 UI → 检查战斗结算。
 func _resolve_skill_action(skill_id: String, target_cells: Array) -> void:
