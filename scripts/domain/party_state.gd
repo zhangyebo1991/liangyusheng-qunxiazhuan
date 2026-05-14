@@ -19,11 +19,26 @@ func has_member(actor_id: String) -> bool:
 func set_member_status(actor_id: String, status: Dictionary) -> void:
 	if actor_id.is_empty() or not has_member(actor_id):
 		return
-	var next_status: Dictionary = {}
+	var current = get_member_status(actor_id)
+	var next_status: Dictionary = {
+		"level": max(1, int(current.get("level", 1))),
+		"exp": max(0, int(current.get("exp", 0))),
+		"total_exp": max(0, int(current.get("total_exp", 0))),
+	}
+	if status.has("level"):
+		next_status["level"] = max(1, int(status.get("level", 1)))
+	if status.has("exp"):
+		next_status["exp"] = max(0, int(status.get("exp", 0)))
+	if status.has("total_exp"):
+		next_status["total_exp"] = max(0, int(status.get("total_exp", 0)))
 	if status.has("hp"):
 		next_status["hp"] = max(0, int(status.get("hp", 0)))
+	elif current.has("hp"):
+		next_status["hp"] = max(0, int(current.get("hp", 0)))
 	if status.has("mp"):
 		next_status["mp"] = max(0, int(status.get("mp", 0)))
+	elif current.has("mp"):
+		next_status["mp"] = max(0, int(current.get("mp", 0)))
 	member_status[actor_id] = next_status
 
 func get_member_status(actor_id: String) -> Dictionary:
@@ -166,7 +181,11 @@ func _read_member_status(value: Variant) -> Dictionary:
 		var raw_status = value[actor_id]
 		if typeof(raw_status) != TYPE_DICTIONARY:
 			continue
-		var status: Dictionary = {}
+		var status: Dictionary = {
+			"level": max(1, int(raw_status.get("level", 1))),
+			"exp": max(0, int(raw_status.get("exp", 0))),
+			"total_exp": max(0, int(raw_status.get("total_exp", 0))),
+		}
 		if raw_status.has("hp"):
 			status["hp"] = max(0, int(raw_status.get("hp", 0)))
 		if raw_status.has("mp"):
