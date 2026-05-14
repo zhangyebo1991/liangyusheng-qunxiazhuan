@@ -12,6 +12,7 @@ var _equipment_system = EquipmentSystemScript.new()
 var _stats_system = ActorStatsSystemScript.new()
 var _root_box: VBoxContainer
 var _member_list: VBoxContainer
+var _formation_list: VBoxContainer
 var _detail_label: Label
 var _equipment_list: VBoxContainer
 
@@ -27,6 +28,7 @@ func refresh() -> void:
 	if _root_box == null:
 		_build_ui()
 	_clear_member_buttons()
+	_clear_formation_rows()
 	_clear_equipment_rows()
 	if party == null:
 		_detail_label.text = "队伍状态缺失。"
@@ -40,6 +42,7 @@ func refresh() -> void:
 		_member_list.add_child(button)
 	if selected_actor_id.is_empty() and not party.members.is_empty():
 		selected_actor_id = str(party.members[0])
+	_refresh_formation_rows()
 	_refresh_detail()
 	_refresh_equipment_rows()
 
@@ -73,6 +76,10 @@ func _build_ui() -> void:
 	_member_list.custom_minimum_size = Vector2(460, 96)
 	_root_box.add_child(_member_list)
 
+	_formation_list = VBoxContainer.new()
+	_formation_list.custom_minimum_size = Vector2(460, 132)
+	_root_box.add_child(_formation_list)
+
 	_detail_label = Label.new()
 	_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_detail_label.custom_minimum_size = Vector2(460, 160)
@@ -94,6 +101,13 @@ func _clear_member_buttons() -> void:
 				button.get_parent().remove_child(button)
 			button.queue_free()
 	member_buttons.clear()
+
+func _clear_formation_rows() -> void:
+	if _formation_list == null:
+		return
+	for child in _formation_list.get_children():
+		_formation_list.remove_child(child)
+		child.queue_free()
 
 func _clear_equipment_rows() -> void:
 	if _equipment_list == null:
@@ -130,6 +144,57 @@ func _refresh_detail() -> void:
 		_equipped_name("armor"),
 		_equipped_name("accessory"),
 	]
+
+func _refresh_formation_rows() -> void:
+	_clear_formation_rows()
+	if party == null or _formation_list == null:
+		return
+	var title = Label.new()
+	title.text = "默认出战顺序"
+	title.custom_minimum_size = Vector2(460, 28)
+	_formation_list.add_child(title)
+	var order: Array = party.get_formation_order() if party.has_method("get_formation_order") else party.members
+	if order.is_empty():
+		var empty = Label.new()
+		empty.text = "暂无可调整队友。"
+		empty.custom_minimum_size = Vector2(460, 28)
+		_formation_list.add_child(empty)
+		return
+	for actor_id_value in order:
+		var actor_id = str(actor_id_value)
+		var row = HBoxContainer.new()
+		row.custom_minimum_size = Vector2(460, 32)
+		_formation_list.add_child(row)
+
+		var name_label = Label.new()
+		name_label.text = _actor_name(actor_id)
+		name_label.custom_minimum_size = Vector2(190, 28)
+		row.add_child(name_label)
+
+		if actor_id == "hero_yun":
+			var required_label = Label.new()
+			required_label.text = "必出战"
+			required_label.custom_minimum_size = Vector2(120, 28)
+			row.add_child(required_label)
+			continue
+
+		var up_button = Button.new()
+		up_button.text = "上移"
+		up_button.custom_minimum_size = Vector2(72, 28)
+		up_button.pressed.connect(_move_formation_member.bind(actor_id, -1))
+		row.add_child(up_button)
+
+		var down_button = Button.new()
+		down_button.text = "下移"
+		down_button.custom_minimum_size = Vector2(72, 28)
+		down_button.pressed.connect(_move_formation_member.bind(actor_id, 1))
+		row.add_child(down_button)
+
+func _move_formation_member(actor_id: String, direction: int) -> void:
+	if party == null or not party.has_method("move_formation_member"):
+		return
+	party.move_formation_member(actor_id, direction)
+	refresh()
 
 func _exp_progress_line(stats: Dictionary) -> String:
 	var next_level_total = int(stats.get("next_level_exp", -1))
