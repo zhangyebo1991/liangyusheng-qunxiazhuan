@@ -398,6 +398,9 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 				hit = true
 				break
 		if not hit:
+			_pending_skill_id = ""
+			_set_range_mode(RangeMode.NONE, [])
+			_refresh_tactical()
 			return
 		var blast: Array = tactical_range_system.get_skill_target_blast_range(_pending_skill_id, clicked, tactical_battle_state.terrain_grid)
 		_resolve_skill_action(_pending_skill_id, blast)
@@ -863,6 +866,16 @@ func _refresh_terrain_panels_for_current_actor() -> void:
 func _input(event: InputEvent) -> void:
 	if not is_tactical_mode:
 		return
+	# 右键取消当前技能选择
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+		if not _pending_skill_id.is_empty() or range_mode == RangeMode.SKILL_DIR_PREVIEW or range_mode == RangeMode.SKILL_TARGET_PREVIEW or range_mode == RangeMode.SKILL_AIM:
+			_pending_skill_id = ""
+			_clear_direction_arrows()
+			_set_range_mode(RangeMode.NONE, [])
+			battle_grid.clear_hover_overlay()
+			_refresh_tactical()
+			accept_event()
+			return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_TAB:
 		_focus_next_distinct_terrain()
 		accept_event()
