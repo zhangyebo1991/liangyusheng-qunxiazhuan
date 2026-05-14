@@ -48,6 +48,15 @@ func run(assertions) -> void:
 	assertions.assert_true(legacy_battle.get_unit("qingshanke") != null, "旧 player_start_cells 配置仍应支持队友入场")
 	assertions.assert_eq(legacy_battle.get_unit("qingshanke").cell.get("r", -1), 3, "旧配置应保留第二个玩家起始格")
 
+	var gate = _map_object(repository, "mountain_pass", "enemy_bandit_gate")
+	var gate_deploy = gate.get("player_deploy", {})
+	assertions.assert_true(typeof(gate_deploy) == TYPE_DICTIONARY, "山道强人战应配置玩家出战位")
+	assertions.assert_true(int(gate_deploy.get("max_members", 0)) >= 2, "山道强人战至少允许 2 名玩家单位出战")
+	assertions.assert_true(gate_deploy.get("start_cells", []).size() >= 2, "山道强人战至少应配置 2 个玩家起始格")
+	var gate_battle = system.create_battle(state, gate, repository)
+	assertions.assert_true(gate_battle.get_unit("hero_yun") != null, "真实山道强人战应生成主角")
+	assertions.assert_true(gate_battle.get_unit("qingshanke") != null, "真实山道强人战应生成已入队的青衫客")
+
 	battle.get_unit("hero_yun").hp = 88
 	battle.get_unit("hero_yun").mp = 6
 	battle.get_unit("qingshanke").hp = 120
@@ -134,6 +143,16 @@ func _log_has(battle, expected: String) -> bool:
 		if str(line) == expected:
 			return true
 	return false
+
+func _map_object(repository, map_id: String, object_id: String) -> Dictionary:
+	var map_data = repository.get_map(map_id)
+	var objects = map_data.get("objects", [])
+	if typeof(objects) != TYPE_ARRAY:
+		return {}
+	for object in objects:
+		if typeof(object) == TYPE_DICTIONARY and str(object.get("id", "")) == object_id:
+			return object
+	return {}
 
 func _state_with_ally():
 	var state = GameStateScript.new()

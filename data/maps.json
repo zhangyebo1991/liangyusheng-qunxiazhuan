@@ -30,6 +30,13 @@
         "battle_mode": "tactical",
         "encounter_id": "mountain_bandit_tutorial",
         "battlefield": {"width": 16, "height": 9},
+        "player_deploy": {
+          "max_members": 2,
+          "start_cells": [
+            {"q": 5, "r": 3},
+            {"q": 5, "r": 4}
+          ]
+        },
         "victory_rewards": {
           "exp": 20,
           "coins": 15,
