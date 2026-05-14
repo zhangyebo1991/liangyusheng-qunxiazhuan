@@ -65,6 +65,7 @@ func to_result_dictionary() -> Dictionary:
 		"victory": victory,
 		"hero_hp": hero_hp,
 		"hero_final_mp": _get_hero_final_mp(),
+		"party_member_results": _party_member_results(),
 		"source_map_id": source_map_id,
 		"source_object_id": source_object_id,
 		"quest_id": quest_id,
@@ -78,6 +79,14 @@ func _get_hero_final_mp() -> int:
 		if unit.team == TEAM_PLAYER and unit.actor_id == "hero_yun":
 			return int(unit.mp)
 	return -1
+
+func _party_member_results() -> Dictionary:
+	var result: Dictionary = {}
+	for unit in units:
+		if unit.team != TEAM_PLAYER or unit.actor_id.is_empty():
+			continue
+		result[unit.actor_id] = {"hp": max(0, int(unit.hp)), "mp": max(0, int(unit.mp))}
+	return result
 
 func to_dictionary() -> Dictionary:
 	var serialized_units: Array = []

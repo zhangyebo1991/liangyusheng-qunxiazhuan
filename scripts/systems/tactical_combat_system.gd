@@ -4,10 +4,12 @@ const TacticalBattleStateScript = preload("res://scripts/domain/tactical_battle_
 const TacticalUnitStateScript = preload("res://scripts/domain/tactical_unit_state.gd")
 const MartialArtRecordScript = preload("res://scripts/domain/martial_art_record.gd")
 const ProficiencySystemScript = preload("res://scripts/systems/proficiency_system.gd")
+const ActorStatsSystemScript = preload("res://scripts/systems/actor_stats_system.gd")
 
 var repository = null
 var _proficiency_system = null
 var _proficiency_map: Dictionary = {}
+var _actor_stats_system = ActorStatsSystemScript.new()
 
 func set_repository(next_repository) -> void:
 	repository = next_repository
@@ -43,8 +45,12 @@ func create_battle(game_state, context: Dictionary, data_source = null):
 	var raw_units = context.get("units", [])
 	if typeof(raw_units) != TYPE_ARRAY:
 		raw_units = []
+	var player_start_cells = _player_start_cells(context, raw_units)
+	_add_party_player_units(battle, game_state, source, player_start_cells)
 	for raw_unit in raw_units:
 		if typeof(raw_unit) != TYPE_DICTIONARY:
+			continue
+		if str(raw_unit.get("team", "")) == TacticalBattleStateScript.TEAM_PLAYER:
 			continue
 		var unit = _build_unit(raw_unit, game_state, source)
 		if _is_valid_start_cell(battle, unit.cell) and not _is_cell_occupied(battle, unit.cell):
@@ -612,6 +618,53 @@ func _build_unit(raw_unit: Dictionary, game_state, source):
 	var unit = TacticalUnitStateScript.new()
 	unit.from_dictionary(unit_data)
 	return unit
+
+func _add_party_player_units(battle, game_state, source, start_cells: Array) -> void:
+	if game_state == null or game_state.party == null:
+		return
+	_sync_hero_member_status_for_battle(game_state)
+	var index := 0
+	for actor_id in game_state.party.members:
+		if index >= start_cells.size():
+			_log(battle, "%s无法入场：起始格不足。" % str(actor_id))
+			continue
+		var stats = _actor_stats_system.build_stats(game_state.party, str(actor_id), source)
+		if stats.is_empty():
+			_log(battle, "%s无法入场：角色数据缺失。" % str(actor_id))
+			continue
+		stats["team"] = TacticalBattleStateScript.TEAM_PLAYER
+		stats["cell"] = start_cells[index].duplicate(true)
+		stats["start_cell"] = start_cells[index].duplicate(true)
+		var unit = TacticalUnitStateScript.new()
+		unit.from_dictionary(stats)
+		if _is_valid_start_cell(battle, unit.cell) and not _is_cell_occupied(battle, unit.cell):
+			battle.add_unit(unit)
+			index += 1
+		else:
+			_log(battle, "%s站位无效。" % unit.display_name)
+
+func _sync_hero_member_status_for_battle(game_state) -> void:
+	if game_state == null or game_state.party == null or not game_state.party.has_member("hero_yun"):
+		return
+	game_state.party.set_member_status("hero_yun", {"hp": int(game_state.hero_hp), "mp": int(game_state.hero_cur_mp)})
+
+func _player_start_cells(context: Dictionary, raw_units: Array) -> Array:
+	var result: Array = []
+	var explicit = context.get("player_start_cells", [])
+	if typeof(explicit) == TYPE_ARRAY:
+		for cell in explicit:
+			if typeof(cell) == TYPE_DICTIONARY:
+				result.append(_read_cell(cell))
+	if not result.is_empty():
+		return result
+	for raw_unit in raw_units:
+		if typeof(raw_unit) != TYPE_DICTIONARY:
+			continue
+		if str(raw_unit.get("team", "")) == TacticalBattleStateScript.TEAM_PLAYER:
+			result.append(_read_cell(raw_unit.get("start_cell", raw_unit.get("cell", {}))))
+	if result.is_empty():
+		result.append({"q": 1, "r": 2})
+	return result
 
 func _is_valid_start_cell(battle, cell: Dictionary) -> bool:
 	var q = int(cell.get("q", -1))
