@@ -205,7 +205,7 @@ func apply_battle_result(result: Dictionary) -> void:
 		if final_mp >= 0:
 			set_hero_cur_mp(final_mp)
 	if result.has("hero_hp"):
-		hero_hp = int(result.get("hero_hp", hero_hp))
+		hero_hp = _protected_battle_hp(int(result.get("hero_hp", hero_hp)))
 		_sync_hero_member_status()
 	_apply_party_member_results(result.get("party_member_results", {}))
 
@@ -234,6 +234,7 @@ func apply_battle_result(result: Dictionary) -> void:
 				return
 		# 未绑定客栈：沿用原地复活
 		hero_hp = max(1, hero_hp)
+		_sync_hero_member_status()
 		map_state.player_position = Vector2(160, 320)
 
 func _battle_victory_effects(result: Dictionary) -> Array:
@@ -380,6 +381,11 @@ func _normalize_hero_hp() -> void:
 		hero_max_hp = DEFAULT_HERO_MAX_HP
 	hero_hp = clamp(hero_hp, 0, hero_max_hp)
 
+func _protected_battle_hp(value: int) -> int:
+	if value <= 0:
+		return 1
+	return value
+
 func _sync_hero_member_status() -> void:
 	if party == null or not party.has_member("hero_yun"):
 		return
@@ -419,10 +425,12 @@ func _apply_party_member_results(value: Variant) -> void:
 		var normalized_id = str(actor_id)
 		if not party.has_member(normalized_id):
 			continue
-		party.set_member_status(normalized_id, {"hp": int(raw_status.get("hp", 0)), "mp": int(raw_status.get("mp", 0))})
+		var next_hp = _protected_battle_hp(int(raw_status.get("hp", 0)))
+		var next_mp = max(0, int(raw_status.get("mp", 0)))
+		party.set_member_status(normalized_id, {"hp": next_hp, "mp": next_mp})
 		if normalized_id == "hero_yun":
-			hero_hp = int(raw_status.get("hp", hero_hp))
-			set_hero_cur_mp(int(raw_status.get("mp", hero_cur_mp)))
+			hero_hp = next_hp
+			set_hero_cur_mp(next_mp)
 
 func _get_actor_data(actor_id: String) -> Dictionary:
 	if actor_id.is_empty():

@@ -81,9 +81,26 @@ func run(assertions) -> void:
 	assertions.assert_eq(fail_state.party.coins, GameStateScript.STARTING_COINS, "战斗失败不应发铜钱")
 	assertions.assert_true(fail_state.last_reward_result.is_empty(), "战斗失败不应保留奖励结果")
 
+	var downed_victory_state = _state_with_ally()
+	downed_victory_state.apply_battle_result(_downed_result(true))
+	assertions.assert_eq(downed_victory_state.party.get_member_status("hero_yun").get("hp", 0), 1, "胜利后倒下主角成员状态应保留 1 点气血")
+	assertions.assert_eq(downed_victory_state.party.get_member_status("qingshanke").get("hp", 0), 1, "胜利后倒下队友应保留 1 点气血")
+	assertions.assert_eq(downed_victory_state.hero_hp, 1, "胜利后主角旧 HP 字段应同步为 1")
+	var restored_down = GameStateScript.new()
+	restored_down.from_dictionary(downed_victory_state.to_dictionary())
+	assertions.assert_eq(restored_down.party.get_member_status("qingshanke").get("hp", 0), 1, "倒下队友 1 血状态应可存档恢复")
+
+	var downed_failure_state = _state_with_ally()
+	downed_failure_state.apply_battle_result(_downed_result(false))
+	assertions.assert_eq(downed_failure_state.party.get_member_status("hero_yun").get("hp", 0), 1, "失败后倒下主角成员状态应保留 1 点气血")
+	assertions.assert_eq(downed_failure_state.party.get_member_status("qingshanke").get("hp", 0), 1, "失败后倒下队友应保留 1 点气血")
+
 	repository.free()
 	reward_state.free()
 	fail_state.free()
+	downed_victory_state.free()
+	restored_down.free()
+	downed_failure_state.free()
 	state.free()
 
 func _party_context() -> Dictionary:
@@ -117,3 +134,22 @@ func _log_has(battle, expected: String) -> bool:
 		if str(line) == expected:
 			return true
 	return false
+
+func _state_with_ally():
+	var state = GameStateScript.new()
+	state.start_new_game()
+	state.party.add_member("qingshanke")
+	state.party.set_member_status("qingshanke", {"hp": 120, "mp": 8})
+	return state
+
+func _downed_result(is_victory: bool) -> Dictionary:
+	return {
+		"victory": is_victory,
+		"hero_hp": 0,
+		"hero_final_mp": 3,
+		"party_member_results": {
+			"hero_yun": {"hp": 0, "mp": 3},
+			"qingshanke": {"hp": 0, "mp": 1}
+		},
+		"participating_party_members": ["hero_yun", "qingshanke"]
+	}
