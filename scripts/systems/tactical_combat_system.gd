@@ -49,7 +49,8 @@ func create_battle(game_state, context: Dictionary, data_source = null):
 	if typeof(raw_units) != TYPE_ARRAY:
 		raw_units = []
 	var player_start_cells = _player_start_cells(context, raw_units)
-	_add_party_player_units(battle, game_state, source, player_start_cells)
+	var player_max_members = _player_max_members(context, player_start_cells.size())
+	_add_party_player_units(battle, game_state, source, player_start_cells, player_max_members)
 	for raw_unit in raw_units:
 		if typeof(raw_unit) != TYPE_DICTIONARY:
 			continue
@@ -622,18 +623,19 @@ func _build_unit(raw_unit: Dictionary, game_state, source):
 	unit.from_dictionary(unit_data)
 	return unit
 
-func _add_party_player_units(battle, game_state, source, start_cells: Array) -> void:
+func _add_party_player_units(battle, game_state, source, start_cells: Array, max_members: int) -> void:
 	if game_state == null or game_state.party == null:
 		return
 	_sync_hero_member_status_for_battle(game_state)
 	var index := 0
-	for actor_id in game_state.party.members:
+	var actor_ids: Array = game_state.party.get_deployable_members(max_members) if game_state.party.has_method("get_deployable_members") else game_state.party.members
+	for actor_id in actor_ids:
 		if index >= start_cells.size():
-			_log(battle, "%s无法入场：起始格不足。" % str(actor_id))
+			_log(battle, "%s无法入场：本场出战位置不足。" % _actor_display_name(source, str(actor_id)))
 			continue
 		var stats = _actor_stats_system.build_stats(game_state.party, str(actor_id), source)
 		if stats.is_empty():
-			_log(battle, "%s无法入场：角色数据缺失。" % str(actor_id))
+			_log(battle, "%s无法入场：角色数据缺失。" % _actor_display_name(source, str(actor_id)))
 			continue
 		stats["team"] = TacticalBattleStateScript.TEAM_PLAYER
 		stats["cell"] = start_cells[index].duplicate(true)
@@ -653,6 +655,15 @@ func _sync_hero_member_status_for_battle(game_state) -> void:
 
 func _player_start_cells(context: Dictionary, raw_units: Array) -> Array:
 	var result: Array = []
+	var deploy = context.get("player_deploy", {})
+	if typeof(deploy) == TYPE_DICTIONARY:
+		var deploy_cells = deploy.get("start_cells", [])
+		if typeof(deploy_cells) == TYPE_ARRAY:
+			for cell in deploy_cells:
+				if typeof(cell) == TYPE_DICTIONARY:
+					result.append(_read_cell(cell))
+	if not result.is_empty():
+		return result
 	var explicit = context.get("player_start_cells", [])
 	if typeof(explicit) == TYPE_ARRAY:
 		for cell in explicit:
@@ -668,6 +679,21 @@ func _player_start_cells(context: Dictionary, raw_units: Array) -> Array:
 	if result.is_empty():
 		result.append({"q": 1, "r": 2})
 	return result
+
+func _player_max_members(context: Dictionary, start_cell_count: int) -> int:
+	var deploy = context.get("player_deploy", {})
+	if typeof(deploy) == TYPE_DICTIONARY and deploy.has("max_members"):
+		return max(0, int(deploy.get("max_members", 0)))
+	return max(0, start_cell_count)
+
+func _actor_display_name(source, actor_id: String) -> String:
+	if actor_id.is_empty():
+		return "未知侠客"
+	if source != null and source.has_method("get_actor"):
+		var actor = source.get_actor(actor_id)
+		if typeof(actor) == TYPE_DICTIONARY and not actor.is_empty():
+			return str(actor.get("name", actor_id))
+	return actor_id
 
 func _is_valid_start_cell(battle, cell: Dictionary) -> bool:
 	var q = int(cell.get("q", -1))

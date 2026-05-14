@@ -11,6 +11,7 @@ func run(assertions) -> void:
 	state.start_new_game()
 	state.party.add_member("qingshanke")
 	state.party.set_member_status("qingshanke", {"hp": 160, "mp": 20})
+	state.party.set_formation_order(["hero_yun", "qingshanke"])
 	state.party.add_item("iron_sword", 1)
 	state.party.set_equipment("hero_yun", "weapon", "iron_sword")
 
@@ -33,6 +34,19 @@ func run(assertions) -> void:
 	assertions.assert_eq(hero.attack, 22, "主角攻击应包含铁剑加成")
 	assertions.assert_eq(ally.hp, 160, "队友应读取成员当前 HP")
 	assertions.assert_true(battle.has_living_team("player"), "玩家队伍应有存活单位")
+
+	var limited_battle = system.create_battle(state, _party_context_with_deploy(1, [{"q": 2, "r": 2}, {"q": 2, "r": 3}]), repository)
+	assertions.assert_true(limited_battle.get_unit("hero_yun") != null, "出战上限为 1 时主角仍应入场")
+	assertions.assert_true(limited_battle.get_unit("qingshanke") == null, "出战上限为 1 时队友不应入场")
+
+	var short_cell_battle = system.create_battle(state, _party_context_with_deploy(2, [{"q": 3, "r": 2}]), repository)
+	assertions.assert_true(short_cell_battle.get_unit("hero_yun") != null, "起始格不足时主角应优先入场")
+	assertions.assert_true(short_cell_battle.get_unit("qingshanke") == null, "起始格不足时队友不应入场")
+	assertions.assert_true(_log_has(short_cell_battle, "青衫客无法入场：本场出战位置不足。"), "起始格不足时应写入中文日志")
+
+	var legacy_battle = system.create_battle(state, _legacy_party_context(), repository)
+	assertions.assert_true(legacy_battle.get_unit("qingshanke") != null, "旧 player_start_cells 配置仍应支持队友入场")
+	assertions.assert_eq(legacy_battle.get_unit("qingshanke").cell.get("r", -1), 3, "旧配置应保留第二个玩家起始格")
 
 	battle.get_unit("hero_yun").hp = 88
 	battle.get_unit("hero_yun").mp = 6
@@ -73,12 +87,15 @@ func run(assertions) -> void:
 	state.free()
 
 func _party_context() -> Dictionary:
+	return _party_context_with_deploy(2, [{"q": 1, "r": 2}, {"q": 1, "r": 3}])
+
+func _party_context_with_deploy(max_members: int, start_cells: Array) -> Dictionary:
 	return {
 		"source_map_id": "mountain_pass",
 		"source_object_id": "enemy_bandit_gate",
 		"quest_id": "quest_mountain_trial",
 		"battlefield": {"width": 8, "height": 6},
-		"player_start_cells": [{"q": 1, "r": 2}, {"q": 1, "r": 3}],
+		"player_deploy": {"max_members": max_members, "start_cells": start_cells},
 		"victory_rewards": {
 			"exp": 35,
 			"coins": 12,
@@ -88,3 +105,15 @@ func _party_context() -> Dictionary:
 			{"unit_id": "bandit", "actor_id": "bandit_01", "team": "enemy", "start_cell": {"q": 5, "r": 2}, "max_mp": 0}
 		]
 	}
+
+func _legacy_party_context() -> Dictionary:
+	var context = _party_context_with_deploy(2, [{"q": 1, "r": 2}, {"q": 1, "r": 3}])
+	context.erase("player_deploy")
+	context["player_start_cells"] = [{"q": 1, "r": 2}, {"q": 1, "r": 3}]
+	return context
+
+func _log_has(battle, expected: String) -> bool:
+	for line in battle.log:
+		if str(line) == expected:
+			return true
+	return false
