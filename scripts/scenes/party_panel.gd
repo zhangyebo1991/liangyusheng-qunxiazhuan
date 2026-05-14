@@ -114,8 +114,12 @@ func _refresh_detail() -> void:
 		_detail_label.text = "未选择队友。"
 		return
 	var stats = _stats_system.build_stats(party, selected_actor_id, repository)
-	_detail_label.text = "%s\n气血 %d/%d  内力 %d/%d\n攻击 %d  防御 %d\n武器：%s\n衣甲：%s\n饰品：%s" % [
+	var level = int(stats.get("level", 1))
+	var exp_line = _exp_progress_line(stats)
+	_detail_label.text = "%s\n等级 %d  %s\n气血 %d/%d  内力 %d/%d\n攻击 %d  防御 %d\n武器：%s\n衣甲：%s\n饰品：%s" % [
 		str(stats.get("display_name", selected_actor_id)),
+		level,
+		exp_line,
 		int(stats.get("hp", 0)),
 		int(stats.get("max_hp", 0)),
 		int(stats.get("mp", 0)),
@@ -126,6 +130,16 @@ func _refresh_detail() -> void:
 		_equipped_name("armor"),
 		_equipped_name("accessory"),
 	]
+
+func _exp_progress_line(stats: Dictionary) -> String:
+	var next_level_total = int(stats.get("next_level_exp", -1))
+	if next_level_total < 0:
+		return "经验 已满"
+	var exp = max(0, int(stats.get("exp", 0)))
+	var total_exp = max(0, int(stats.get("total_exp", 0)))
+	var level_start = max(0, total_exp - exp)
+	var required = max(0, next_level_total - level_start)
+	return "经验 %d/%d" % [exp, required]
 
 func _refresh_equipment_rows() -> void:
 	_clear_equipment_rows()
