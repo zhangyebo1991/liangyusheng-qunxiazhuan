@@ -34,6 +34,20 @@ func run(assertions) -> void:
 	assertions.assert_eq(result.get("items", [])[0].get("id", ""), "herb_small", "结果应记录物品编号")
 	assertions.assert_eq(result.get("coins", 0), 15, "结果应记录铜钱总数")
 
+	var recruit_result = effect_system.apply_effects(state, [
+		{"type": "add_party_member", "actor_id": "qingshanke"}
+	])
+	var recruited_members: Array = recruit_result.get("party_members", [])
+	assertions.assert_true(bool(recruit_result.get("success", false)), "add_party_member 应成功招募青衫客")
+	assertions.assert_true(state.party.has_member("qingshanke"), "青衫客应加入队伍")
+	assertions.assert_eq(recruited_members[0] if not recruited_members.is_empty() else "", "qingshanke", "效果结果应记录入队成员")
+
+	var duplicate_recruit = effect_system.apply_effects(state, [
+		{"type": "add_party_member", "actor_id": "qingshanke"}
+	])
+	assertions.assert_true(bool(duplicate_recruit.get("success", false)), "重复招募应幂等成功")
+	assertions.assert_eq(state.party.members.count("qingshanke"), 1, "重复招募不应重复添加成员")
+
 	var remove_result = effect_system.apply_effects(state, [
 		{"type": "remove_item", "item_id": "herb_small", "amount": 1}
 	])

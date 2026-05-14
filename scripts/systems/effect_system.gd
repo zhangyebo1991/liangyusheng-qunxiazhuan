@@ -52,6 +52,8 @@ func apply_effect(game_state, effect: Variant, _context: Dictionary = {}) -> Dic
 			_apply_resolve_map_object(result, game_state, effect)
 		"add_martial_proficiency":
 			_apply_add_martial_proficiency(result, game_state, effect)
+		"add_party_member":
+			_apply_add_party_member(result, game_state, effect)
 		"restore_mp":
 			_apply_restore_mp(result, game_state, effect)
 		"rest_at_inn":
@@ -167,6 +169,24 @@ func _apply_add_martial_proficiency(result: Dictionary, game_state, effect: Dict
 	martial.append({"id": martial_art_id, "amount": amount, "current": current})
 	_mark_applied(result, "武学熟练度提升：%s +%d" % [martial_art_id, amount])
 
+func _apply_add_party_member(result: Dictionary, game_state, effect: Dictionary) -> void:
+	var actor_id = str(effect.get("actor_id", ""))
+	if actor_id.is_empty():
+		_add_error(result, "队友效果缺少角色编号。")
+		return
+	if game_state.party == null:
+		_add_error(result, "队伍状态缺失。")
+		return
+	if game_state.has_method("actor_exists") and not game_state.actor_exists(actor_id):
+		_add_error(result, "角色不存在：%s" % actor_id)
+		return
+	game_state.party.add_member(actor_id)
+	if game_state.has_method("initialize_party_member_status"):
+		game_state.initialize_party_member_status(actor_id)
+	var members: Array = result["party_members"]
+	members.append(actor_id)
+	_mark_applied(result, "队友加入：%s" % actor_id)
+
 func _apply_add_rumor(result: Dictionary, game_state, effect: Dictionary, context: Dictionary) -> void:
 	var journal_state = _get_journal_state(game_state)
 	if journal_state == null:
@@ -266,6 +286,7 @@ func _empty_result() -> Dictionary:
 		"quests": [],
 		"resolved_objects": [],
 		"martial_proficiency": [],
+		"party_members": [],
 		"rumors": [],
 		"triggered_rumors": [],
 	}
@@ -285,7 +306,7 @@ func _merge_result(target: Dictionary, source: Dictionary) -> void:
 	target["applied"] = int(target.get("applied", 0)) + int(source.get("applied", 0))
 	target["failed"] = int(target.get("failed", 0)) + int(source.get("failed", 0))
 	target["coins"] = int(target.get("coins", 0)) + int(source.get("coins", 0))
-	for key in ["messages", "errors", "items", "removed_items", "flags", "quests", "resolved_objects", "martial_proficiency", "rumors", "triggered_rumors"]:
+	for key in ["messages", "errors", "items", "removed_items", "flags", "quests", "resolved_objects", "martial_proficiency", "party_members", "rumors", "triggered_rumors"]:
 		var target_values: Array = target[key]
 		for value in source.get(key, []):
 			target_values.append(value)

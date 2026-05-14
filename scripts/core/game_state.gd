@@ -47,6 +47,27 @@ func start_new_game() -> void:
 	if is_inside_tree() and has_node("/root/EventBus"):
 		get_node("/root/EventBus").game_started.emit()
 
+func actor_exists(actor_id: String) -> bool:
+	return not _get_actor_data(actor_id).is_empty()
+
+func initialize_party_member_status(actor_id: String) -> void:
+	if party == null or actor_id.is_empty() or not party.has_member(actor_id):
+		return
+	if not party.get_member_status(actor_id).is_empty():
+		return
+	var actor = _get_actor_data(actor_id)
+	if actor.is_empty():
+		return
+	var max_hp = max(1, int(actor.get("max_hp", actor.get("hp", 1))))
+	var max_mp = max(0, int(actor.get("max_mp", 0)))
+	party.set_member_status(actor_id, {"hp": max_hp, "mp": max_mp})
+	if actor_id == "hero_yun":
+		hero_max_hp = max_hp
+		hero_hp = max_hp
+		if max_mp > 0:
+			hero_max_mp = max_mp
+		hero_cur_mp = hero_max_mp
+
 func set_player_position(position: Vector2) -> void:
 	map_state.set_player_position(position)
 
@@ -175,6 +196,7 @@ func apply_battle_result(result: Dictionary) -> void:
 			set_hero_cur_mp(final_mp)
 	if result.has("hero_hp"):
 		hero_hp = int(result.get("hero_hp", hero_hp))
+	_apply_party_member_results(result.get("party_member_results", {}))
 
 	if bool(result.get("victory", false)):
 		_normalize_hero_hp()
@@ -298,6 +320,31 @@ func _read_martial_proficiency(value: Variant) -> Dictionary:
 		if amount > 0:
 			result[normalized_id] = amount
 	return result
+
+func _apply_party_member_results(value: Variant) -> void:
+	if party == null or typeof(value) != TYPE_DICTIONARY:
+		return
+	for actor_id in value.keys():
+		var raw_status = value[actor_id]
+		if typeof(raw_status) != TYPE_DICTIONARY:
+			continue
+		var normalized_id = str(actor_id)
+		if not party.has_member(normalized_id):
+			continue
+		party.set_member_status(normalized_id, {"hp": int(raw_status.get("hp", 0)), "mp": int(raw_status.get("mp", 0))})
+		if normalized_id == "hero_yun":
+			hero_hp = int(raw_status.get("hp", hero_hp))
+			set_hero_cur_mp(int(raw_status.get("mp", hero_cur_mp)))
+
+func _get_actor_data(actor_id: String) -> Dictionary:
+	if actor_id.is_empty():
+		return {}
+	if is_inside_tree() and has_node("/root/DataRepository"):
+		return get_node("/root/DataRepository").get_actor(actor_id)
+	var repository = DataRepositoryScript.new()
+	var actor = repository.get_actor(actor_id)
+	repository.free()
+	return actor if typeof(actor) == TYPE_DICTIONARY else {}
 
 func _get_map_data(map_id: String) -> Dictionary:
 	if map_id.is_empty():
