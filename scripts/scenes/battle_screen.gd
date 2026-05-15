@@ -15,6 +15,7 @@ const BattlePanelActorScript = preload("res://scripts/scenes/battle_panel_actor.
 const BattleLogScript = preload("res://scripts/scenes/battle_log.gd")
 const ProficiencySystemScript = preload("res://scripts/systems/proficiency_system.gd")
 const BattleFeedbackDirectorScript = preload("res://scripts/systems/battle_feedback_director.gd")
+const TacticalAIScript = preload("res://scripts/systems/tactical_ai.gd")
 const TACTICAL_CELL_SIZE := 80  # 与 battle_grid TILE_SIZE 一致
 const TACTICAL_GRID_OFFSET := Vector2.ZERO
 # v0.x: 16×9 棋盘 × 80px = 1280×720，铺满战斗视口。
@@ -82,6 +83,9 @@ func _ready() -> void:
 	is_tactical_mode = str(context.get("battle_mode", "")) == "tactical"
 	if is_tactical_mode:
 		tactical_combat_system.set_repository(DataRepository)
+		var tactical_ai = TacticalAIScript.new()
+		tactical_ai.set_repository(DataRepository)
+		tactical_combat_system.set_tactical_ai(tactical_ai)
 		_connect_tactical_proficiency()
 		tactical_battle_state = tactical_combat_system.create_battle(GameState, context, DataRepository)
 		_create_tactical_ui()
@@ -215,6 +219,8 @@ func _create_tactical_ui() -> void:
 	EventBus.tactical_log_appended.connect(_on_tactical_log_appended)
 	_refresh_terrain_panels_for_current_actor()
 	_refresh_actor_panel()
+	# 初始化模式 UI
+	_update_mode_ui()
 
 func _build_unit_sprites() -> void:
 	# 为 tactical_battle_state.units 中每个单位创建一个 TacticalUnitSprite，
@@ -993,10 +999,29 @@ func _input(event: InputEvent) -> void:
 		_focus_next_distinct_terrain()
 		accept_event()
 		return
+	# A 键切换自动/手动战斗模式
+	if event is InputEventKey and event.pressed and event.keycode == KEY_A:
+		_toggle_auto_mode()
+		accept_event()
+		return
 	# v0.x: 未提交「攻击/技能/待机」前按 ESC 可撤销本回合的移动，回到移动前位置。
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		if _try_undo_move():
 			accept_event()
+
+func _toggle_auto_mode() -> void:
+	if tactical_battle_state == null:
+		return
+	tactical_battle_state.auto_battle_mode.toggle()
+	var mode_text = "自动" if tactical_battle_state.auto_battle_mode.is_auto else "手动"
+	_on_tactical_log_appended("切换到%s战斗模式" % mode_text)
+	_update_mode_ui()
+
+func _update_mode_ui() -> void:
+	if status_label == null or tactical_battle_state == null:
+		return
+	var mode_text = "自动" if tactical_battle_state.auto_battle_mode.is_auto else "手动"
+	status_label.text = "模式: %s [按 A 切换]" % mode_text
 
 func _focus_next_distinct_terrain() -> void:
 	if tactical_battle_state == null:

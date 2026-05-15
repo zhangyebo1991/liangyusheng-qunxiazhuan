@@ -5,11 +5,13 @@ const TacticalUnitStateScript = preload("res://scripts/domain/tactical_unit_stat
 const MartialArtRecordScript = preload("res://scripts/domain/martial_art_record.gd")
 const ProficiencySystemScript = preload("res://scripts/systems/proficiency_system.gd")
 const ActorStatsSystemScript = preload("res://scripts/systems/actor_stats_system.gd")
+const TacticalAIScript = preload("res://scripts/systems/tactical_ai.gd")
 
 var repository = null
 var _proficiency_system = null
 var _proficiency_map: Dictionary = {}
 var _actor_stats_system = ActorStatsSystemScript.new()
+var _tactical_ai = null
 
 func set_repository(next_repository) -> void:
 	repository = next_repository
@@ -17,6 +19,9 @@ func set_repository(next_repository) -> void:
 func set_proficiency(proficiency_system, proficiency_map: Dictionary) -> void:
 	_proficiency_system = proficiency_system
 	_proficiency_map = proficiency_map
+
+func set_tactical_ai(tactical_ai) -> void:
+	_tactical_ai = tactical_ai
 
 func create_battle(game_state, context: Dictionary, data_source = null):
 	var source = data_source if data_source != null else repository
@@ -69,6 +74,8 @@ func create_battle(game_state, context: Dictionary, data_source = null):
 	if not battle.has_living_team(TacticalBattleStateScript.TEAM_ENEMY):
 		_log(battle, "敌方单位缺失。")
 		battle.finish(true)
+	if _tactical_ai != null:
+		_tactical_ai.set_repository(source)
 	return battle
 
 func advance_charge(battle, delta: float) -> void:
@@ -81,6 +88,8 @@ func advance_charge(battle, delta: float) -> void:
 	var ready = get_ready_unit(battle)
 	if ready != null:
 		begin_unit_action(battle, ready.unit_id)
+		if battle.auto_battle_mode.is_auto and ready.team == TacticalBattleStateScript.TEAM_PLAYER:
+			_resolve_auto_action(battle, ready)
 
 func get_ready_unit(battle):
 	return get_ready_unit_excluding(battle, "")
@@ -554,6 +563,28 @@ func resolve_enemy_action(battle, unit_id: String) -> Dictionary:
 	if not battle.is_finished:
 		end_unit_action(battle, unit.unit_id)
 	return {"success": true, "message": "敌人已经行动。"}
+
+func _resolve_auto_action(battle, unit) -> void:
+	if _tactical_ai == null:
+		_log(battle, "AI 系统未初始化。")
+		end_unit_action(battle, unit.unit_id)
+		return
+	var action = _tactical_ai.evaluate(unit, battle)
+	if not action.get("success", false):
+		_log(battle, "AI 决策失败：%s" % str(action.get("message", "未知错误")))
+		end_unit_action(battle, unit.unit_id)
+		return
+	var move_to = action.get("move_to", unit.cell)
+	var use_skill = str(action.get("use_skill", "attack"))
+	var target = action.get("target", Vector2i.ZERO)
+	move_unit(battle, unit.unit_id, move_to)
+	var target_cells = [target]
+	var result = resolve_action(battle, unit.unit_id, use_skill, target_cells)
+	if result.get("success", false):
+		_log(battle, "%s 自动行动完成。" % unit.display_name)
+	else:
+		_log(battle, "%s 自动行动失败：%s" % [unit.display_name, str(result.get("message", "未知错误"))])
+	end_unit_action(battle, unit.unit_id)
 
 func resolve_retreat(battle) -> Dictionary:
 	if battle == null:
