@@ -24,6 +24,7 @@ var quest_id: String = ""
 var reward_martial_art_id: String = "basic_sword"
 var proficiency_reward: int = 1
 var victory_rewards: Dictionary = {}
+var auto_battle_mode: AutoBattleMode = AutoBattleMode.new()
 
 func add_unit(unit) -> void:
 	if unit == null:
@@ -75,6 +76,7 @@ func to_result_dictionary() -> Dictionary:
 		"martial_art_id": reward_martial_art_id,
 		"proficiency_reward": max(0, proficiency_reward),
 		"log": log.duplicate(),
+		"auto_battle_mode": auto_battle_mode.to_dictionary(),
 	}
 
 func _get_hero_final_mp() -> int:
@@ -121,7 +123,32 @@ func to_dictionary() -> Dictionary:
 		"victory_rewards": victory_rewards.duplicate(true),
 		"reward_martial_art_id": reward_martial_art_id,
 		"proficiency_reward": proficiency_reward,
+		"auto_battle_mode": auto_battle_mode.to_dictionary(),
 	}
+
+func load_from_dictionary(data: Dictionary) -> void:
+	battlefield_width = int(data.get("battlefield_width", 7))
+	battlefield_height = int(data.get("battlefield_height", 5))
+	time_mode = str(data.get("time_mode", TIME_MODE_PAUSE_ON_ACTION))
+	terrain_grid = data.get("terrain_grid", [])
+	current_unit_id = str(data.get("current_unit_id", ""))
+	is_action_phase = bool(data.get("is_action_phase", false))
+	is_finished = bool(data.get("is_finished", false))
+	victory = bool(data.get("victory", false))
+	log.clear()
+	var log_data = data.get("log", [])
+	if typeof(log_data) == TYPE_ARRAY:
+		for item in log_data:
+			log.append(str(item))
+	source_map_id = str(data.get("source_map_id", "mountain_pass"))
+	source_object_id = str(data.get("source_object_id", ""))
+	quest_id = str(data.get("quest_id", ""))
+	reward_martial_art_id = str(data.get("reward_martial_art_id", "basic_sword"))
+	proficiency_reward = int(data.get("proficiency_reward", 1))
+	victory_rewards = data.get("victory_rewards", {})
+	var auto_data = data.get("auto_battle_mode", {})
+	if typeof(auto_data) == TYPE_DICTIONARY:
+		auto_battle_mode.from_dictionary(auto_data)
 
 func _first_player_unit():
 	for unit in units:

@@ -66,6 +66,7 @@ const TestTacticalRangeSurroundScript = preload("res://tests/test_tactical_range
 const TestTacticalRangePierceScript = preload("res://tests/test_tactical_range_pierce.gd")
 const TestTacticalRangeRingScript = preload("res://tests/test_tactical_range_ring.gd")
 const TestNewMartialArtsDataScript = preload("res://tests/test_new_martial_arts_data.gd")
+const TestAutoBattleModeScript = preload("res://tests/test_auto_battle_mode.gd")
 
 func _initialize() -> void:
 	# _initialize 阶段 root 尚未进入树；deferred 后执行可让依赖 SceneTree 的测试稳定运行。
@@ -139,6 +140,7 @@ func _run_all_suites() -> void:
 		TestTacticalRangePierceScript.new(),
 		TestTacticalRangeRingScript.new(),
 		TestNewMartialArtsDataScript.new(),
+		TestAutoBattleModeScript.new(),
 	]
 
 	for suite in suites:
