@@ -1441,6 +1441,22 @@ func _try_undo_move() -> bool:
 	_refresh_tactical()
 	return true
 
+# 统一的目标格展开：根据招式 shape 将 AI 选定的单个目标格展开为实际影响范围。
+# 自动战斗与手动操作共用此方法，确保同一招式走相同的 target_cells → resolve_action 路径。
+func _expand_target_cells_for_skill(skill_id: String, target: Vector2i) -> Array:
+	if skill_id == "attack":
+		return [target]
+	if tactical_battle_state == null or tactical_combat_system.repository == null:
+		return [target]
+	var sd: Dictionary = tactical_combat_system.repository.get_martial_art(skill_id)
+	if sd.is_empty():
+		return [target]
+	var shape := _skill_shape_for_data(sd)
+	if shape == "target_cross_1":
+		return tactical_range_system.get_skill_target_blast_range(skill_id, target, tactical_battle_state.terrain_grid)
+	# diamond / line / fan / pierce / surround / ring：target 为单格，resolve_action 内部验证范围。
+	return [target]
+
 # 工具：在 movable_cells 列表里查 target_cell（{q,r} dict 形式）是否存在。
 func _cell_in_list(target_cell: Dictionary, list: Array) -> bool:
 	var tq: int = int(target_cell.get("q", -999))
@@ -1568,6 +1584,8 @@ func _on_auto_move_delay_done() -> void:
 	if unit == null or not unit.is_alive():
 		_reset_auto_action()
 		return
+	# 移动动画开始前清除 MOVE overlay，避免蓝色高亮残留在怪脚下。
+	_set_range_mode(RangeMode.NONE, [])
 	var move_to: Dictionary = _auto_action_data["move_to"]
 	var started := _start_move_animation(unit, move_to)
 	if not started:
@@ -1580,10 +1598,34 @@ func _proceed_auto_after_move() -> void:
 		_reset_auto_action()
 		return
 	var target: Vector2i = _auto_action_data["target"]
-	_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, [target])
+	var use_skill: String = _auto_action_data["use_skill"]
+	# 移动后验证目标是否在攻击范围内；不在则跳过红点预览，直接结束行动。
+	var unit = tactical_battle_state.get_unit(_pending_auto_unit_id) if not _pending_auto_unit_id.is_empty() else null
+	if unit != null and not _is_auto_target_in_range(unit, use_skill, target):
+		_set_range_mode(RangeMode.NONE, [])
+		_refresh_tactical()
+		if not tactical_battle_state.is_finished:
+			tactical_combat_system.end_unit_action(tactical_battle_state, str(unit.unit_id))
+		_reset_auto_action()
+		_return_if_tactical_finished()
+		return
+	var preview_cells: Array = _expand_target_cells_for_skill(use_skill, target)
+	_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, preview_cells)
 	_refresh_tactical()
 	_auto_action_step = 2
 	get_tree().create_timer(0.3).timeout.connect(_on_auto_skill_delay_done, CONNECT_ONE_SHOT)
+
+func _is_auto_target_in_range(unit, skill_id: String, target: Vector2i) -> bool:
+	if skill_id == "attack":
+		var unit_pos := Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0)))
+		var dist: int = abs(unit_pos.x - target.x) + abs(unit_pos.y - target.y)
+		return dist > 0 and dist <= int(unit.attack_range)
+	var attackable = tactical_combat_system.get_attackable_units_for_martial_art(
+		tactical_battle_state, str(unit.unit_id), skill_id, DataRepository)
+	for u in attackable:
+		if Vector2i(int(u.cell.get("q", 0)), int(u.cell.get("r", 0))) == target:
+			return true
+	return false
 
 func _on_auto_skill_delay_done() -> void:
 	if tactical_battle_state == null or tactical_battle_state.is_finished or _pending_auto_unit_id.is_empty():
@@ -1593,7 +1635,9 @@ func _on_auto_skill_delay_done() -> void:
 	var display_name: String = _auto_action_data["display_name"]
 	var use_skill: String = _auto_action_data["use_skill"]
 	var target: Vector2i = _auto_action_data["target"]
-	var result = tactical_combat_system.resolve_action(tactical_battle_state, unit_id, use_skill, [target])
+	var target_cells: Array = _expand_target_cells_for_skill(use_skill, target)
+	# 复用与手动操作相同的 resolve_action 路径，确保范围验证一致。
+	var result = tactical_combat_system.resolve_action(tactical_battle_state, unit_id, use_skill, target_cells)
 	if result.get("success", false):
 		var use_name = use_skill
 		if use_skill != "attack" and tactical_combat_system.repository != null:

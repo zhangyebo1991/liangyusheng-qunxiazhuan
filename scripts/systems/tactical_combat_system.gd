@@ -506,6 +506,11 @@ func _axis_sign(value: int) -> int:
 func _resolve_basic_attack(battle, attacker, target_cells: Array) -> Dictionary:
 	var hits: Array = []
 	for cell_v in target_cells:
+		# 范围验证：目标格必须在攻击距离内（曼哈顿距离 ≤ attack_range）。
+		if typeof(cell_v) == TYPE_VECTOR2I:
+			var dist := _cell_distance_to_vector(attacker.cell, cell_v)
+			if dist <= 0 or dist > int(attacker.attack_range):
+				continue
 		var defender = _find_unit_at_cell_v(battle, cell_v)
 		if defender == null or defender.team == attacker.team or not defender.is_alive():
 			continue
