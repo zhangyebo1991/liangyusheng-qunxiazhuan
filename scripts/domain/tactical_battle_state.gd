@@ -126,11 +126,19 @@ func to_dictionary() -> Dictionary:
 		"auto_battle_mode": auto_battle_mode.to_dictionary(),
 	}
 
-func load_from_dictionary(data: Dictionary) -> void:
+func from_dictionary(data: Dictionary) -> void:
 	battlefield_width = int(data.get("battlefield_width", 7))
 	battlefield_height = int(data.get("battlefield_height", 5))
 	time_mode = str(data.get("time_mode", TIME_MODE_PAUSE_ON_ACTION))
 	terrain_grid = data.get("terrain_grid", [])
+	units.clear()
+	var units_data = data.get("units", [])
+	if typeof(units_data) == TYPE_ARRAY:
+		for unit_data in units_data:
+			if typeof(unit_data) == TYPE_DICTIONARY:
+				var unit = TacticalUnitState.new()
+				unit.from_dictionary(unit_data)
+				units.append(unit)
 	current_unit_id = str(data.get("current_unit_id", ""))
 	is_action_phase = bool(data.get("is_action_phase", false))
 	is_finished = bool(data.get("is_finished", false))

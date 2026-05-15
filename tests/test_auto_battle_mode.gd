@@ -52,14 +52,14 @@ func run(assertions) -> void:
 		"结果序列化应包含 auto_battle_mode"
 	)
 
-	# load_from_dictionary
+	# from_dictionary
 	var battle2 = TacticalBattleState.new()
-	battle2.load_from_dictionary({
+	battle2.from_dictionary({
 		"auto_battle_mode": {"is_auto": true}
 	})
 	assertions.assert_true(battle2.auto_battle_mode.is_auto, "反序列化应恢复 auto_battle_mode")
 
-	# load_from_dictionary 缺少 auto_battle_mode
+	# from_dictionary 缺少 auto_battle_mode
 	var battle3 = TacticalBattleState.new()
-	battle3.load_from_dictionary({})
+	battle3.from_dictionary({})
 	assertions.assert_false(battle3.auto_battle_mode.is_auto, "缺少字段时应默认为手动模式")
