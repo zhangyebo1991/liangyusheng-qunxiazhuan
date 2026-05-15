@@ -110,6 +110,9 @@ func _process(delta: float) -> void:
 	if not tactical_battle_state.is_action_phase:
 		tactical_combat_system.advance_charge(tactical_battle_state, delta)
 		_refresh_tactical()
+		_return_if_tactical_finished()
+		if tactical_battle_state.is_finished:
+			return
 	if tactical_battle_state.is_action_phase:
 		var unit = tactical_battle_state.get_unit(tactical_battle_state.current_unit_id)
 		if unit != null and unit.team == TacticalBattleStateScript.TEAM_ENEMY:
