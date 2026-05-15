@@ -1579,12 +1579,9 @@ func _proceed_auto_after_move() -> void:
 	if tactical_battle_state == null or tactical_battle_state.is_finished:
 		_reset_auto_action()
 		return
-	var use_skill: String = _auto_action_data["use_skill"]
 	var target: Vector2i = _auto_action_data["target"]
-	var skill_overlay: Array = _get_skill_target_overlay(use_skill, target)
-	if not skill_overlay.is_empty():
-		_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, skill_overlay)
-		_refresh_tactical()
+	_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, [target])
+	_refresh_tactical()
 	_auto_action_step = 2
 	get_tree().create_timer(0.3).timeout.connect(_on_auto_skill_delay_done, CONNECT_ONE_SHOT)
 
@@ -1616,41 +1613,6 @@ func _reset_auto_action() -> void:
 	_auto_action_step = 0
 	_auto_action_data = {}
 	_set_range_mode(RangeMode.NONE, [])
-
-func _get_skill_target_overlay(skill_id: String, center: Vector2i) -> Array:
-	if tactical_battle_state == null:
-		return []
-	var skill_data: Dictionary = {}
-	if tactical_combat_system.repository != null and skill_id != "attack":
-		skill_data = tactical_combat_system.repository.get_martial_art(skill_id)
-	var shape: String = "diamond"
-	var range_val: int = 1
-	if not skill_data.is_empty():
-		var tactical = skill_data.get("tactical", {})
-		shape = str(tactical.get("range_shape", "diamond"))
-		range_val = int(tactical.get("range", 1))
-	var cells: Array = []
-	var w = tactical_battle_state.battlefield_width
-	var h = tactical_battle_state.battlefield_height
-	for q in range(w):
-		for r in range(h):
-			var v = Vector2i(q, r)
-			if _is_in_range_shape(center, v, shape, range_val):
-				cells.append(v)
-	return cells
-
-func _is_in_range_shape(from: Vector2i, to: Vector2i, shape: String, range_val: int) -> bool:
-	var dq = abs(from.x - to.x)
-	var dr = abs(from.y - to.y)
-	match shape:
-		"diamond":
-			return dq + dr <= range_val and (dq + dr) > 0
-		"line":
-			return (dq == 0 or dr == 0) and (dq + dr) <= range_val and (dq + dr) > 0
-		"surround":
-			return dq <= range_val and dr <= range_val and (dq + dr) > 0
-		_:
-			return dq + dr <= range_val and (dq + dr) > 0
 
 func _pick_enemy_target(enemy_unit):
 	if tactical_battle_state == null or enemy_unit == null:
