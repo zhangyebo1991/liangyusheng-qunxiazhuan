@@ -70,6 +70,7 @@ var _has_moved_this_action := false
 var _pre_move_cell: Dictionary = {}
 var _last_action_unit_id: String = ""
 var _pending_enemy_move_unit_id: String = ""
+var _pending_auto_unit_id: String = ""
 var _feedback_director = null
 var _feedback_hitstop_sec := 0.0
 var reward_panel: PanelContainer
@@ -118,6 +119,9 @@ func _process(delta: float) -> void:
 		if unit != null and unit.team == TacticalBattleStateScript.TEAM_ENEMY:
 			if _pending_enemy_move_unit_id.is_empty():
 				_run_enemy_action_with_animation(unit)
+		elif unit != null and unit.team == TacticalBattleStateScript.TEAM_PLAYER and tactical_battle_state.auto_battle_mode.is_auto:
+			if _pending_auto_unit_id.is_empty():
+				_run_auto_action_with_animation(unit)
 	_refresh_charge_bar()
 	_poll_terrain_hover()
 
@@ -1389,18 +1393,24 @@ func _on_move_animation_done(unit_id: String, from_q: int, from_r: int) -> void:
 	if target_cell.is_empty():
 		_refresh_tactical()
 		return
-	# v0.x: 记录本回合移动前位置，供 ESC 撤销使用；并锁定「本回合不能再移动」。
-	var result: Dictionary = tactical_combat_system.move_unit(tactical_battle_state, unit_id, target_cell)
-	if bool(result.get("success", false)):
-		var to_cell := Vector2i(int(target_cell.get("q", 0)), int(target_cell.get("r", 0)))
-		EventBus.tactical_unit_moved.emit(unit_id, Vector2i(from_q, from_r), to_cell)
-		_has_moved_this_action = true
-		_pre_move_cell = {"q": from_q, "r": from_r}
+	var to_q: int = int(target_cell.get("q", 0))
+	var to_r: int = int(target_cell.get("r", 0))
+	tactical_combat_system.move_unit(tactical_battle_state, unit_id, target_cell)
+	EventBus.tactical_unit_moved.emit(unit_id, Vector2i(from_q, from_r), Vector2i(to_q, to_r))
+	# 自动战斗移动完成 → 继续技能阶段
+	if unit_id == _pending_auto_unit_id and _auto_action_step == 1:
+		_set_range_mode(RangeMode.NONE, [])
+		_refresh_tactical()
+		_proceed_auto_after_move()
+		return
+	# 敌人移动完成 → 继续攻击
 	if unit_id == _pending_enemy_move_unit_id:
 		_pending_enemy_move_unit_id = ""
 		_resolve_enemy_post_move(unit_id)
 		return
-	# v0.x: 移动落地后清 range_mode，避免高亮残留、避免玩家连点又动。
+	# 玩家手动移动
+	_has_moved_this_action = true
+	_pre_move_cell = {"q": from_q, "r": from_r}
 	_set_range_mode(RangeMode.NONE, [])
 	_refresh_tactical()
 	_return_if_tactical_finished()
@@ -1509,6 +1519,138 @@ func _resolve_enemy_post_move(enemy_id: String) -> void:
 	_set_range_mode(RangeMode.NONE, [])
 	_refresh_tactical()
 	_return_if_tactical_finished()
+
+var _auto_action_step: int = 0  # 0=idle, 1=waiting move anim, 2=waiting skill delay
+var _auto_action_data: Dictionary = {}
+
+func _run_auto_action_with_animation(unit) -> void:
+	if unit == null or tactical_battle_state == null:
+		return
+	var ai = tactical_combat_system._tactical_ai
+	if ai == null:
+		tactical_combat_system.end_unit_action(tactical_battle_state, str(unit.unit_id))
+		_refresh_tactical()
+		return
+	var action = ai.evaluate(unit, tactical_battle_state)
+	if not action.get("success", false):
+		tactical_combat_system.end_unit_action(tactical_battle_state, str(unit.unit_id))
+		_refresh_tactical()
+		return
+	_pending_auto_unit_id = str(unit.unit_id)
+	_auto_action_data = {
+		"unit_id": str(unit.unit_id),
+		"display_name": str(unit.display_name),
+		"move_to": action.get("move_to", {}),
+		"use_skill": str(action.get("use_skill", "attack")),
+		"target": action.get("target", Vector2i.ZERO),
+		"step": "move_show",
+	}
+	var move_to: Dictionary = _auto_action_data["move_to"]
+	if not move_to.is_empty() and _cell_distance_dict(unit.cell, move_to) > 0:
+		var movable: Array = tactical_combat_system.get_movable_cells(tactical_battle_state, str(unit.unit_id))
+		var move_overlay: Array = []
+		for c in movable:
+			if typeof(c) == TYPE_DICTIONARY:
+				move_overlay.append(Vector2i(int(c.get("q", 0)), int(c.get("r", 0))))
+		_set_range_mode(RangeMode.MOVE, move_overlay)
+		_refresh_tactical()
+		_auto_action_step = 1
+		get_tree().create_timer(0.25).timeout.connect(_on_auto_move_delay_done, CONNECT_ONE_SHOT)
+	else:
+		_auto_action_step = 2
+		get_tree().create_timer(0.15).timeout.connect(_on_auto_skill_delay_done, CONNECT_ONE_SHOT)
+
+func _on_auto_move_delay_done() -> void:
+	if tactical_battle_state == null or _pending_auto_unit_id.is_empty():
+		_reset_auto_action()
+		return
+	var unit = tactical_battle_state.get_unit(_pending_auto_unit_id)
+	if unit == null or not unit.is_alive():
+		_reset_auto_action()
+		return
+	var move_to: Dictionary = _auto_action_data["move_to"]
+	var started := _start_move_animation(unit, move_to)
+	if not started:
+		tactical_combat_system.move_unit(tactical_battle_state, _pending_auto_unit_id, move_to)
+		_refresh_tactical()
+		_proceed_auto_after_move()
+
+func _proceed_auto_after_move() -> void:
+	if tactical_battle_state == null or tactical_battle_state.is_finished:
+		_reset_auto_action()
+		return
+	var use_skill: String = _auto_action_data["use_skill"]
+	var target: Vector2i = _auto_action_data["target"]
+	var skill_overlay: Array = _get_skill_target_overlay(use_skill, target)
+	if not skill_overlay.is_empty():
+		_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, skill_overlay)
+		_refresh_tactical()
+	_auto_action_step = 2
+	get_tree().create_timer(0.3).timeout.connect(_on_auto_skill_delay_done, CONNECT_ONE_SHOT)
+
+func _on_auto_skill_delay_done() -> void:
+	if tactical_battle_state == null or tactical_battle_state.is_finished or _pending_auto_unit_id.is_empty():
+		_reset_auto_action()
+		return
+	var unit_id: String = _auto_action_data["unit_id"]
+	var display_name: String = _auto_action_data["display_name"]
+	var use_skill: String = _auto_action_data["use_skill"]
+	var target: Vector2i = _auto_action_data["target"]
+	var result = tactical_combat_system.resolve_action(tactical_battle_state, unit_id, use_skill, [target])
+	if result.get("success", false):
+		var use_name = use_skill
+		if use_skill != "attack" and tactical_combat_system.repository != null:
+			var sd = tactical_combat_system.repository.get_martial_art(use_skill)
+			if not sd.is_empty():
+				use_name = str(sd.get("name", use_skill))
+		tactical_battle_state.append_log("【自动】%s 使用 %s" % [display_name, use_name])
+	_set_range_mode(RangeMode.NONE, [])
+	_refresh_tactical()
+	if not tactical_battle_state.is_finished:
+		tactical_combat_system.end_unit_action(tactical_battle_state, unit_id)
+	_reset_auto_action()
+	_return_if_tactical_finished()
+
+func _reset_auto_action() -> void:
+	_pending_auto_unit_id = ""
+	_auto_action_step = 0
+	_auto_action_data = {}
+	_set_range_mode(RangeMode.NONE, [])
+
+func _get_skill_target_overlay(skill_id: String, center: Vector2i) -> Array:
+	if tactical_battle_state == null:
+		return []
+	var skill_data: Dictionary = {}
+	if tactical_combat_system.repository != null and skill_id != "attack":
+		skill_data = tactical_combat_system.repository.get_martial_art(skill_id)
+	var shape: String = "diamond"
+	var range_val: int = 1
+	if not skill_data.is_empty():
+		var tactical = skill_data.get("tactical", {})
+		shape = str(tactical.get("range_shape", "diamond"))
+		range_val = int(tactical.get("range", 1))
+	var cells: Array = []
+	var w = tactical_battle_state.battlefield_width
+	var h = tactical_battle_state.battlefield_height
+	for q in range(w):
+		for r in range(h):
+			var v = Vector2i(q, r)
+			if _is_in_range_shape(center, v, shape, range_val):
+				cells.append(v)
+	return cells
+
+func _is_in_range_shape(from: Vector2i, to: Vector2i, shape: String, range_val: int) -> bool:
+	var dq = abs(from.x - to.x)
+	var dr = abs(from.y - to.y)
+	match shape:
+		"diamond":
+			return dq + dr <= range_val and (dq + dr) > 0
+		"line":
+			return (dq == 0 or dr == 0) and (dq + dr) <= range_val and (dq + dr) > 0
+		"surround":
+			return dq <= range_val and dr <= range_val and (dq + dr) > 0
+		_:
+			return dq + dr <= range_val and (dq + dr) > 0
 
 func _pick_enemy_target(enemy_unit):
 	if tactical_battle_state == null or enemy_unit == null:

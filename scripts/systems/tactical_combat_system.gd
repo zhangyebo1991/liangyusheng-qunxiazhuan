@@ -88,8 +88,6 @@ func advance_charge(battle, delta: float) -> void:
 	var ready = get_ready_unit(battle)
 	if ready != null:
 		begin_unit_action(battle, ready.unit_id)
-		if battle.auto_battle_mode.is_auto and ready.team == TacticalBattleStateScript.TEAM_PLAYER:
-			_resolve_auto_action(battle, ready)
 
 func get_ready_unit(battle):
 	return get_ready_unit_excluding(battle, "")
