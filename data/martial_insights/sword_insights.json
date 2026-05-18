@@ -1,0 +1,18 @@
+{
+  "insights": [
+    {
+      "id": "sword_whirlwind",
+      "name": "旋风剑领悟",
+      "conditions": [
+        {"type": "skill_proficiency", "skill": "basic_sword", "min": 30},
+        {"type": "skill_used_count", "skill": "basic_sword", "min": 50},
+        {"type": "random", "chance": 0.1}
+      ],
+      "trigger_scene": "combat",
+      "result": {
+        "unlock": "sword_whirlwind",
+        "message": "实战中你领悟了「旋风剑」！"
+      }
+    }
+  ]
+}

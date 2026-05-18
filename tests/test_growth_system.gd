@@ -73,3 +73,16 @@ func run_inner_art_tests(assertions) -> void:
 	var effects = manager2.get_active_effects()
 	assertions.assert_eq(int(effects.get("max_mp", 0)), 3, "1级静心诀应增加3内力上限")
 	assertions.assert_eq(int(effects.get("mp_regen", 0)), 1, "1级静心诀应增加1内力回复")
+
+	run_insight_tests(assertions)
+
+func run_insight_tests(assertions) -> void:
+	var GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")
+
+	var manager = GrowthManagerScript.new()
+	var context = {
+		"skill_proficiency": {"basic_sword": 50},
+		"skill_used_count": {"basic_sword": 100}
+	}
+	var result = manager.insights.check_triggers("combat", context)
+	assertions.assert_true(result.is_empty() or result.has("triggered"), "领悟触发检查应返回正确格式")
