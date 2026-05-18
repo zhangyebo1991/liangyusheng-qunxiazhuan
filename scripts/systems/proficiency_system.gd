@@ -1,5 +1,19 @@
 extends RefCounted
 
+var _proficiency_points: int = 0
+
+func add_proficiency_points(amount: int) -> void:
+	_proficiency_points += amount
+
+func spend_proficiency_points(amount: int) -> bool:
+	if _proficiency_points >= amount:
+		_proficiency_points -= amount
+		return true
+	return false
+
+func get_proficiency_points() -> int:
+	return _proficiency_points
+
 func get_level(use_count: int, thresholds: Array) -> int:
 	var level := 0
 	for t in thresholds:
