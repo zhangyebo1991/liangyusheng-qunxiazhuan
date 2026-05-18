@@ -14,11 +14,23 @@ func _load_trees():
 		while file_name != "":
 			if file_name.ends_with(".json"):
 				var file = FileAccess.open("res://data/skill_trees/" + file_name, FileAccess.READ)
-				var json = JSON.new()
-				json.parse(file.get_as_text())
-				var data = json.data
-				_trees[data.skill_id] = data
+				if file:
+					var json = JSON.new()
+					var error = json.parse(file.get_as_text())
+					if error == OK and json.data:
+						var data = json.data
+						if data.has("skill_id"):
+							_trees[data.skill_id] = data
+						else:
+							push_error("技能树文件缺少 skill_id: " + file_name)
+					else:
+						push_error("JSON 解析失败: " + file_name)
+				else:
+					push_error("无法打开文件: " + file_name)
 			file_name = dir.get_next()
+		dir.list_dir_end()
+	else:
+		push_error("无法打开技能树目录: res://data/skill_trees")
 
 func unlock_node(skill_id: String, node_id: String, available_points: int) -> Dictionary:
 	if not _trees.has(skill_id):
