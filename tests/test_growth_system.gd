@@ -59,13 +59,17 @@ func run_inner_art_tests(assertions) -> void:
 	var GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")
 
 	var manager = GrowthManagerScript.new()
-	manager.inner_arts.learn_art("calm_heart")
-	var result = manager.inner_arts.upgrade_art("calm_heart", 5)
+	manager.learn_art("calm_heart")
+	var result = manager.upgrade_art("calm_heart")
 	assertions.assert_true(bool(result.get("success", false)), "升级心法应成功")
-	assertions.assert_eq(manager.inner_arts.get_art_level("calm_heart"), 1, "心法等级应为 1")
+	assertions.assert_eq(manager.get_art_level("calm_heart"), 1, "心法等级应为 1")
 
 	var manager2 = GrowthManagerScript.new()
-	manager2.inner_arts.learn_art("calm_heart")
-	var result2 = manager2.inner_arts.switch_active("calm_heart")
+	manager2.learn_art("calm_heart")
+	var result2 = manager2.switch_active("calm_heart")
 	assertions.assert_true(bool(result2.get("success", false)), "切换心法应成功")
-	assertions.assert_eq(manager2.inner_arts.get_active_art(), "calm_heart", "当前心法应为 calm_heart")
+	assertions.assert_eq(manager2.get_active_art(), "calm_heart", "当前心法应为 calm_heart")
+
+	var effects = manager2.get_active_effects()
+	assertions.assert_eq(int(effects.get("max_mp", 0)), 3, "1级静心诀应增加3内力上限")
+	assertions.assert_eq(int(effects.get("mp_regen", 0)), 1, "1级静心诀应增加1内力回复")

@@ -23,10 +23,13 @@ func _load_arts():
 						if data.has("id"):
 							_arts[data.id] = data
 			file_name = dir.get_next()
+		dir.list_dir_end()
 
-func learn_art(art_id: String):
+func learn_art(art_id: String) -> Dictionary:
 	if _arts.has(art_id) and not _learned_arts.has(art_id):
 		_learned_arts[art_id] = {"level": 0}
+		return {"success": true}
+	return {"success": false}
 
 func upgrade_art(art_id: String, available_points: int) -> Dictionary:
 	if not _learned_arts.has(art_id):
@@ -64,6 +67,20 @@ func get_art_level(art_id: String) -> int:
 
 func get_active_art() -> String:
 	return _active_art
+
+func get_active_effects() -> Dictionary:
+	if _active_art.is_empty() or not _learned_arts.has(_active_art):
+		return {}
+
+	var art_data = _arts[_active_art]
+	var level = _learned_arts[_active_art].level
+	var effects_per_level = art_data.get("effects_per_level", {})
+
+	var total_effects = {}
+	for key in effects_per_level.keys():
+		total_effects[key] = int(effects_per_level[key]) * level
+
+	return total_effects
 
 func check_triggers(_scene: String, _context: Dictionary) -> Dictionary:
 	return {}

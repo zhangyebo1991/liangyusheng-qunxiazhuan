@@ -27,11 +27,23 @@ func unlock_skill_node(skill_id: String, node_id: String) -> Dictionary:
 		proficiency_points -= int(result.get("cost", 0))
 	return result
 
-func learn_art(art_id: String):
-	inner_arts.learn_art(art_id)
+func learn_art(art_id: String) -> Dictionary:
+	return inner_arts.learn_art(art_id)
 
 func upgrade_art(art_id: String) -> Dictionary:
 	var result = inner_arts.upgrade_art(art_id, proficiency_points)
 	if result.get("success", false):
 		proficiency_points -= int(result.get("cost", 0))
 	return result
+
+func switch_active(art_id: String) -> Dictionary:
+	return inner_arts.switch_active(art_id)
+
+func get_art_level(art_id: String) -> int:
+	return inner_arts.get_art_level(art_id)
+
+func get_active_art() -> String:
+	return inner_arts.get_active_art()
+
+func get_active_effects() -> Dictionary:
+	return inner_arts.get_active_effects()
