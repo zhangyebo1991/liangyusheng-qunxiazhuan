@@ -43,6 +43,7 @@ func run(assertions) -> void:
 	run_inner_art_tests(assertions)
 	run_proficiency_points_tests(assertions)
 	run_effect_system_skill_tree_bonus_tests(assertions)
+	run_full_growth_workflow_tests(assertions)
 	run_save_load_growth_data_tests(assertions)
 
 func run_skill_tree_tests(assertions) -> void:
@@ -131,6 +132,29 @@ func run_effect_system_skill_tree_bonus_tests(assertions) -> void:
 	var effects = {"damage_bonus": 5, "crit_chance": 0.1}
 	var result = effect_sys.apply_skill_tree_effects(effects)
 	assertions.assert_true(bool(result.get("success", false)), "apply_skill_tree_effects 应成功应用技能树效果")
+
+func run_full_growth_workflow_tests(assertions) -> void:
+	var GameStateScript = preload("res://scripts/core/game_state.gd")
+	var game_state = GameStateScript.new()
+	game_state.start_new_game()
+
+	game_state.growth_manager.on_battle_end({"enemies": 3, "difficulty": 1})
+	assertions.assert_true(game_state.growth_manager.proficiency_points > 0, "战斗后熟练度点数应大于 0")
+
+	var points_before = game_state.growth_manager.proficiency_points
+	var unlock_result = game_state.growth_manager.unlock_skill_node("basic_sword", "dmg_1")
+	assertions.assert_true(bool(unlock_result.get("success", false)), "解锁技能树节点应成功")
+	assertions.assert_eq(game_state.growth_manager.proficiency_points, points_before - 1, "解锁后点数应减 1")
+
+	game_state.growth_manager.learn_art("calm_heart")
+	assertions.assert_eq(game_state.growth_manager.get_art_level("calm_heart"), 0, "学习心法后等级应为 0")
+
+	game_state.growth_manager.proficiency_points += 5
+	var upgrade_result = game_state.growth_manager.upgrade_art("calm_heart")
+	assertions.assert_true(bool(upgrade_result.get("success", false)), "升级心法应成功")
+	assertions.assert_eq(game_state.growth_manager.get_art_level("calm_heart"), 1, "心法等级应为 1")
+
+	game_state.free()
 
 func run_save_load_growth_data_tests(assertions) -> void:
 	var GameStateScript = preload("res://scripts/core/game_state.gd")
