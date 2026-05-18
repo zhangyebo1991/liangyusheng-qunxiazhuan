@@ -1,0 +1,11 @@
+{
+  "id": "calm_heart",
+  "name": "静心诀",
+  "description": "入门心法，提升内力根基",
+  "max_level": 10,
+  "effects_per_level": {
+    "max_mp": 3,
+    "mp_regen": 1
+  },
+  "level_up_cost": [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]
+}

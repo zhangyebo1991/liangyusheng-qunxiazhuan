@@ -39,6 +39,7 @@ func run(assertions) -> void:
 	repository.free()
 
 	run_skill_tree_tests(assertions)
+	run_inner_art_tests(assertions)
 
 func run_skill_tree_tests(assertions) -> void:
 	var GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")
@@ -53,3 +54,18 @@ func run_skill_tree_tests(assertions) -> void:
 	manager2.proficiency_points = 0
 	var result2 = manager2.unlock_skill_node("basic_sword", "dmg_1")
 	assertions.assert_false(bool(result2.get("success", true)), "点数不足应失败")
+
+func run_inner_art_tests(assertions) -> void:
+	var GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")
+
+	var manager = GrowthManagerScript.new()
+	manager.inner_arts.learn_art("calm_heart")
+	var result = manager.inner_arts.upgrade_art("calm_heart", 5)
+	assertions.assert_true(bool(result.get("success", false)), "升级心法应成功")
+	assertions.assert_eq(manager.inner_arts.get_art_level("calm_heart"), 1, "心法等级应为 1")
+
+	var manager2 = GrowthManagerScript.new()
+	manager2.inner_arts.learn_art("calm_heart")
+	var result2 = manager2.inner_arts.switch_active("calm_heart")
+	assertions.assert_true(bool(result2.get("success", false)), "切换心法应成功")
+	assertions.assert_eq(manager2.inner_arts.get_active_art(), "calm_heart", "当前心法应为 calm_heart")
