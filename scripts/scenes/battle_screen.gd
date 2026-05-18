@@ -86,6 +86,7 @@ func _ready() -> void:
 		tactical_combat_system.set_repository(DataRepository)
 		var tactical_ai = TacticalAIScript.new()
 		tactical_ai.set_repository(DataRepository)
+		tactical_ai.set_combat_system(tactical_combat_system)
 		tactical_combat_system.set_tactical_ai(tactical_ai)
 		_connect_tactical_proficiency()
 		tactical_battle_state = tactical_combat_system.create_battle(GameState, context, DataRepository)
@@ -199,6 +200,11 @@ func _create_tactical_ui() -> void:
 	charge_bar.bar_width = 800
 	add_child(charge_bar)
 	_refresh_charge_bar()
+	status_label = Label.new()
+	status_label.position = Vector2(240, 60)
+	status_label.size = Vector2(320, 24)
+	add_child(status_label)
+	_update_mode_ui()
 	# Task 14: 左上战斗目标 + 战场信息；左下地形信息。
 	panel_objective = BattlePanelObjectiveScript.new()
 	panel_objective.position = Vector2(8, 8)
@@ -276,7 +282,7 @@ func _refresh_tactical() -> void:
 		_last_action_unit_id = cur_id
 		_has_moved_this_action = false
 		_pre_move_cell = {}
-	# status_label / output / retreat_button 已删除；行动者/HP/MP 由 panel_actor 显示，日志由 battle_log 显示。
+	_update_mode_ui()
 	var movable: Array = []
 	var attackable: Array = []
 	if _is_player_action():
@@ -440,19 +446,10 @@ func _on_tactical_cell_pressed(q: int, r: int) -> void:
 	if target != null and target.team != current_unit.team:
 		if range_mode != RangeMode.ATTACK:
 			return
-		var target_hp_before := int(target.hp)
-		var result: Dictionary
-		if selected_tactical_action_id == "attack":
-			result = tactical_combat_system.attack_unit(tactical_battle_state, current_unit.unit_id, target.unit_id)
-		else:
-			result = tactical_combat_system.use_martial_art(tactical_battle_state, current_unit.unit_id, target.unit_id, selected_tactical_action_id, DataRepository)
-		if bool(result.get("success", false)):
-			_emit_damage_feedback(str(target.unit_id), target_hp_before, int(target.hp))
-			if not tactical_battle_state.is_finished:
-				tactical_combat_system.end_unit_action(tactical_battle_state, current_unit.unit_id)
+		var target_cell := Vector2i(q, r)
+		var target_cells: Array = _expand_target_cells_for_skill(selected_tactical_action_id, target_cell)
+		_resolve_tactical_action(str(current_unit.unit_id), selected_tactical_action_id, target_cells)
 		_set_range_mode(RangeMode.NONE, [])
-		_refresh_tactical()
-		_return_if_tactical_finished()
 		return
 	# v0.x: 移动必须先点底部「移动」按钮进入 MOVE 模式，避免误操作。
 	if range_mode != RangeMode.MOVE:
@@ -1020,9 +1017,14 @@ func _toggle_auto_mode() -> void:
 	if tactical_battle_state == null:
 		return
 	tactical_battle_state.auto_battle_mode.toggle()
+	if not tactical_battle_state.auto_battle_mode.is_auto:
+		_cancel_pending_auto_action_for_manual_mode()
 	var mode_text = "自动" if tactical_battle_state.auto_battle_mode.is_auto else "手动"
 	_on_tactical_log_appended("切换到%s战斗模式" % mode_text)
 	_update_mode_ui()
+
+func _cancel_pending_auto_action_for_manual_mode() -> void:
+	_reset_auto_action()
 
 func _update_mode_ui() -> void:
 	if status_label == null or tactical_battle_state == null:
@@ -1296,16 +1298,32 @@ func _resolve_skill_action(skill_id: String, target_cells: Array) -> void:
 	if tactical_battle_state == null:
 		return
 	var current_id := str(tactical_battle_state.current_unit_id)
+	_resolve_tactical_action(current_id, skill_id, target_cells)
+
+func _resolve_tactical_action(unit_id: String, action_id: String, target_cells: Array, auto_display_name: String = "") -> Dictionary:
+	if tactical_battle_state == null:
+		return {"success": false, "message": "战斗尚未准备好。"}
 	var hp_before := _collect_hp_snapshot()
-	var result: Dictionary = tactical_combat_system.resolve_action(tactical_battle_state, current_id, skill_id, target_cells)
+	var result: Dictionary = tactical_combat_system.resolve_action(tactical_battle_state, unit_id, action_id, target_cells)
 	# 招式失败（内力不足等）保留行动相位让玩家重选；成功才结束行动。
-	if bool(result.get("success", false)) and not tactical_battle_state.is_finished:
+	if bool(result.get("success", false)):
 		_emit_multi_hit_feedback(result.get("hits", []), hp_before)
-		tactical_combat_system.end_unit_action(tactical_battle_state, current_id)
-	elif bool(result.get("success", false)):
-		_emit_multi_hit_feedback(result.get("hits", []), hp_before)
+		if not auto_display_name.is_empty():
+			tactical_battle_state.append_log("【自动】%s 使用 %s" % [auto_display_name, _action_display_name(action_id)])
+		if not tactical_battle_state.is_finished:
+			tactical_combat_system.end_unit_action(tactical_battle_state, unit_id)
 	_refresh_tactical()
 	_return_if_tactical_finished()
+	return result
+
+func _action_display_name(action_id: String) -> String:
+	if action_id == "attack":
+		return "普攻"
+	if tactical_combat_system.repository != null:
+		var martial_art: Dictionary = tactical_combat_system.repository.get_martial_art(action_id)
+		if not martial_art.is_empty():
+			return str(martial_art.get("name", action_id))
+	return action_id
 
 # ─── Task 19: 移动滑动动画 ───────────────────────────────────────────────────
 
@@ -1446,16 +1464,15 @@ func _try_undo_move() -> bool:
 func _expand_target_cells_for_skill(skill_id: String, target: Vector2i) -> Array:
 	if skill_id == "attack":
 		return [target]
-	if tactical_battle_state == null or tactical_combat_system.repository == null:
+	if tactical_battle_state == null:
 		return [target]
-	var sd: Dictionary = tactical_combat_system.repository.get_martial_art(skill_id)
-	if sd.is_empty():
+	var unit_id := _pending_auto_unit_id
+	if unit_id.is_empty():
+		unit_id = str(tactical_battle_state.current_unit_id)
+	var target_cells: Array = tactical_combat_system.build_target_cells_for_action(tactical_battle_state, unit_id, skill_id, target)
+	if target_cells.is_empty():
 		return [target]
-	var shape := _skill_shape_for_data(sd)
-	if shape == "target_cross_1":
-		return tactical_range_system.get_skill_target_blast_range(skill_id, target, tactical_battle_state.terrain_grid)
-	# diamond / line / fan / pierce / surround / ring：target 为单格，resolve_action 内部验证范围。
-	return [target]
+	return target_cells
 
 # 工具：在 movable_cells 列表里查 target_cell（{q,r} dict 形式）是否存在。
 func _cell_in_list(target_cell: Dictionary, list: Array) -> bool:
@@ -1559,6 +1576,7 @@ func _run_auto_action_with_animation(unit) -> void:
 		"move_to": action.get("move_to", {}),
 		"use_skill": str(action.get("use_skill", "attack")),
 		"target": action.get("target", Vector2i.ZERO),
+		"target_cells": action.get("target_cells", []),
 		"step": "move_show",
 	}
 	var move_to: Dictionary = _auto_action_data["move_to"]
@@ -1580,6 +1598,10 @@ func _on_auto_move_delay_done() -> void:
 	if tactical_battle_state == null or _pending_auto_unit_id.is_empty():
 		_reset_auto_action()
 		return
+	if not tactical_battle_state.auto_battle_mode.is_auto:
+		_reset_auto_action()
+		_refresh_tactical()
+		return
 	var unit = tactical_battle_state.get_unit(_pending_auto_unit_id)
 	if unit == null or not unit.is_alive():
 		_reset_auto_action()
@@ -1597,11 +1619,18 @@ func _proceed_auto_after_move() -> void:
 	if tactical_battle_state == null or tactical_battle_state.is_finished:
 		_reset_auto_action()
 		return
+	if not tactical_battle_state.auto_battle_mode.is_auto:
+		_reset_auto_action()
+		_refresh_tactical()
+		return
 	var target: Vector2i = _auto_action_data["target"]
 	var use_skill: String = _auto_action_data["use_skill"]
 	# 移动后验证目标是否在攻击范围内；不在则跳过红点预览，直接结束行动。
 	var unit = tactical_battle_state.get_unit(_pending_auto_unit_id) if not _pending_auto_unit_id.is_empty() else null
-	if unit != null and not _is_auto_target_in_range(unit, use_skill, target):
+	var preview_cells: Array = _auto_action_data.get("target_cells", [])
+	if preview_cells.is_empty():
+		preview_cells = _expand_target_cells_for_skill(use_skill, target)
+	if unit != null and not _is_auto_target_in_range(unit, use_skill, preview_cells):
 		_set_range_mode(RangeMode.NONE, [])
 		_refresh_tactical()
 		if not tactical_battle_state.is_finished:
@@ -1609,48 +1638,38 @@ func _proceed_auto_after_move() -> void:
 		_reset_auto_action()
 		_return_if_tactical_finished()
 		return
-	var preview_cells: Array = _expand_target_cells_for_skill(use_skill, target)
 	_set_range_mode(RangeMode.SKILL_TARGET_PREVIEW, preview_cells)
 	_refresh_tactical()
 	_auto_action_step = 2
 	get_tree().create_timer(0.3).timeout.connect(_on_auto_skill_delay_done, CONNECT_ONE_SHOT)
 
-func _is_auto_target_in_range(unit, skill_id: String, target: Vector2i) -> bool:
-	if skill_id == "attack":
-		var unit_pos := Vector2i(int(unit.cell.get("q", 0)), int(unit.cell.get("r", 0)))
-		var dist: int = abs(unit_pos.x - target.x) + abs(unit_pos.y - target.y)
-		return dist > 0 and dist <= int(unit.attack_range)
-	var attackable = tactical_combat_system.get_attackable_units_for_martial_art(
-		tactical_battle_state, str(unit.unit_id), skill_id, DataRepository)
-	for u in attackable:
-		if Vector2i(int(u.cell.get("q", 0)), int(u.cell.get("r", 0))) == target:
-			return true
-	return false
+func _is_auto_target_in_range(unit, skill_id: String, target_cells: Array) -> bool:
+	return tactical_combat_system.is_action_target_valid_from_cell(
+		tactical_battle_state,
+		str(unit.unit_id),
+		unit.cell,
+		skill_id,
+		target_cells
+	)
 
 func _on_auto_skill_delay_done() -> void:
 	if tactical_battle_state == null or tactical_battle_state.is_finished or _pending_auto_unit_id.is_empty():
 		_reset_auto_action()
 		return
+	if not tactical_battle_state.auto_battle_mode.is_auto:
+		_reset_auto_action()
+		_refresh_tactical()
+		return
 	var unit_id: String = _auto_action_data["unit_id"]
 	var display_name: String = _auto_action_data["display_name"]
 	var use_skill: String = _auto_action_data["use_skill"]
 	var target: Vector2i = _auto_action_data["target"]
-	var target_cells: Array = _expand_target_cells_for_skill(use_skill, target)
-	# 复用与手动操作相同的 resolve_action 路径，确保范围验证一致。
-	var result = tactical_combat_system.resolve_action(tactical_battle_state, unit_id, use_skill, target_cells)
-	if result.get("success", false):
-		var use_name = use_skill
-		if use_skill != "attack" and tactical_combat_system.repository != null:
-			var sd = tactical_combat_system.repository.get_martial_art(use_skill)
-			if not sd.is_empty():
-				use_name = str(sd.get("name", use_skill))
-		tactical_battle_state.append_log("【自动】%s 使用 %s" % [display_name, use_name])
+	var target_cells: Array = _auto_action_data.get("target_cells", [])
+	if target_cells.is_empty():
+		target_cells = _expand_target_cells_for_skill(use_skill, target)
 	_set_range_mode(RangeMode.NONE, [])
-	_refresh_tactical()
-	if not tactical_battle_state.is_finished:
-		tactical_combat_system.end_unit_action(tactical_battle_state, unit_id)
+	_resolve_tactical_action(unit_id, use_skill, target_cells, display_name)
 	_reset_auto_action()
-	_return_if_tactical_finished()
 
 func _reset_auto_action() -> void:
 	_pending_auto_unit_id = ""

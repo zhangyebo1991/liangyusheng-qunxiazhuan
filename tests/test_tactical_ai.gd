@@ -1,5 +1,7 @@
 extends RefCounted
 
+const TacticalCombatSystemScript = preload("res://scripts/systems/tactical_combat_system.gd")
+
 class MockRepository extends RefCounted:
 	var martial_arts: Dictionary = {}
 
@@ -28,11 +30,23 @@ func run(assertions) -> void:
 	mock_repo.add_martial_art("straight_sword_thrust", {
 		"id": "straight_sword_thrust",
 		"name": "穿云刺",
+		"shape": "line_2",
 		"tactical": {
 			"damage_bonus": 4,
 			"range": 2,
 			"range_shape": "line",
 			"mp_cost": 5
+		}
+	})
+	mock_repo.add_martial_art("sword_rainbow_pierce", {
+		"id": "sword_rainbow_pierce",
+		"name": "长虹贯日",
+		"shape": "pierce",
+		"tactical": {
+			"damage_bonus": 4,
+			"range": 3,
+			"range_shape": "pierce",
+			"mp_cost": 7
 		}
 	})
 
@@ -216,3 +230,51 @@ func run(assertions) -> void:
 		int(move_to.get("q", 0)) == 3 and int(move_to.get("r", 0)) == 2,
 		"不应移动到友军位置"
 	)
+
+	# evaluate 应返回与实际结算一致的目标格列表，避免 AI 评分多目标但执行只打一格。
+	var combat_system = TacticalCombatSystemScript.new()
+	combat_system.set_repository(mock_repo)
+	ai.set_combat_system(combat_system)
+	battle = TacticalBattleState.new()
+	battle.battlefield_width = 6
+	battle.battlefield_height = 5
+	player = TacticalUnitState.new()
+	player.unit_id = "player"
+	player.team = "player"
+	player.cell = {"q": 2, "r": 2}
+	player.hp = 100
+	player.mp = 10
+	player.attack = 10
+	player.move_range = 0
+	player.attack_range = 1
+	var pierce_skills: Array[String] = ["sword_rainbow_pierce"]
+	player.martial_art_ids = pierce_skills
+	battle.add_unit(player)
+	enemy1 = TacticalUnitState.new()
+	enemy1.unit_id = "enemy1"
+	enemy1.team = "enemy"
+	enemy1.cell = {"q": 3, "r": 2}
+	enemy1.hp = 10
+	battle.add_unit(enemy1)
+	enemy2 = TacticalUnitState.new()
+	enemy2.unit_id = "enemy2"
+	enemy2.team = "enemy"
+	enemy2.cell = {"q": 4, "r": 2}
+	enemy2.hp = 10
+	battle.add_unit(enemy2)
+	result = ai.evaluate(player, battle)
+	assertions.assert_eq(result.get("use_skill", ""), "sword_rainbow_pierce", "AI 应选择可穿透多目标的技能")
+	var target_cells: Array = result.get("target_cells", [])
+	assertions.assert_true(_has_vector_cell(target_cells, 3, 2), "AI 行动应包含穿透路径第一格")
+	assertions.assert_true(_has_vector_cell(target_cells, 4, 2), "AI 行动应包含穿透路径第二格")
+	assertions.assert_eq(
+		ai.count_targets_from_position("sword_rainbow_pierce", Vector2i(2, 3), [enemy1, enemy2], battle),
+		0,
+		"共享 combat system 存在时，假想空站位计数不应递归或误命中"
+	)
+
+func _has_vector_cell(cells: Array, q: int, r: int) -> bool:
+	for cell in cells:
+		if typeof(cell) == TYPE_VECTOR2I and cell == Vector2i(q, r):
+			return true
+	return false

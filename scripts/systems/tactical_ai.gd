@@ -4,9 +4,13 @@ extends RefCounted
 const TacticalBattleStateScript = preload("res://scripts/domain/tactical_battle_state.gd")
 
 var repository = null
+var combat_system = null
 
 func set_repository(next_repository) -> void:
 	repository = next_repository
+
+func set_combat_system(next_combat_system) -> void:
+	combat_system = next_combat_system
 
 # 返回单位的最优行动: { "move_to": Dictionary, "use_skill": String, "target": Vector2i }
 func evaluate(unit, battle) -> Dictionary:
@@ -21,31 +25,36 @@ func evaluate(unit, battle) -> Dictionary:
 		"move_to": unit.cell.duplicate(true),
 		"use_skill": "",
 		"target": Vector2i.ZERO,
+		"target_cells": [],
 		"targets_hit": 0,
 		"damage": 0
 	}
 	for cell in movable_cells:
 		var cell_v = Vector2i(int(cell.get("q", 0)), int(cell.get("r", 0)))
-		var attack_targets = _count_attack_targets(cell_v, enemies, unit)
+		var attack_plan = _best_target_for_action("attack", cell, cell_v, enemies, battle, unit)
+		var attack_targets = int(attack_plan.get("targets_hit", 0))
 		var attack_damage = unit.attack
 		if attack_targets > best_action.get("targets_hit", 0) or \
 			(attack_targets == best_action.get("targets_hit", 0) and attack_damage > best_action.get("damage", 0)):
 			best_action = {
 				"move_to": cell.duplicate(true),
 				"use_skill": "attack",
-				"target": _find_best_target(cell_v, enemies, unit),
+				"target": attack_plan.get("target", Vector2i.ZERO),
+				"target_cells": attack_plan.get("target_cells", []),
 				"targets_hit": attack_targets,
 				"damage": attack_damage
 			}
 		for skill_id in available_skills:
-			var skill_targets = count_targets_from_position(skill_id, cell_v, enemies, battle)
+			var skill_plan = _best_target_for_action(skill_id, cell, cell_v, enemies, battle, unit)
+			var skill_targets = int(skill_plan.get("targets_hit", 0))
 			var skill_damage = _calculate_skill_damage(unit, skill_id)
 			if skill_targets > best_action.get("targets_hit", 0) or \
 				(skill_targets == best_action.get("targets_hit", 0) and skill_damage > best_action.get("damage", 0)):
 				best_action = {
 					"move_to": cell.duplicate(true),
 					"use_skill": skill_id,
-					"target": _find_best_skill_target(cell_v, enemies, skill_id, battle),
+					"target": skill_plan.get("target", Vector2i.ZERO),
+					"target_cells": skill_plan.get("target_cells", []),
 					"targets_hit": skill_targets,
 					"damage": skill_damage
 				}
@@ -57,6 +66,7 @@ func evaluate(unit, battle) -> Dictionary:
 				"move_to": best_move.duplicate(true),
 				"use_skill": "attack",
 				"target": Vector2i(int(nearest_enemy.cell.get("q", 0)), int(nearest_enemy.cell.get("r", 0))),
+				"target_cells": [Vector2i(int(nearest_enemy.cell.get("q", 0)), int(nearest_enemy.cell.get("r", 0)))],
 				"targets_hit": 0,
 				"damage": 0
 			}
@@ -84,6 +94,15 @@ func get_available_skills(unit) -> Array[String]:
 func count_targets_from_position(skill_id: String, position: Vector2i, enemies: Array, battle) -> int:
 	if skill_id.is_empty() or enemies.is_empty():
 		return 0
+	if combat_system != null:
+		var position_cell := {"q": position.x, "r": position.y}
+		var unit = _find_unit_at_position(battle, position)
+		if unit != null:
+			var best_plan = _best_target_for_action(skill_id, position_cell, position, enemies, battle, unit)
+			return int(best_plan.get("targets_hit", 0))
+	return _count_targets_from_position_legacy(skill_id, position, enemies, battle)
+
+func _count_targets_from_position_legacy(skill_id: String, position: Vector2i, enemies: Array, battle) -> int:
 	var skill_data = repository.get_martial_art(skill_id) if repository != null else {}
 	if skill_data.is_empty():
 		return 0
@@ -130,6 +149,8 @@ func count_targets_from_position(skill_id: String, position: Vector2i, enemies: 
 	return count
 
 func _get_movable_cells(battle, unit) -> Array:
+	if combat_system != null:
+		return combat_system.get_movable_cells(battle, str(unit.unit_id))
 	var result: Array = []
 	for q in range(battle.battlefield_width):
 		for r in range(battle.battlefield_height):
@@ -205,6 +226,63 @@ func _find_best_skill_target(position: Vector2i, enemies: Array, skill_id: Strin
 			best_target = enemy_cell
 			best_count = count
 	return best_target
+
+func _best_target_for_action(action_id: String, position_cell: Dictionary, position: Vector2i, enemies: Array, battle, unit) -> Dictionary:
+	var best_target := Vector2i.ZERO
+	var best_cells: Array = []
+	var best_count := 0
+	var unit_id := str(unit.unit_id) if unit != null else ""
+	var attacker_team := str(unit.team) if unit != null else TacticalBattleStateScript.TEAM_PLAYER
+	for enemy in enemies:
+		if not enemy.is_alive():
+			continue
+		var enemy_cell := Vector2i(int(enemy.cell.get("q", 0)), int(enemy.cell.get("r", 0)))
+		var target_cells: Array = []
+		var valid := true
+		if combat_system != null and not unit_id.is_empty():
+			target_cells = combat_system.build_target_cells_for_action_from_cell(battle, position_cell, action_id, enemy_cell)
+			valid = combat_system.is_action_target_valid_from_cell(battle, unit_id, position_cell, action_id, target_cells)
+		else:
+			target_cells = [enemy_cell]
+			if action_id == "attack":
+				var distance: int = abs(position.x - enemy_cell.x) + abs(position.y - enemy_cell.y)
+				valid = unit != null and distance > 0 and distance <= int(unit.attack_range)
+			else:
+				valid = _count_targets_from_position_legacy(action_id, position, [enemy], battle) > 0
+		if not valid:
+			continue
+		var hit_count := _count_enemy_hits_for_cells(battle, attacker_team, target_cells)
+		if hit_count > best_count:
+			best_count = hit_count
+			best_target = enemy_cell
+			best_cells = target_cells
+	return {
+		"target": best_target,
+		"target_cells": best_cells,
+		"targets_hit": best_count,
+	}
+
+func _count_enemy_hits_for_cells(battle, attacker_team: String, target_cells: Array) -> int:
+	if combat_system != null:
+		return combat_system.count_enemy_hits_in_cells(battle, attacker_team, target_cells)
+	var hits := {}
+	for cell_v in target_cells:
+		if typeof(cell_v) != TYPE_VECTOR2I:
+			continue
+		for unit in battle.units:
+			if not unit.is_alive() or unit.team == attacker_team:
+				continue
+			if int(unit.cell.get("q", 0)) == cell_v.x and int(unit.cell.get("r", 0)) == cell_v.y:
+				hits[str(unit.unit_id)] = true
+	return hits.size()
+
+func _find_unit_at_position(battle, position: Vector2i):
+	if battle == null:
+		return null
+	for unit in battle.units:
+		if int(unit.cell.get("q", 0)) == position.x and int(unit.cell.get("r", 0)) == position.y:
+			return unit
+	return null
 
 func _find_nearest_enemy(unit, enemies: Array):
 	var nearest = null

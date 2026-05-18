@@ -22,6 +22,8 @@ func set_proficiency(proficiency_system, proficiency_map: Dictionary) -> void:
 
 func set_tactical_ai(tactical_ai) -> void:
 	_tactical_ai = tactical_ai
+	if _tactical_ai != null and _tactical_ai.has_method("set_combat_system"):
+		_tactical_ai.set_combat_system(self)
 
 func create_battle(game_state, context: Dictionary, data_source = null):
 	var source = data_source if data_source != null else repository
@@ -270,6 +272,70 @@ func resolve_action(battle, unit_id: String, action_id: String, target_cells: Ar
 			_proficiency_system.add_use(_proficiency_map, action_id)
 	return result
 
+func build_target_cells_for_action(battle, unit_id: String, action_id: String, target_cell: Vector2i) -> Array:
+	var unit = battle.get_unit(unit_id) if battle != null else null
+	if unit == null:
+		return []
+	return build_target_cells_for_action_from_cell(battle, unit.cell, action_id, target_cell)
+
+func build_target_cells_for_action_from_cell(battle, attacker_cell: Dictionary, action_id: String, target_cell: Vector2i) -> Array:
+	if battle == null:
+		return []
+	if action_id == "attack":
+		return [target_cell]
+	var skill_data: Dictionary = {}
+	if repository != null:
+		skill_data = repository.get_martial_art(action_id)
+	if skill_data.is_empty() or typeof(skill_data.get("tactical", {})) != TYPE_DICTIONARY:
+		return [target_cell]
+	var tactical: Dictionary = skill_data.get("tactical", {})
+	var shape := _skill_shape(skill_data)
+	var range_val: int = max(1, int(tactical.get("range", skill_data.get("cast_range", 1))))
+	if shape == "target_cross_1":
+		return _target_cross_cells(battle, target_cell)
+	if shape.begins_with("line_") or shape == "line" or shape == "pierce":
+		var line_direction := _line_direction_to_target(attacker_cell, target_cell)
+		if line_direction == Vector2i.ZERO:
+			return [target_cell]
+		return _ray_cells_from_cell(battle, attacker_cell, line_direction, range_val)
+	if shape == "fan":
+		var fan_direction := _dominant_direction_to_target(attacker_cell, target_cell)
+		if fan_direction == Vector2i.ZERO:
+			return [target_cell]
+		return _fan_cells_from_cell(battle, attacker_cell, fan_direction, range_val)
+	if shape == "surround":
+		return _surround_cells_from_cell(battle, attacker_cell)
+	if shape == "ring":
+		return _ring_cells_from_cell(battle, attacker_cell, range_val)
+	return [target_cell]
+
+func is_action_target_valid_from_cell(battle, unit_id: String, attacker_cell: Dictionary, action_id: String, target_cells: Array) -> bool:
+	var unit = battle.get_unit(unit_id) if battle != null else null
+	if unit == null or not unit.is_alive():
+		return false
+	var previous_cell: Dictionary = unit.cell.duplicate(true)
+	unit.cell = _read_cell(attacker_cell)
+	var valid := false
+	if action_id == "attack":
+		valid = target_cells.size() == 1 and _is_valid_target_cell(battle, target_cells[0]) and _cell_distance_to_vector(unit.cell, target_cells[0]) > 0 and _cell_distance_to_vector(unit.cell, target_cells[0]) <= int(unit.attack_range)
+	elif unit.martial_art_ids.has(action_id):
+		var skill_data: Dictionary = repository.get_martial_art(action_id) if repository != null else {}
+		if not skill_data.is_empty():
+			valid = _are_target_cells_valid_for_skill(battle, unit, target_cells, skill_data)
+	unit.cell = previous_cell
+	return valid
+
+func count_enemy_hits_in_cells(battle, attacker_team: String, target_cells: Array) -> int:
+	if battle == null:
+		return 0
+	var hits := {}
+	for cell_v in target_cells:
+		var defender = _find_unit_at_cell_v(battle, cell_v)
+		if defender == null or not defender.is_alive() or defender.team == attacker_team:
+			continue
+		hits[str(defender.unit_id)] = true
+	return hits.size()
+
 # Task 17: 通用方向型/范围型招式结算。
 # - 扣除 tactical.mp_cost；mp 不足直接失败。
 # - 对 target_cells 内每个敌方占据格结算 max(1, attacker.attack + damage_bonus - defender.defense)。
@@ -471,6 +537,65 @@ func _target_cross_cells(battle, center: Vector2i) -> Array:
 		if _is_valid_target_cell(battle, target_cell):
 			cells.append(target_cell)
 	return cells
+
+func _line_direction_to_target(attacker_cell: Dictionary, target_cell: Vector2i) -> Vector2i:
+	var delta: Vector2i = _cell_delta_to_vector(attacker_cell, target_cell)
+	if delta == Vector2i.ZERO:
+		return Vector2i.ZERO
+	if delta.x != 0 and delta.y != 0:
+		return Vector2i.ZERO
+	return Vector2i(_axis_sign(delta.x), _axis_sign(delta.y))
+
+func _dominant_direction_to_target(attacker_cell: Dictionary, target_cell: Vector2i) -> Vector2i:
+	var delta: Vector2i = _cell_delta_to_vector(attacker_cell, target_cell)
+	if delta == Vector2i.ZERO:
+		return Vector2i.ZERO
+	if abs(delta.x) >= abs(delta.y):
+		return Vector2i(_axis_sign(delta.x), 0)
+	return Vector2i(0, _axis_sign(delta.y))
+
+func _ray_cells_from_cell(battle, attacker_cell: Dictionary, direction: Vector2i, range_val: int) -> Array:
+	var result: Array = []
+	var src := Vector2i(int(attacker_cell.get("q", 0)), int(attacker_cell.get("r", 0)))
+	for i in range(1, range_val + 1):
+		var target_cell := src + direction * i
+		if not _is_valid_target_cell(battle, target_cell):
+			break
+		result.append(target_cell)
+	return result
+
+func _fan_cells_from_cell(battle, attacker_cell: Dictionary, direction: Vector2i, range_val: int) -> Array:
+	var result: Array = []
+	for row_index in range(battle.battlefield_height):
+		for col_index in range(battle.battlefield_width):
+			var target_cell := Vector2i(col_index, row_index)
+			if _cell_in_fan(attacker_cell, target_cell, direction, range_val):
+				result.append(target_cell)
+	return result
+
+func _surround_cells_from_cell(battle, attacker_cell: Dictionary) -> Array:
+	var result: Array = []
+	var src := Vector2i(int(attacker_cell.get("q", 0)), int(attacker_cell.get("r", 0)))
+	for row_delta in [-1, 0, 1]:
+		for col_delta in [-1, 0, 1]:
+			if row_delta == 0 and col_delta == 0:
+				continue
+			var target_cell := Vector2i(src.x + col_delta, src.y + row_delta)
+			if _is_valid_target_cell(battle, target_cell):
+				result.append(target_cell)
+	return result
+
+func _ring_cells_from_cell(battle, attacker_cell: Dictionary, range_val: int) -> Array:
+	var result: Array = []
+	var src := Vector2i(int(attacker_cell.get("q", 0)), int(attacker_cell.get("r", 0)))
+	for row_index in range(battle.battlefield_height):
+		for col_index in range(battle.battlefield_width):
+			var target_cell := Vector2i(col_index, row_index)
+			if target_cell == src:
+				continue
+			if abs(target_cell.x - src.x) + abs(target_cell.y - src.y) == range_val:
+				result.append(target_cell)
+	return result
 
 func _cell_in_fan(attacker_cell: Dictionary, target_cell: Vector2i, direction: Vector2i, range_val: int) -> bool:
 	var delta: Vector2i = _cell_delta_to_vector(attacker_cell, target_cell)
@@ -789,8 +914,16 @@ func _is_target_in_martial_range(attacker_cell: Dictionary, defender_cell: Dicti
 	match martial_art.tactical_range_shape:
 		"diamond":
 			return true
-		"line":
+		"line", "pierce":
 			return int(attacker_cell.get("q", 0)) == int(defender_cell.get("q", 0)) or int(attacker_cell.get("r", 0)) == int(defender_cell.get("r", 0))
+		"fan":
+			return true
+		"surround":
+			return max(abs(int(attacker_cell.get("q", 0)) - int(defender_cell.get("q", 0))), abs(int(attacker_cell.get("r", 0)) - int(defender_cell.get("r", 0)))) == 1
+		"ring":
+			return distance == martial_art.tactical_range
+		"target_cross_1":
+			return true
 		_:
 			return false
 

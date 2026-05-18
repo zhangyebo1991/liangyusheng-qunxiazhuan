@@ -210,6 +210,13 @@ func run(assertions) -> void:
 	pierce_battle.get_unit("lackey").cell = {"q": 6, "r": 2}
 	var pierce_result = system.resolve_action(pierce_battle, "hero_yun", "sword_rainbow_pierce", [Vector2i(5, 2), Vector2i(6, 2)])
 	assertions.assert_true(bool(pierce_result.get("success", false)), "长虹贯日应穿透两目标")
+	var shared_pierce_cells: Array = system.build_target_cells_for_action_from_cell(pierce_battle, {"q": 4, "r": 2}, "sword_rainbow_pierce", Vector2i(6, 2))
+	assertions.assert_true(_has_vector_cell(shared_pierce_cells, 5, 2), "共享目标展开应包含穿透路径第一格")
+	assertions.assert_true(_has_vector_cell(shared_pierce_cells, 6, 2), "共享目标展开应包含穿透路径第二格")
+	assertions.assert_true(
+		system.is_action_target_valid_from_cell(pierce_battle, "hero_yun", {"q": 4, "r": 2}, "sword_rainbow_pierce", shared_pierce_cells),
+		"共享目标展开应通过同一套结算范围校验"
+	)
 
 	# 剑气环身环形命中
 	var ring_battle = system.create_battle(state, _sample_context(), repository)
@@ -275,5 +282,11 @@ func _sample_context() -> Dictionary:
 func _has_cell(cells: Array, q: int, r: int) -> bool:
 	for cell in cells:
 		if int(cell.get("q", -1)) == q and int(cell.get("r", -1)) == r:
+			return true
+	return false
+
+func _has_vector_cell(cells: Array, q: int, r: int) -> bool:
+	for cell in cells:
+		if typeof(cell) == TYPE_VECTOR2I and cell == Vector2i(q, r):
 			return true
 	return false
