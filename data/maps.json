@@ -28,6 +28,73 @@
         "dialogue_id": "training_dummy_intro"
       },
       {
+        "id": "enemy_roaming_bandit",
+        "type": "battle_trigger",
+        "name": "流窜山贼",
+        "actor_id": "roaming_bandit",
+        "position": {"x": 620, "y": 520},
+        "radius": 56,
+        "required_quest_id": "quest_mountain_trial",
+        "required_quest_status": "completed",
+        "battle_mode": "tactical",
+        "repeatable": true,
+        "encounter_id": "mountain_roaming_bandit",
+        "battlefield": {"width": 16, "height": 9},
+        "player_deploy": {
+          "max_members": 2,
+          "start_cells": [
+            {"q": 5, "r": 5},
+            {"q": 5, "r": 6}
+          ]
+        },
+        "victory_rewards": {
+          "exp": 12,
+          "coins": 8,
+          "items": [],
+          "loot_table": {
+            "rolls": 2,
+            "entries": [
+              {"type": "item", "item_id": "herb_focus", "chance": 0.35, "amount": 1},
+              {"type": "item", "item_id": "iron_sword", "chance": 0.10, "amount": 1},
+              {"type": "item", "item_id": "cloth_armor", "chance": 0.08, "amount": 1},
+              {"type": "coins", "chance": 0.50, "amount_min": 3, "amount_max": 8}
+            ]
+          }
+        },
+        "time_mode": "pause_on_action",
+        "terrain_grid": [
+          ["mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain"],
+          ["mountain","grass","grass","grass","grass","grass","grass","water","grass","grass","grass","grass","grass","grass","grass","mountain"],
+          ["mountain","grass","grass","grass","grass","grass","grass","water","grass","grass","tree","grass","grass","grass","grass","mountain"],
+          ["mountain","grass","grass","grass","grass","tree","grass","bridge","grass","grass","grass","grass","grass","grass","grass","mountain"],
+          ["mountain","grass","grass","grass","grass","grass","grass","water","grass","grass","grass","grass","grass","grass","grass","mountain"],
+          ["mountain","grass","grass","grass","grass","grass","grass","water","grass","grass","tree","grass","grass","grass","grass","mountain"],
+          ["mountain","grass","grass","grass","grass","grass","grass","water","grass","grass","grass","grass","grass","grass","grass","mountain"],
+          ["mountain","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","mountain"],
+          ["mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain","mountain"]
+        ],
+        "units": [
+          {
+            "unit_id": "roaming_bandit",
+            "actor_id": "roaming_bandit",
+            "team": "enemy",
+            "start_cell": {"q": 9, "r": 5},
+            "move_range": 3,
+            "attack_range": 1,
+            "charge_speed": 230
+          },
+          {
+            "unit_id": "roaming_bandit_lackey",
+            "actor_id": "bandit_lackey_01",
+            "team": "enemy",
+            "start_cell": {"q": 10, "r": 5},
+            "move_range": 3,
+            "attack_range": 1,
+            "charge_speed": 240
+          }
+        ]
+      },
+      {
         "id": "enemy_bandit_gate",
         "type": "battle_trigger",
         "name": "山道强人",

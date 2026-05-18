@@ -70,6 +70,20 @@
     "sprite_tile_id": "tile_bandit_lackey_hd"
   },
   {
+    "id": "roaming_bandit",
+    "name": "流窜山贼",
+    "level": 2,
+    "hp": 45,
+    "max_hp": 45,
+    "attack": 11,
+    "defense": 3,
+    "move_range": 3,
+    "attack_range": 1,
+    "charge_speed": 230,
+    "martial_arts": ["rough_fist"],
+    "sprite_tile_id": "tile_bandit_lackey_hd"
+  },
+  {
     "id": "training_dummy_easy",
     "name": "初档木桩",
     "level": 1,
