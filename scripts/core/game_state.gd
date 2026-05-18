@@ -8,6 +8,7 @@ const SaveSystemScript = preload("res://scripts/systems/save_system.gd")
 const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
 const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
 const GrowthSystemScript = preload("res://scripts/systems/growth_system.gd")
+const LootSystemScript = preload("res://scripts/systems/loot_system.gd")
 
 const DEFAULT_HERO_MAX_HP := 120
 const DEFAULT_HERO_MAX_MP := 20
@@ -273,10 +274,10 @@ func _apply_victory_rewards(result: Dictionary) -> Dictionary:
 				var growth_result = growth.add_exp(party, str(actor_id), exp_amount, repository)
 				if bool(growth_result.get("success", false)):
 					summary["experience"].append(growth_result)
-	var coins = int(rewards.get("coins", 0))
-	if coins > 0:
-		party.add_coins(coins)
-		summary["coins"] = coins
+	var fixed_coins = int(rewards.get("coins", 0))
+	if fixed_coins > 0:
+		party.add_coins(fixed_coins)
+		summary["coins"] = int(summary.get("coins", 0)) + fixed_coins
 	var items = rewards.get("items", [])
 	if typeof(items) == TYPE_ARRAY:
 		for item in items:
@@ -287,9 +288,50 @@ func _apply_victory_rewards(result: Dictionary) -> Dictionary:
 			if item_id.is_empty():
 				continue
 			party.add_item(item_id, amount)
-			summary["items"].append({"item_id": item_id, "id": item_id, "amount": amount})
+			summary["items"].append({"item_id": item_id, "id": item_id, "amount": amount, "source": "fixed"})
+	var loot_table = rewards.get("loot_table", {})
+	if typeof(loot_table) == TYPE_DICTIONARY and not loot_table.is_empty():
+		var loot_result = LootSystemScript.new().roll_loot(loot_table)
+		_apply_loot_result(summary, loot_result, repository)
 	_apply_growth_results_to_hero(summary["experience"])
 	return summary
+
+func _apply_loot_result(summary: Dictionary, loot_result: Dictionary, repository) -> void:
+	var loot_summary = {
+		"rolled": bool(loot_result.get("rolled", false)),
+		"coins": max(0, int(loot_result.get("coins", 0))),
+		"items": [],
+		"errors": [],
+	}
+	var raw_errors = loot_result.get("errors", [])
+	if typeof(raw_errors) == TYPE_ARRAY:
+		for error in raw_errors:
+			loot_summary["errors"].append(str(error))
+
+	var loot_coins = int(loot_summary.get("coins", 0))
+	if loot_coins > 0:
+		party.add_coins(loot_coins)
+		summary["coins"] = int(summary.get("coins", 0)) + loot_coins
+
+	var loot_items = loot_result.get("items", [])
+	if typeof(loot_items) == TYPE_ARRAY:
+		for item in loot_items:
+			if typeof(item) != TYPE_DICTIONARY:
+				loot_summary["errors"].append("掉落物品格式错误。")
+				continue
+			var item_id = str(item.get("item_id", ""))
+			var amount = max(1, int(item.get("amount", 1)))
+			if item_id.is_empty():
+				loot_summary["errors"].append("掉落物品编号缺失。")
+				continue
+			if repository == null or not repository.has_method("get_item") or repository.get_item(item_id).is_empty():
+				loot_summary["errors"].append("掉落物品资料缺失：%s。" % item_id)
+				continue
+			party.add_item(item_id, amount)
+			var record = {"item_id": item_id, "id": item_id, "amount": amount}
+			loot_summary["items"].append(record)
+			summary["items"].append({"item_id": item_id, "id": item_id, "amount": amount, "source": "loot"})
+	summary["loot"] = loot_summary
 
 func _apply_growth_results_to_hero(experience: Array) -> void:
 	if party == null or not party.has_member("hero_yun"):

@@ -96,6 +96,37 @@ func run(assertions) -> void:
 	assertions.assert_eq(reward_state.party.get_item_count("herb_small"), 2, "战斗胜利应发放物品")
 	assertions.assert_true(not reward_state.last_reward_result.is_empty(), "GameState 应保存最近奖励结果供 UI 展示")
 
+	var loot_state = GameStateScript.new()
+	loot_state.start_new_game()
+	var loot_battle = system.create_battle(loot_state, _loot_context(), repository)
+	loot_battle.finish(true)
+	loot_state.apply_battle_result(loot_battle.to_result_dictionary())
+	assertions.assert_eq(loot_state.party.coins, GameStateScript.STARTING_COINS + 13, "固定铜钱和随机铜钱应合并发放")
+	assertions.assert_eq(loot_state.party.get_item_count("herb_focus"), 1, "随机消耗品应进入背包")
+	assertions.assert_eq(loot_state.party.get_item_count("iron_sword"), 1, "随机装备应进入背包")
+	assertions.assert_eq(int(loot_state.last_reward_result.get("coins", 0)), 13, "奖励摘要应记录总铜钱")
+	var loot_items = loot_state.last_reward_result.get("items", [])
+	assertions.assert_eq(loot_items.size(), 2, "奖励摘要应记录随机掉落物品")
+	if not loot_items.is_empty():
+		assertions.assert_eq(loot_items[0].get("source", ""), "loot", "随机物品来源应标记为 loot")
+	assertions.assert_true(bool(loot_state.last_reward_result.get("loot", {}).get("rolled", false)), "奖励摘要应记录本场已掷掉落表")
+
+	var missing_loot_state = GameStateScript.new()
+	missing_loot_state.start_new_game()
+	var missing_loot_battle = system.create_battle(missing_loot_state, _missing_loot_context(), repository)
+	missing_loot_battle.finish(true)
+	missing_loot_state.apply_battle_result(missing_loot_battle.to_result_dictionary())
+	assertions.assert_eq(missing_loot_state.party.get_item_count("missing_item"), 0, "缺失物品资料不应进入背包")
+	assertions.assert_true(missing_loot_state.last_reward_result.get("loot", {}).get("errors", []).size() >= 1, "缺失物品资料应记录错误")
+
+	var failed_loot_state = GameStateScript.new()
+	failed_loot_state.start_new_game()
+	var failed_loot_battle = system.create_battle(failed_loot_state, _loot_context(), repository)
+	failed_loot_battle.finish(false)
+	failed_loot_state.apply_battle_result(failed_loot_battle.to_result_dictionary())
+	assertions.assert_eq(failed_loot_state.party.coins, GameStateScript.STARTING_COINS, "战斗失败不应掷掉落表")
+	assertions.assert_eq(failed_loot_state.party.get_item_count("herb_focus"), 0, "战斗失败不应发随机物品")
+
 	var fail_state = GameStateScript.new()
 	fail_state.start_new_game()
 	var fail_battle = system.create_battle(fail_state, _party_context(), repository)
@@ -122,6 +153,9 @@ func run(assertions) -> void:
 	repository.free()
 	hard_dummy_state.free()
 	reward_state.free()
+	loot_state.free()
+	missing_loot_state.free()
+	failed_loot_state.free()
 	fail_state.free()
 	downed_victory_state.free()
 	restored_down.free()
@@ -147,6 +181,43 @@ func _party_context_with_deploy(max_members: int, start_cells: Array) -> Diction
 			{"unit_id": "bandit", "actor_id": "bandit_01", "team": "enemy", "start_cell": {"q": 5, "r": 2}, "max_mp": 0}
 		]
 	}
+
+func _loot_context() -> Dictionary:
+	return {
+		"source_map_id": "mountain_pass",
+		"source_object_id": "enemy_roaming_bandit",
+		"battlefield": {"width": 8, "height": 6},
+		"player_deploy": {"max_members": 1, "start_cells": [{"q": 1, "r": 2}]},
+		"victory_rewards": {
+			"exp": 0,
+			"coins": 5,
+			"loot_table": {
+				"rolls": 1,
+				"entries": [
+					{"type": "coins", "chance": 1.0, "amount": 8},
+					{"type": "item", "item_id": "herb_focus", "chance": 1.0, "amount": 1},
+					{"type": "item", "item_id": "iron_sword", "chance": 1.0, "amount": 1}
+				]
+			}
+		},
+		"units": [
+			{"unit_id": "roaming_bandit", "actor_id": "bandit_lackey_01", "team": "enemy", "start_cell": {"q": 5, "r": 2}, "move_range": 3, "attack_range": 1, "max_mp": 0}
+		]
+	}
+
+func _missing_loot_context() -> Dictionary:
+	var context = _loot_context()
+	context["victory_rewards"] = {
+		"exp": 0,
+		"coins": 0,
+		"loot_table": {
+			"rolls": 1,
+			"entries": [
+				{"type": "item", "item_id": "missing_item", "chance": 1.0, "amount": 1}
+			]
+		}
+	}
+	return context
 
 func _legacy_party_context() -> Dictionary:
 	var context = _party_context_with_deploy(2, [{"q": 1, "r": 2}, {"q": 1, "r": 3}])
