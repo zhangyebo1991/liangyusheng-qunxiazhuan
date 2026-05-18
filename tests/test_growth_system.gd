@@ -43,6 +43,7 @@ func run(assertions) -> void:
 	run_inner_art_tests(assertions)
 	run_proficiency_points_tests(assertions)
 	run_effect_system_skill_tree_bonus_tests(assertions)
+	run_save_load_growth_data_tests(assertions)
 
 func run_skill_tree_tests(assertions) -> void:
 	var GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")
@@ -130,3 +131,21 @@ func run_effect_system_skill_tree_bonus_tests(assertions) -> void:
 	var effects = {"damage_bonus": 5, "crit_chance": 0.1}
 	var result = effect_sys.apply_skill_tree_effects(effects)
 	assertions.assert_true(bool(result.get("success", false)), "apply_skill_tree_effects 应成功应用技能树效果")
+
+func run_save_load_growth_data_tests(assertions) -> void:
+	var GameStateScript = preload("res://scripts/core/game_state.gd")
+
+	var game_state = GameStateScript.new()
+	game_state.start_new_game()
+	game_state.growth_manager.proficiency_points = 15
+
+	var save_data = game_state.to_dictionary()
+	assertions.assert_true(save_data.has("growth_manager"), "存档应包含成长管理器数据")
+	assertions.assert_eq(int(save_data.get("growth_manager", {}).get("proficiency_points", 0)), 15, "存档应保存熟练度点数")
+
+	var restored = GameStateScript.new()
+	restored.from_dictionary(save_data)
+	assertions.assert_eq(restored.growth_manager.proficiency_points, 15, "读档应恢复熟练度点数")
+
+	game_state.free()
+	restored.free()
