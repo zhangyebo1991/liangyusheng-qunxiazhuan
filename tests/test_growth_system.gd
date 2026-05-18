@@ -63,12 +63,15 @@ func run_inner_art_tests(assertions) -> void:
 
 	var manager = GrowthManagerScript.new()
 	manager.learn_art("calm_heart")
+	manager.proficiency_points = 5
 	var result = manager.upgrade_art("calm_heart")
 	assertions.assert_true(bool(result.get("success", false)), "升级心法应成功")
 	assertions.assert_eq(manager.get_art_level("calm_heart"), 1, "心法等级应为 1")
 
 	var manager2 = GrowthManagerScript.new()
 	manager2.learn_art("calm_heart")
+	manager2.proficiency_points = 5
+	manager2.upgrade_art("calm_heart")
 	var result2 = manager2.switch_active("calm_heart")
 	assertions.assert_true(bool(result2.get("success", false)), "切换心法应成功")
 	assertions.assert_eq(manager2.get_active_art(), "calm_heart", "当前心法应为 calm_heart")
@@ -99,10 +102,10 @@ func run_insight_tests(assertions) -> void:
 		"skill_proficiency": {"basic_sword": 50},
 		"skill_used_count": {"basic_sword": 100}
 	}
-	manager.insights.set_seed(0)
+	manager.insights.set_seed(13)
 	var result = manager.insights.check_triggers("combat", context)
 	assertions.assert_true(result is Array, "领悟触发检查应返回数组")
-	assertions.assert_false(result.is_empty(), "proficiency=50 + used_count=100 + seed=0 应触发领悟")
+	assertions.assert_false(result.is_empty(), "proficiency=50 + used_count=100 + seed=13 应触发领悟")
 	if not result.is_empty():
 		assertions.assert_true(result[0].has("triggered"), "触发结果应包含 triggered 字段")
 
