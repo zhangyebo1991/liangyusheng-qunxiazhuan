@@ -2,9 +2,13 @@ extends RefCounted
 
 var _insights: Array = []
 var _triggered: Dictionary = {}
+var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 func _init():
 	_load_insights()
+
+func set_seed(seed_value: int) -> void:
+	_rng.seed = seed_value
 
 func _load_insights():
 	var dir = DirAccess.open("res://data/martial_insights")
@@ -24,7 +28,8 @@ func _load_insights():
 		file_name = dir.get_next()
 	dir.list_dir_end()
 
-func check_triggers(scene: String, context: Dictionary) -> Dictionary:
+func check_triggers(scene: String, context: Dictionary) -> Array:
+	var results: Array = []
 	for insight in _insights:
 		var trigger_scene = insight.get("trigger_scene", "any")
 		if trigger_scene != "any" and trigger_scene != scene:
@@ -37,14 +42,14 @@ func check_triggers(scene: String, context: Dictionary) -> Dictionary:
 			var id = insight.get("id", "")
 			_triggered[id] = true
 			var result_data = insight.get("result", {})
-			return {
+			results.append({
 				"triggered": true,
 				"id": id,
 				"unlock": result_data.get("unlock", ""),
 				"message": result_data.get("message", "")
-			}
+			})
 
-	return {}
+	return results
 
 func _check_conditions(conditions: Array, context: Dictionary) -> bool:
 	for condition in conditions:
@@ -70,7 +75,7 @@ func _check_single_condition(condition: Dictionary, context: Dictionary) -> bool
 
 		"random":
 			var chance = float(condition.get("chance", 0))
-			return randf() < chance
+			return _rng.randf() < chance
 
 		"dialogue":
 			var npc = condition.get("npc", "")

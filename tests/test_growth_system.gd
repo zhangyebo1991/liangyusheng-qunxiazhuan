@@ -84,5 +84,9 @@ func run_insight_tests(assertions) -> void:
 		"skill_proficiency": {"basic_sword": 50},
 		"skill_used_count": {"basic_sword": 100}
 	}
+	manager.insights.set_seed(0)
 	var result = manager.insights.check_triggers("combat", context)
-	assertions.assert_true(result.is_empty() or result.has("triggered"), "领悟触发检查应返回正确格式")
+	assertions.assert_true(result is Array, "领悟触发检查应返回数组")
+	assertions.assert_false(result.is_empty(), "proficiency=50 + used_count=100 + seed=0 应触发领悟")
+	if not result.is_empty():
+		assertions.assert_true(result[0].has("triggered"), "触发结果应包含 triggered 字段")
