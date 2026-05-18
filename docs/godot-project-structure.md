@@ -54,6 +54,12 @@
 
 战棋武学切片使用 `data/martial_arts.json` 的 `tactical` 字段声明战棋伤害加值、内力消耗、范围和范围形状。`GameState` 只保存主角长期最大内力；战棋单位的当前内力保存在 `TacticalUnitState`，每场战斗开局回满。`TacticalCombatSystem` 是普通攻击和武学攻击的统一规则入口，负责校验武学归属、内力、范围、伤害和胜负；`BattleScreen` 只负责动作按钮、内力显示、格子高亮和点击接线。
 
+## 战利品掉落与可重复遭遇切片
+
+战利品掉落切片在 `victory_rewards` 中增加嵌入式 `loot_table`。`LootSystem` 只负责按概率生成结构化掉落结果，不直接修改背包、铜钱或 UI。`GameState` 在战斗胜利时继续统一发放固定奖励和随机掉落，并把结果写入 `last_reward_result` 供奖励面板展示。
+
+可重复战斗对象使用 `repeatable = true`。这类战斗胜利后不写入 `MapState.resolved_objects`，返回地图后仍可再次挑战；未声明该字段的战斗保持一次性逻辑。奖励面板、背包、商店和地图奖励消息必须通过物品资料显示中文名，不能把 `item_id` 直接展示给玩家。
+
 ## 验证命令
 
 ```powershell
