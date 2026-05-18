@@ -75,6 +75,18 @@ func run_inner_art_tests(assertions) -> void:
 	assertions.assert_eq(int(effects.get("mp_regen", 0)), 1, "1级静心诀应增加1内力回复")
 
 	run_insight_tests(assertions)
+	run_game_state_integration_tests(assertions)
+
+func run_game_state_integration_tests(assertions) -> void:
+	var GameStateScript = preload("res://scripts/core/game_state.gd")
+	var game_state = GameStateScript.new()
+	assertions.assert_true(game_state.growth_manager != null, "GameState 应有 growth_manager")
+
+	var game_state2 = GameStateScript.new()
+	game_state2.start_new_game()
+	var old_points = game_state2.growth_manager.proficiency_points
+	game_state2.growth_manager.on_battle_end({"enemies": 2, "difficulty": 1})
+	assertions.assert_true(game_state2.growth_manager.proficiency_points > old_points, "战斗结束后熟练度点数应增加")
 
 func run_insight_tests(assertions) -> void:
 	var GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")

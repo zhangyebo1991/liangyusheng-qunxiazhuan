@@ -8,6 +8,7 @@ const SaveSystemScript = preload("res://scripts/systems/save_system.gd")
 const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
 const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
 const GrowthSystemScript = preload("res://scripts/systems/growth_system.gd")
+const GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")
 const LootSystemScript = preload("res://scripts/systems/loot_system.gd")
 
 const DEFAULT_HERO_MAX_HP := 120
@@ -28,6 +29,7 @@ var hero_cur_mp := DEFAULT_HERO_MAX_MP
 var last_inn_id: String = ""
 var martial_proficiency: Dictionary = {}
 var last_reward_result: Dictionary = {}
+var growth_manager = GrowthManagerScript.new()
 
 func start_new_game() -> void:
 	party = PartyStateScript.new()
@@ -45,6 +47,7 @@ func start_new_game() -> void:
 	last_inn_id = ""
 	martial_proficiency = {}
 	last_reward_result = {}
+	growth_manager = GrowthManagerScript.new()
 	set_current_map("mountain_pass", Vector2(160, 320))
 	flags = {"current_map": "mountain_pass"}
 	battle_context = {}
