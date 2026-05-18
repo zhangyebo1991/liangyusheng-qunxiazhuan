@@ -20,3 +20,9 @@ func on_dialogue_event(npc_id: String, dialogue_id: String):
 
 func on_item_used(item_id: String):
 	insights.check_triggers("item", {"item": item_id})
+
+func unlock_skill_node(skill_id: String, node_id: String) -> Dictionary:
+	var result = skill_trees.unlock_node(skill_id, node_id, proficiency_points)
+	if result.get("success", false):
+		proficiency_points -= int(result.get("cost", 0))
+	return result

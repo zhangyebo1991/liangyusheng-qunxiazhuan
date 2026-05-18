@@ -1,0 +1,58 @@
+{
+  "skill_id": "basic_sword",
+  "name": "基础剑法",
+  "branches": [
+    {
+      "id": "power_branch",
+      "name": "刚猛路线",
+      "nodes": [
+        {
+          "id": "dmg_1",
+          "name": "力道+3",
+          "cost": 1,
+          "effects": {"damage_bonus": 3}
+        },
+        {
+          "id": "dmg_2",
+          "name": "力道+5",
+          "cost": 2,
+          "requires": ["dmg_1"],
+          "effects": {"damage_bonus": 5}
+        },
+        {
+          "id": "crit",
+          "name": "暴击强化",
+          "cost": 3,
+          "requires": ["dmg_2"],
+          "effects": {"crit_chance": 0.1}
+        }
+      ]
+    },
+    {
+      "id": "technique_branch",
+      "name": "技巧路线",
+      "nodes": [
+        {
+          "id": "acc_1",
+          "name": "精准+5",
+          "cost": 1,
+          "effects": {"accuracy_bonus": 5}
+        },
+        {
+          "id": "bleed",
+          "name": "破绽攻击",
+          "cost": 2,
+          "requires": ["acc_1"],
+          "effects": {"add_effect": "bleed"}
+        },
+        {
+          "id": "multi",
+          "name": "连击",
+          "cost": 3,
+          "requires": ["bleed"],
+          "effects": {"extra_strike": 0.15}
+        }
+      ]
+    }
+  ]
+}

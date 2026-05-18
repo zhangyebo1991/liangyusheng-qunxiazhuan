@@ -37,3 +37,19 @@ func run(assertions) -> void:
 	assertions.assert_false(bool(invalid.get("success", true)), "不存在角色不应获得经验")
 
 	repository.free()
+
+	run_skill_tree_tests(assertions)
+
+func run_skill_tree_tests(assertions) -> void:
+	var GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")
+
+	var manager = GrowthManagerScript.new()
+	manager.proficiency_points = 5
+	var result = manager.unlock_skill_node("basic_sword", "dmg_1")
+	assertions.assert_true(bool(result.get("success", false)), "解锁节点应成功")
+	assertions.assert_eq(manager.proficiency_points, 4, "消耗 1 点后剩余 4")
+
+	var manager2 = GrowthManagerScript.new()
+	manager2.proficiency_points = 0
+	var result2 = manager2.unlock_skill_node("basic_sword", "dmg_1")
+	assertions.assert_false(bool(result2.get("success", true)), "点数不足应失败")
