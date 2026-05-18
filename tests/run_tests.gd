@@ -7,6 +7,7 @@ const TestPartyStateScript = preload("res://tests/test_party_state.gd")
 const TestEquipmentSystemScript = preload("res://tests/test_equipment_system.gd")
 const TestActorStatsSystemScript = preload("res://tests/test_actor_stats_system.gd")
 const TestGrowthSystemScript = preload("res://tests/test_growth_system.gd")
+const TestLootSystemScript = preload("res://tests/test_loot_system.gd")
 const TestJournalStateScript = preload("res://tests/test_journal_state.gd")
 const TestJournalSystemScript = preload("res://tests/test_journal_system.gd")
 const TestQuestAndDialogueScript = preload("res://tests/test_quest_and_dialogue.gd")
@@ -82,6 +83,7 @@ func _run_all_suites() -> void:
 		TestEquipmentSystemScript.new(),
 		TestActorStatsSystemScript.new(),
 		TestGrowthSystemScript.new(),
+		TestLootSystemScript.new(),
 		TestJournalStateScript.new(),
 		TestJournalSystemScript.new(),
 		TestQuestAndDialogueScript.new(),
