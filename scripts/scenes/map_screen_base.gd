@@ -452,7 +452,7 @@ func _build_effect_message(result: Dictionary, fallback_message: String) -> Stri
 		if item_id.is_empty():
 			continue
 		var item_data = data_repository.get_item(item_id) if data_repository != null else {}
-		var name = str(item_data.get("name", item_id))
+		var name = str(item_data.get("name", "未知物品"))
 		var amount = int(item.get("amount", 1))
 		if amount > 1:
 			item_parts.append("%s x%d" % [name, amount])

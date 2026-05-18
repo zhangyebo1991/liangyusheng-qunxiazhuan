@@ -589,8 +589,8 @@ func _item_display_name(item_id: String) -> String:
 	if DataRepository != null and DataRepository.has_method("get_item"):
 		var item = DataRepository.get_item(item_id)
 		if typeof(item) == TYPE_DICTIONARY and not item.is_empty():
-			return str(item.get("name", item_id))
-	return item_id
+			return str(item.get("name", "未知物品"))
+	return "未知物品"
 
 func _on_reward_return_pressed() -> void:
 	if reward_panel != null:

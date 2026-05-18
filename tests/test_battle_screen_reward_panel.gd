@@ -27,6 +27,11 @@ func run(assertions) -> void:
 	assertions.assert_true(text.find("气血内力已回满") >= 0, "奖励文本应显示升级回满")
 	assertions.assert_true(text.find("15 文") >= 0, "奖励文本应显示铜钱")
 	assertions.assert_true(text.find("小还丹 x1") >= 0, "奖励文本应显示中文物品名和掉落明细")
+	var missing_text = screen._reward_text({
+		"items": [{"item_id": "missing_item", "amount": 2}]
+	})
+	assertions.assert_true(missing_text.find("未知物品 x2") >= 0, "缺失物品资料时奖励面板应显示中文兜底")
+	assertions.assert_eq(missing_text.find("missing_item"), -1, "奖励面板不应暴露 item_id")
 	screen.free()
 
 func _collect_method_names(script) -> Dictionary:
