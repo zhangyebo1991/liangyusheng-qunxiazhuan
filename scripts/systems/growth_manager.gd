@@ -10,10 +10,13 @@ func _init():
 	inner_arts = preload("res://scripts/systems/inner_art_system.gd").new()
 	insights = preload("res://scripts/systems/insight_system.gd").new()
 
-func on_battle_end(battle_data: Dictionary):
+func on_battle_end(battle_data: Dictionary) -> Array:
 	var enemies = int(battle_data.get("enemies", 1))
 	var difficulty = int(battle_data.get("difficulty", 1))
 	proficiency_points += enemies * difficulty
+	var context = battle_data.duplicate()
+	context["proficiency_points"] = proficiency_points
+	return insights.check_triggers("combat", context)
 
 func on_dialogue_event(npc_id: String, dialogue_id: String) -> Array:
 	return insights.check_triggers("dialogue", {"npc": npc_id, "dialogue": dialogue_id})

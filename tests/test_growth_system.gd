@@ -3,7 +3,6 @@ extends RefCounted
 const PartyStateScript = preload("res://scripts/domain/party_state.gd")
 const DataRepositoryScript = preload("res://scripts/systems/data_repository.gd")
 const GrowthSystemScript = preload("res://scripts/systems/growth_system.gd")
-const ProficiencySystemScript = preload("res://scripts/systems/proficiency_system.gd")
 
 func run(assertions) -> void:
 	var repository = DataRepositoryScript.new()
@@ -41,7 +40,6 @@ func run(assertions) -> void:
 
 	run_skill_tree_tests(assertions)
 	run_inner_art_tests(assertions)
-	run_proficiency_points_tests(assertions)
 	run_effect_system_skill_tree_bonus_tests(assertions)
 	run_full_growth_workflow_tests(assertions)
 	run_save_load_growth_data_tests(assertions)
@@ -92,23 +90,6 @@ func run_game_state_integration_tests(assertions) -> void:
 	var old_points = game_state2.growth_manager.proficiency_points
 	game_state2.growth_manager.on_battle_end({"enemies": 2, "difficulty": 1})
 	assertions.assert_true(game_state2.growth_manager.proficiency_points > old_points, "战斗结束后熟练度点数应增加")
-
-func run_proficiency_points_tests(assertions) -> void:
-	var ps = ProficiencySystemScript.new()
-	ps.add_proficiency_points(10)
-	assertions.assert_eq(ps.get_proficiency_points(), 10, "添加 10 点后应为 10")
-
-	var ps2 = ProficiencySystemScript.new()
-	ps2.add_proficiency_points(10)
-	var result = ps2.spend_proficiency_points(3)
-	assertions.assert_true(result, "消耗 3 点应成功")
-	assertions.assert_eq(ps2.get_proficiency_points(), 7, "消耗 3 点后剩余 7")
-
-	var ps3 = ProficiencySystemScript.new()
-	ps3.add_proficiency_points(2)
-	var result2 = ps3.spend_proficiency_points(5)
-	assertions.assert_false(result2, "点数不足应失败")
-	assertions.assert_eq(ps3.get_proficiency_points(), 2, "失败后点数不变")
 
 func run_insight_tests(assertions) -> void:
 	var GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")

@@ -68,6 +68,3 @@ func _find_node(tree: Dictionary, node_id: String) -> Dictionary:
 
 func _is_node_unlocked(skill_id: String, node_id: String) -> bool:
 	return _unlocked_nodes.has(skill_id) and node_id in _unlocked_nodes[skill_id]
-
-func check_triggers(_scene: String, _context: Dictionary) -> Dictionary:
-	return {}
