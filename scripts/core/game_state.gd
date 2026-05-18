@@ -391,6 +391,7 @@ func to_dictionary() -> Dictionary:
 		"hero_cur_mp": hero_cur_mp,
 		"last_inn_id": last_inn_id,
 		"martial_proficiency": _normalized_martial_proficiency(),
+		"growth_manager": growth_manager.to_dictionary(),
 	}
 
 func from_dictionary(data: Dictionary) -> void:
@@ -415,6 +416,8 @@ func from_dictionary(data: Dictionary) -> void:
 	last_inn_id = str(data.get("last_inn_id", ""))
 	hero_hp = int(data.get("hero_hp", hero_max_hp))
 	martial_proficiency = _read_martial_proficiency(data.get("martial_proficiency", {}))
+	growth_manager = GrowthManagerScript.new()
+	growth_manager.from_dictionary(data.get("growth_manager", {}))
 	last_reward_result = {}
 	_normalize_hero_hp()
 	_normalize_hero_mp()

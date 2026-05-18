@@ -47,3 +47,27 @@ func get_active_art() -> String:
 
 func get_active_effects() -> Dictionary:
 	return inner_arts.get_active_effects()
+
+func to_dictionary() -> Dictionary:
+	return {
+		"proficiency_points": proficiency_points,
+		"unlocked_nodes": skill_trees._unlocked_nodes.duplicate(true),
+		"learned_arts": inner_arts._learned_arts.duplicate(true),
+		"active_art": inner_arts.get_active_art(),
+		"triggered_insights": insights._triggered.duplicate(true),
+	}
+
+func from_dictionary(data: Dictionary) -> void:
+	proficiency_points = max(0, int(data.get("proficiency_points", 0)))
+	var unlocked = data.get("unlocked_nodes", {})
+	if typeof(unlocked) == TYPE_DICTIONARY:
+		skill_trees._unlocked_nodes = unlocked.duplicate(true)
+	var learned = data.get("learned_arts", {})
+	if typeof(learned) == TYPE_DICTIONARY:
+		inner_arts._learned_arts = learned.duplicate(true)
+	var active = str(data.get("active_art", ""))
+	if not active.is_empty() and inner_arts._learned_arts.has(active):
+		inner_arts._active_art = active
+	var triggered = data.get("triggered_insights", {})
+	if typeof(triggered) == TYPE_DICTIONARY:
+		insights._triggered = triggered.duplicate(true)
