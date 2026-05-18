@@ -42,6 +42,7 @@ func run(assertions) -> void:
 	run_skill_tree_tests(assertions)
 	run_inner_art_tests(assertions)
 	run_proficiency_points_tests(assertions)
+	run_effect_system_skill_tree_bonus_tests(assertions)
 
 func run_skill_tree_tests(assertions) -> void:
 	var GrowthManagerScript = preload("res://scripts/systems/growth_manager.gd")
@@ -121,3 +122,11 @@ func run_insight_tests(assertions) -> void:
 	assertions.assert_false(result.is_empty(), "proficiency=50 + used_count=100 + seed=0 应触发领悟")
 	if not result.is_empty():
 		assertions.assert_true(result[0].has("triggered"), "触发结果应包含 triggered 字段")
+
+func run_effect_system_skill_tree_bonus_tests(assertions) -> void:
+	var EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
+
+	var effect_sys = EffectSystemScript.new()
+	var effects = {"damage_bonus": 5, "crit_chance": 0.1}
+	var result = effect_sys.apply_skill_tree_effects(effects)
+	assertions.assert_true(bool(result.get("success", false)), "apply_skill_tree_effects 应成功应用技能树效果")

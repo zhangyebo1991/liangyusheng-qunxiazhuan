@@ -292,6 +292,31 @@ func _apply_rest_at_inn(result: Dictionary, game_state, effect: Dictionary) -> v
 		game_state.get_node("/root/EventBus").inn_rested.emit(inn_id)
 	_mark_applied(result, "在客栈歇息一晚。")
 
+func apply_skill_tree_effects(effects: Dictionary) -> Dictionary:
+	var result = _empty_result()
+	if typeof(effects) != TYPE_DICTIONARY:
+		_add_error(result, "技能树效果格式错误。")
+		return result
+
+	for key in effects.keys():
+		var value = effects[key]
+		match key:
+			"damage_bonus":
+				_mark_applied(result, "伤害加成 +%d" % int(value))
+			"crit_chance":
+				_mark_applied(result, "暴击率 +%.0f%%" % (float(value) * 100))
+			"accuracy_bonus":
+				_mark_applied(result, "精准加成 +%d" % int(value))
+			"add_effect":
+				_mark_applied(result, "附加效果：%s" % str(value))
+			"extra_strike":
+				_mark_applied(result, "连击率 +%.0f%%" % (float(value) * 100))
+			_:
+				_mark_applied(result, "未知技能树效果：%s" % str(key))
+
+	result["success"] = int(result.get("applied", 0)) > 0 and int(result.get("failed", 0)) == 0
+	return result
+
 func _get_journal_state(game_state):
 	if game_state == null:
 		return null
