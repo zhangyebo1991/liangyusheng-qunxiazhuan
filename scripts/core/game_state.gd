@@ -245,7 +245,7 @@ func _battle_victory_effects(result: Dictionary) -> Array:
 
 	var effects: Array = []
 	var object_id = str(result.get("source_object_id", ""))
-	if not object_id.is_empty():
+	if not object_id.is_empty() and not bool(result.get("repeatable", false)):
 		effects.append({"type": "resolve_map_object", "object_id": object_id})
 	var quest_id = str(result.get("quest_id", ""))
 	if not quest_id.is_empty():

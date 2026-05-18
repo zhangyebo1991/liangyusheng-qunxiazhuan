@@ -44,7 +44,7 @@ func _talk_to_npc(record: Dictionary) -> void:
 
 func _start_battle(record: Dictionary) -> void:
 	var quest_id = str(record.get("quest_id", ""))
-	if GameState.quest_system.get_status(quest_id) == "not_started":
+	if not quest_id.is_empty() and GameState.quest_system.get_status(quest_id) == "not_started":
 		hud.show_message("先与青衫客交谈。")
 		return
 	var context = record.duplicate(true)

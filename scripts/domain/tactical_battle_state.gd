@@ -24,6 +24,7 @@ var quest_id: String = ""
 var reward_martial_art_id: String = "basic_sword"
 var proficiency_reward: int = 1
 var victory_rewards: Dictionary = {}
+var repeatable := false
 var auto_battle_mode: AutoBattleMode = AutoBattleMode.new()
 
 func add_unit(unit) -> void:
@@ -73,6 +74,7 @@ func to_result_dictionary() -> Dictionary:
 		"source_object_id": source_object_id,
 		"quest_id": quest_id,
 		"victory_rewards": victory_rewards.duplicate(true),
+		"repeatable": repeatable,
 		"martial_art_id": reward_martial_art_id,
 		"proficiency_reward": max(0, proficiency_reward),
 		"log": log.duplicate(),
@@ -121,6 +123,7 @@ func to_dictionary() -> Dictionary:
 		"source_object_id": source_object_id,
 		"quest_id": quest_id,
 		"victory_rewards": victory_rewards.duplicate(true),
+		"repeatable": repeatable,
 		"reward_martial_art_id": reward_martial_art_id,
 		"proficiency_reward": proficiency_reward,
 		"auto_battle_mode": auto_battle_mode.to_dictionary(),
@@ -154,6 +157,7 @@ func from_dictionary(data: Dictionary) -> void:
 	reward_martial_art_id = str(data.get("reward_martial_art_id", "basic_sword"))
 	proficiency_reward = int(data.get("proficiency_reward", 1))
 	victory_rewards = data.get("victory_rewards", {})
+	repeatable = bool(data.get("repeatable", false))
 	var auto_data = data.get("auto_battle_mode", {})
 	if typeof(auto_data) == TYPE_DICTIONARY:
 		auto_battle_mode.from_dictionary(auto_data)

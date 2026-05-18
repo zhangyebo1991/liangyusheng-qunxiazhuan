@@ -127,6 +127,20 @@ func run(assertions) -> void:
 	assertions.assert_eq(failed_loot_state.party.coins, GameStateScript.STARTING_COINS, "战斗失败不应掷掉落表")
 	assertions.assert_eq(failed_loot_state.party.get_item_count("herb_focus"), 0, "战斗失败不应发随机物品")
 
+	var repeatable_state = GameStateScript.new()
+	repeatable_state.start_new_game()
+	var repeatable_battle = system.create_battle(repeatable_state, _repeatable_context(), repository)
+	repeatable_battle.finish(true)
+	repeatable_state.apply_battle_result(repeatable_battle.to_result_dictionary())
+	assertions.assert_false(repeatable_state.is_map_object_resolved("enemy_roaming_bandit"), "repeatable 战斗胜利后不应标记来源对象已解决")
+
+	var one_shot_state = GameStateScript.new()
+	one_shot_state.start_new_game()
+	var one_shot_battle = system.create_battle(one_shot_state, _party_context(), repository)
+	one_shot_battle.finish(true)
+	one_shot_state.apply_battle_result(one_shot_battle.to_result_dictionary())
+	assertions.assert_true(one_shot_state.is_map_object_resolved("enemy_bandit_gate"), "非 repeatable 战斗胜利后仍应标记来源对象已解决")
+
 	var fail_state = GameStateScript.new()
 	fail_state.start_new_game()
 	var fail_battle = system.create_battle(fail_state, _party_context(), repository)
@@ -156,6 +170,8 @@ func run(assertions) -> void:
 	loot_state.free()
 	missing_loot_state.free()
 	failed_loot_state.free()
+	repeatable_state.free()
+	one_shot_state.free()
 	fail_state.free()
 	downed_victory_state.free()
 	restored_down.free()
@@ -217,6 +233,12 @@ func _missing_loot_context() -> Dictionary:
 			]
 		}
 	}
+	return context
+
+func _repeatable_context() -> Dictionary:
+	var context = _loot_context()
+	context["repeatable"] = true
+	context["source_object_id"] = "enemy_roaming_bandit"
 	return context
 
 func _legacy_party_context() -> Dictionary:

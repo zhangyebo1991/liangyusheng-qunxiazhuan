@@ -31,6 +31,7 @@ func create_battle(game_state, context: Dictionary, data_source = null):
 		battle.source_map_id = "mountain_pass"
 	battle.source_object_id = str(context.get("source_object_id", ""))
 	battle.quest_id = str(context.get("quest_id", ""))
+	battle.repeatable = bool(context.get("repeatable", false))
 	var rewards = context.get("victory_rewards", {})
 	if typeof(rewards) == TYPE_DICTIONARY:
 		battle.victory_rewards = rewards.duplicate(true)

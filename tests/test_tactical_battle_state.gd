@@ -15,6 +15,7 @@ func run(assertions) -> void:
 	battle.quest_id = "quest_mountain_trial"
 	battle.reward_martial_art_id = "basic_sword"
 	battle.proficiency_reward = 1
+	battle.repeatable = true
 	battle.time_mode = "pause_on_action"
 	battle.battlefield_width = 7
 	battle.battlefield_height = 5
@@ -59,6 +60,10 @@ func run(assertions) -> void:
 	assertions.assert_eq(serialized.get("current_unit_id", ""), "hero", "战棋战斗序列化应保存当前行动单位")
 	assertions.assert_eq(serialized.get("units", []).size(), 2, "战棋战斗序列化应保存单位列表")
 	assertions.assert_eq(serialized.get("log", []).size(), 1, "战棋战斗序列化应保存日志")
+	assertions.assert_true(bool(serialized.get("repeatable", false)), "战棋战斗序列化应保存 repeatable")
+	var restored = TacticalBattleStateScript.new()
+	restored.from_dictionary(serialized)
+	assertions.assert_true(restored.repeatable, "战棋战斗反序列化应恢复 repeatable")
 
 	battle.finish(true)
 	var payload = battle.to_result_dictionary()
@@ -68,3 +73,4 @@ func run(assertions) -> void:
 	assertions.assert_eq(payload.get("quest_id", ""), "quest_mountain_trial", "战棋结果应带回任务编号")
 	assertions.assert_eq(payload.get("martial_art_id", ""), "basic_sword", "战棋结果应带回成长武学")
 	assertions.assert_eq(payload.get("proficiency_reward", 0), 1, "战棋结果应带回熟练度奖励")
+	assertions.assert_true(bool(payload.get("repeatable", false)), "战棋结果应带回 repeatable")
