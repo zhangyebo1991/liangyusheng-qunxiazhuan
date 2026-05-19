@@ -1,6 +1,9 @@
 extends CanvasLayer
 
 const PartyPanelScript = preload("res://scripts/scenes/party_panel.gd")
+const SkillTreePanelScript = preload("res://scripts/scenes/skill_tree_panel.gd")
+const InnerArtPanelScript = preload("res://scripts/scenes/inner_art_panel.gd")
+const InsightPopupScript = preload("res://scripts/scenes/insight_popup.gd")
 
 signal item_use_requested(item_id: String)
 signal shop_buy_requested(item_id: String)
@@ -23,6 +26,11 @@ var shop_list: VBoxContainer
 var shop_empty_label: Label
 var shop_is_open := false
 var mp_label: Label = null
+
+var skill_tree_panel: PanelContainer
+var inner_art_panel: PanelContainer
+var insight_popup: PanelContainer
+var growth_buttons: HBoxContainer
 
 func _ready() -> void:
 	quest_label = Label.new()
@@ -61,6 +69,7 @@ func _ready() -> void:
 
 	_create_inventory_panel()
 	_create_shop_panel()
+	_create_growth_panels()
 
 	set_quest_text("")
 	set_prompt("")
@@ -314,3 +323,87 @@ func _add_shop_row(item: Dictionary) -> void:
 	var item_id = str(item.get("id", ""))
 	buy_button.pressed.connect(func(): shop_buy_requested.emit(item_id))
 	row.add_child(buy_button)
+
+func _create_growth_panels() -> void:
+	growth_buttons = HBoxContainer.new()
+	growth_buttons.position = Vector2(1120, 60)
+	growth_buttons.size = Vector2(300, 36)
+	add_child(growth_buttons)
+
+	var skill_tree_button = Button.new()
+	skill_tree_button.text = "技能树"
+	skill_tree_button.custom_minimum_size = Vector2(90, 36)
+	skill_tree_button.pressed.connect(toggle_skill_tree)
+	growth_buttons.add_child(skill_tree_button)
+
+	var inner_art_button = Button.new()
+	inner_art_button.text = "心法"
+	inner_art_button.custom_minimum_size = Vector2(90, 36)
+	inner_art_button.pressed.connect(toggle_inner_art)
+	growth_buttons.add_child(inner_art_button)
+
+	skill_tree_panel = SkillTreePanelScript.new()
+	skill_tree_panel.set_anchors_preset(Control.PRESET_CENTER)
+	add_child(skill_tree_panel)
+
+	inner_art_panel = InnerArtPanelScript.new()
+	inner_art_panel.set_anchors_preset(Control.PRESET_CENTER)
+	add_child(inner_art_panel)
+
+	insight_popup = InsightPopupScript.new()
+	insight_popup.set_anchors_preset(Control.PRESET_CENTER)
+	add_child(insight_popup)
+
+func set_growth_manager(manager: RefCounted) -> void:
+	if skill_tree_panel != null:
+		skill_tree_panel.set_growth_manager(manager)
+	if inner_art_panel != null:
+		inner_art_panel.set_growth_manager(manager)
+
+func toggle_skill_tree() -> void:
+	if skill_tree_panel == null:
+		return
+	if skill_tree_panel.visible:
+		skill_tree_panel.close()
+	else:
+		hide_inventory()
+		hide_shop()
+		hide_party_panel()
+		skill_tree_panel.open()
+
+func toggle_inner_art() -> void:
+	if inner_art_panel == null:
+		return
+	if inner_art_panel.visible:
+		inner_art_panel.close()
+	else:
+		hide_inventory()
+		hide_shop()
+		hide_party_panel()
+		inner_art_panel.open()
+
+func show_insight(message: String, unlock_name: String = "") -> void:
+	if insight_popup != null:
+		insight_popup.show_insight(message, unlock_name)
+
+func is_growth_panel_open() -> bool:
+	return (skill_tree_panel != null and skill_tree_panel.visible) or \
+		   (inner_art_panel != null and inner_art_panel.visible)
+
+func hide_all_growth_panels() -> void:
+	if skill_tree_panel != null:
+		skill_tree_panel.close()
+	if inner_art_panel != null:
+		inner_art_panel.close()
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_K:
+				toggle_skill_tree()
+			KEY_J:
+				toggle_inner_art()
+			KEY_ESCAPE:
+				if is_growth_panel_open():
+					hide_all_growth_panels()
+					get_viewport().set_input_as_handled()
