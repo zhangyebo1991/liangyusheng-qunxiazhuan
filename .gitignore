@@ -10,6 +10,7 @@ user://
 # 本地工具与引擎下载，不提交
 .tools/
 .worktrees/
+start.bat
 
 # 临时审计与分析输出，不提交
 tmp/

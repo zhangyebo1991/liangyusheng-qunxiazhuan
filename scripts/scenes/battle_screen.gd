@@ -16,6 +16,7 @@ const BattleLogScript = preload("res://scripts/scenes/battle_log.gd")
 const ProficiencySystemScript = preload("res://scripts/systems/proficiency_system.gd")
 const BattleFeedbackDirectorScript = preload("res://scripts/systems/battle_feedback_director.gd")
 const TacticalAIScript = preload("res://scripts/systems/tactical_ai.gd")
+const UiTheme = preload("res://scripts/core/ui_theme.gd")
 const TACTICAL_CELL_SIZE := 80  # 与 battle_grid TILE_SIZE 一致
 const TACTICAL_GRID_OFFSET := Vector2.ZERO
 # v0.x: 16×9 棋盘 × 80px = 1280×720，铺满战斗视口。
@@ -127,47 +128,68 @@ func _process(delta: float) -> void:
 	_poll_terrain_hover()
 
 func _create_ui() -> void:
+	var root := MarginContainer.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_theme_constant_override("margin_left", 32)
+	root.add_theme_constant_override("margin_top", 24)
+	root.add_theme_constant_override("margin_right", 200)
+	root.add_theme_constant_override("margin_bottom", 24)
+	add_child(root)
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.add_theme_constant_override("separation", 12)
+	root.add_child(vbox)
+
 	title_label = Label.new()
-	title_label.position = Vector2(32, 24)
-	title_label.size = Vector2(720, 32)
-	add_child(title_label)
+	title_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_GOLD)
+	title_label.add_theme_font_size_override("font_size", UiTheme.FONT_SIZE_TITLE)
+	vbox.add_child(title_label)
+
+	var hp_row := HBoxContainer.new()
+	hp_row.add_theme_constant_override("separation", 16)
+	vbox.add_child(hp_row)
 
 	hero_hp_label = Label.new()
-	hero_hp_label.position = Vector2(32, 72)
-	hero_hp_label.size = Vector2(320, 32)
-	add_child(hero_hp_label)
+	hero_hp_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_WARM)
+	hero_hp_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_row.add_child(hero_hp_label)
 
 	enemy_hp_label = Label.new()
-	enemy_hp_label.position = Vector2(380, 72)
-	enemy_hp_label.size = Vector2(320, 32)
-	add_child(enemy_hp_label)
+	enemy_hp_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_WARM)
+	enemy_hp_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_row.add_child(enemy_hp_label)
 
 	output = Label.new()
-	output.position = Vector2(32, 120)
-	output.size = Vector2(900, 220)
 	output.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(output)
+	output.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_WARM)
+	output.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(output)
+
+	var button_row := HBoxContainer.new()
+	button_row.add_theme_constant_override("separation", 12)
+	vbox.add_child(button_row)
 
 	attack_button = Button.new()
 	attack_button.text = "基础剑法"
-	attack_button.position = Vector2(32, 372)
-	attack_button.size = Vector2(120, 40)
+	attack_button.custom_minimum_size = Vector2(120, 40)
+	UiTheme.apply_button_theme(attack_button)
 	attack_button.pressed.connect(_on_attack_pressed)
-	add_child(attack_button)
+	button_row.add_child(attack_button)
 
 	item_button = Button.new()
 	item_button.text = "小还丹"
-	item_button.position = Vector2(176, 372)
-	item_button.size = Vector2(120, 40)
+	item_button.custom_minimum_size = Vector2(120, 40)
+	UiTheme.apply_button_theme(item_button)
 	item_button.pressed.connect(_on_item_pressed)
-	add_child(item_button)
+	button_row.add_child(item_button)
 
 	retreat_button = Button.new()
 	retreat_button.text = "暂退"
-	retreat_button.position = Vector2(320, 372)
-	retreat_button.size = Vector2(120, 40)
+	retreat_button.custom_minimum_size = Vector2(120, 40)
+	UiTheme.apply_button_theme(retreat_button)
 	retreat_button.pressed.connect(_on_retreat_pressed)
-	add_child(retreat_button)
+	button_row.add_child(retreat_button)
 
 func _create_tactical_ui() -> void:
 	# v0.x 修复：删除 title_label/status_label/output/retreat_button/grid_layer 5 个旧节点。
@@ -190,42 +212,81 @@ func _create_tactical_ui() -> void:
 	_build_unit_sprites()
 	# Task 12: 底部 7 图标行动栏（与旧按钮并存，旧按钮 Task 20 再清）。
 	action_bar = BattleActionBarScript.new()
-	action_bar.position = Vector2(290, 620)  # v0.x: 与 80px tile grid 底边 (580) 保持 40px 间隙
+	action_bar.anchor_left = 0.5
+	action_bar.anchor_right = 0.5
+	action_bar.anchor_top = 1.0
+	action_bar.anchor_bottom = 1.0
+	action_bar.offset_left = -350
+	action_bar.offset_right = 350
+	action_bar.offset_top = -100
+	action_bar.offset_bottom = -20
 	add_child(action_bar)
 	action_bar.action_selected.connect(_on_action_bar_selected)
 	# Task 13: 顶部集气进度条（800 宽，置于左右面板之间空隙）。
 	charge_bar = ChargeBarScript.new()
-	charge_bar.position = Vector2(240, 24)  # v0.x: 上移到 grid (y=100) 上方 70px 间隙，避免遮挡第一行 HP 条
+	charge_bar.anchor_left = 0.0
+	charge_bar.anchor_right = 1.0
+	charge_bar.anchor_top = 0.0
+	charge_bar.anchor_bottom = 0.0
+	charge_bar.offset_left = 240
+	charge_bar.offset_right = -240
+	charge_bar.offset_top = 24
 	charge_bar.size = Vector2(800, 32)
 	charge_bar.bar_width = 800
 	add_child(charge_bar)
 	_refresh_charge_bar()
 	status_label = Label.new()
-	status_label.position = Vector2(240, 60)
-	status_label.size = Vector2(320, 24)
+	status_label.offset_left = 240
+	status_label.offset_top = 60
 	add_child(status_label)
 	_update_mode_ui()
 	# Task 14: 左上战斗目标 + 战场信息；左下地形信息。
 	panel_objective = BattlePanelObjectiveScript.new()
-	panel_objective.position = Vector2(8, 8)
-	panel_objective.size = Vector2(200, 180)
+	panel_objective.anchor_left = 0.0
+	panel_objective.anchor_right = 0.0
+	panel_objective.anchor_top = 0.0
+	panel_objective.anchor_bottom = 0.0
+	panel_objective.offset_left = 8
+	panel_objective.offset_top = 8
+	panel_objective.offset_right = 208
+	panel_objective.offset_bottom = 188
 	panel_objective.custom_minimum_size = Vector2(200, 180)
 	add_child(panel_objective)
 	panel_terrain = BattlePanelTerrainScript.new()
-	panel_terrain.position = Vector2(8, 360)  # v0.x: 上提，避免与新 action_bar/grid 底部重叠
+	panel_terrain.anchor_left = 0.0
+	panel_terrain.anchor_right = 0.0
+	panel_terrain.anchor_top = 1.0
+	panel_terrain.anchor_bottom = 1.0
+	panel_terrain.offset_left = 8
+	panel_terrain.offset_right = 208
+	panel_terrain.offset_top = -230
+	panel_terrain.offset_bottom = 0
 	panel_terrain.size = Vector2(200, 230)
 	panel_terrain.custom_minimum_size = Vector2(200, 230)
 	add_child(panel_terrain)
 	# Task 15: 右上当前行动角色状态卡。
 	panel_actor = BattlePanelActorScript.new()
-	panel_actor.position = Vector2(1072, 8)
+	panel_actor.anchor_left = 1.0
+	panel_actor.anchor_right = 1.0
+	panel_actor.anchor_top = 0.0
+	panel_actor.anchor_bottom = 0.0
+	panel_actor.offset_left = -208
+	panel_actor.offset_right = -8
+	panel_actor.offset_top = 8
 	panel_actor.size = Vector2(200, 240)
 	panel_actor.custom_minimum_size = Vector2(200, 240)
 	add_child(panel_actor)
 	EventBus.hero_mp_changed.connect(_on_hero_mp_changed_for_actor_panel)
 	# Task 16: 右下战斗日志面板。
 	battle_log = BattleLogScript.new()
-	battle_log.position = Vector2(1072, 360)  # v0.x: 上提与 panel_terrain 对齐
+	battle_log.anchor_left = 1.0
+	battle_log.anchor_right = 1.0
+	battle_log.anchor_top = 1.0
+	battle_log.anchor_bottom = 1.0
+	battle_log.offset_left = -208
+	battle_log.offset_right = -8
+	battle_log.offset_top = -230
+	battle_log.offset_bottom = 0
 	battle_log.size = Vector2(200, 230)
 	battle_log.custom_minimum_size = Vector2(200, 230)
 	add_child(battle_log)
@@ -517,7 +578,7 @@ func _show_reward_panel(reward_result: Dictionary) -> void:
 	if reward_panel == null:
 		reward_panel = PanelContainer.new()
 		reward_panel.name = "RewardPanel"
-		reward_panel.position = Vector2(300, 120)
+		reward_panel.set_anchors_preset(Control.PRESET_CENTER)
 		reward_panel.custom_minimum_size = Vector2(440, 300)
 		reward_panel.z_index = 200
 		add_child(reward_panel)

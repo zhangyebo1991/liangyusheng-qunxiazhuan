@@ -1,5 +1,6 @@
 extends PanelContainer
 
+const UiTheme = preload("res://scripts/core/ui_theme.gd")
 const EquipmentSystemScript = preload("res://scripts/systems/equipment_system.gd")
 const ActorStatsSystemScript = preload("res://scripts/systems/actor_stats_system.gd")
 
@@ -34,9 +35,10 @@ func refresh() -> void:
 		_detail_label.text = "队伍状态缺失。"
 		return
 	for actor_id in party.members:
-		var button = Button.new()
+		var button := Button.new()
 		button.text = _actor_name(str(actor_id))
 		button.custom_minimum_size = Vector2(120, 32)
+		UiTheme.apply_button_theme(button)
 		button.pressed.connect(func(): _select_actor(str(actor_id)))
 		member_buttons.append(button)
 		_member_list.add_child(button)
@@ -58,40 +60,55 @@ func _build_ui() -> void:
 	if _root_box != null:
 		return
 	name = "PartyPanel"
-	position = Vector2(220, 72)
-	size = Vector2(520, 520)
+	add_theme_stylebox_override("panel", UiTheme.make_gold_panel())
 	custom_minimum_size = Vector2(520, 520)
+	set_anchors_preset(Control.PRESET_CENTER)
 
 	_root_box = VBoxContainer.new()
-	_root_box.position = Vector2(16, 16)
-	_root_box.size = Vector2(488, 488)
-	add_child(_root_box)
+	_root_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root_box.add_theme_constant_override("separation", 4)
+	var root_margin := MarginContainer.new()
+	root_margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root_margin.add_theme_constant_override("margin_left", 16)
+	root_margin.add_theme_constant_override("margin_right", 16)
+	root_margin.add_theme_constant_override("margin_top", 16)
+	root_margin.add_theme_constant_override("margin_bottom", 16)
+	root_margin.add_child(_root_box)
+	add_child(root_margin)
 
-	var title = Label.new()
+	var title := Label.new()
 	title.text = "队伍"
-	title.custom_minimum_size = Vector2(460, 28)
+	title.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_GOLD)
+	title.add_theme_font_size_override("font_size", UiTheme.FONT_SIZE_TITLE)
+	title.custom_minimum_size = Vector2(0, 28)
 	_root_box.add_child(title)
 
 	_member_list = VBoxContainer.new()
-	_member_list.custom_minimum_size = Vector2(460, 96)
+	_member_list.custom_minimum_size = Vector2(0, 96)
+	_member_list.add_theme_constant_override("separation", 4)
 	_root_box.add_child(_member_list)
 
 	_formation_list = VBoxContainer.new()
-	_formation_list.custom_minimum_size = Vector2(460, 132)
+	_formation_list.custom_minimum_size = Vector2(0, 132)
+	_formation_list.add_theme_constant_override("separation", 4)
 	_root_box.add_child(_formation_list)
 
 	_detail_label = Label.new()
 	_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_detail_label.custom_minimum_size = Vector2(460, 160)
+	_detail_label.custom_minimum_size = Vector2(0, 160)
+	_detail_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_WARM)
 	_root_box.add_child(_detail_label)
 
-	var equipment_title = Label.new()
+	var equipment_title := Label.new()
 	equipment_title.text = "可装备物品"
-	equipment_title.custom_minimum_size = Vector2(460, 28)
+	equipment_title.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_GOLD)
+	equipment_title.custom_minimum_size = Vector2(0, 28)
 	_root_box.add_child(equipment_title)
 
 	_equipment_list = VBoxContainer.new()
-	_equipment_list.custom_minimum_size = Vector2(460, 160)
+	_equipment_list.custom_minimum_size = Vector2(0, 100)
+	_equipment_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_equipment_list.add_theme_constant_override("separation", 4)
 	_root_box.add_child(_equipment_list)
 
 func _clear_member_buttons() -> void:
@@ -149,47 +166,55 @@ func _refresh_formation_rows() -> void:
 	_clear_formation_rows()
 	if party == null or _formation_list == null:
 		return
-	var title = Label.new()
+	var title := Label.new()
 	title.text = "默认出战顺序"
-	title.custom_minimum_size = Vector2(460, 28)
+	title.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_GOLD)
+	title.custom_minimum_size = Vector2(0, 28)
 	_formation_list.add_child(title)
 	var order: Array = party.get_formation_order() if party.has_method("get_formation_order") else party.members
 	if order.is_empty():
-		var empty = Label.new()
+		var empty := Label.new()
 		empty.text = "暂无可调整队友。"
-		empty.custom_minimum_size = Vector2(460, 28)
+		empty.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_DIM)
+		empty.custom_minimum_size = Vector2(0, 28)
 		_formation_list.add_child(empty)
 		return
 	for order_index in range(order.size()):
 		var actor_id = str(order[order_index])
-		var row = HBoxContainer.new()
-		row.custom_minimum_size = Vector2(460, 32)
+		var row := HBoxContainer.new()
+		row.custom_minimum_size = Vector2(0, 32)
+		row.add_theme_constant_override("separation", 8)
 		_formation_list.add_child(row)
 
-		var name_label = Label.new()
+		var name_label := Label.new()
 		name_label.text = _actor_name(actor_id)
+		name_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_WARM)
 		name_label.custom_minimum_size = Vector2(190, 28)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_label)
 
 		if actor_id == "hero_yun":
-			var required_label = Label.new()
+			var required_label := Label.new()
 			required_label.text = "必出战"
+			required_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_DIM)
 			required_label.custom_minimum_size = Vector2(120, 28)
 			row.add_child(required_label)
 			continue
 
-		var up_button = Button.new()
+		var up_button := Button.new()
 		up_button.text = "上移"
 		up_button.custom_minimum_size = Vector2(72, 28)
+		UiTheme.apply_button_theme(up_button)
 		up_button.disabled = order_index <= 1
 		if up_button.disabled:
 			up_button.tooltip_text = "主角固定第一位。"
 		up_button.pressed.connect(_move_formation_member.bind(actor_id, -1))
 		row.add_child(up_button)
 
-		var down_button = Button.new()
+		var down_button := Button.new()
 		down_button.text = "下移"
 		down_button.custom_minimum_size = Vector2(72, 28)
+		UiTheme.apply_button_theme(down_button)
 		down_button.disabled = order_index >= order.size() - 1
 		if down_button.disabled:
 			down_button.tooltip_text = "已经在队尾。"
@@ -223,24 +248,29 @@ func _refresh_equipment_rows() -> void:
 		if typeof(item) != TYPE_DICTIONARY or str(item.get("type", "")) != "equipment":
 			continue
 		has_equipment = true
-		var row = HBoxContainer.new()
-		row.custom_minimum_size = Vector2(460, 36)
+		var row := HBoxContainer.new()
+		row.custom_minimum_size = Vector2(0, 36)
+		row.add_theme_constant_override("separation", 8)
 		_equipment_list.add_child(row)
 
-		var label = Label.new()
+		var label := Label.new()
 		label.text = "%s x%d" % [str(item.get("name", item_id)), party.get_item_count(item_id)]
+		label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_WARM)
 		label.custom_minimum_size = Vector2(300, 32)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)
 
-		var button = Button.new()
+		var button := Button.new()
 		button.text = "装备"
 		button.custom_minimum_size = Vector2(72, 32)
+		UiTheme.apply_button_theme(button)
 		button.pressed.connect(func(): equip_selected(item_id))
 		row.add_child(button)
 	if not has_equipment:
-		var empty = Label.new()
+		var empty := Label.new()
 		empty.text = "暂无可装备物品。"
-		empty.custom_minimum_size = Vector2(460, 32)
+		empty.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_DIM)
+		empty.custom_minimum_size = Vector2(0, 32)
 		_equipment_list.add_child(empty)
 
 func _actor_name(actor_id: String) -> String:

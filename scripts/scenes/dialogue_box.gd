@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const UiTheme = preload("res://scripts/core/ui_theme.gd")
+
 signal closed
 signal option_selected(option: Dictionary)
 
@@ -13,31 +15,65 @@ var options: Array = []
 var index := 0
 
 func _ready() -> void:
+	# 根 Control 使用 anchor 定位到底部
+	var root := Control.new()
+	root.name = "DialogueRoot"
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(root)
+
 	panel = Panel.new()
-	panel.position = Vector2(120, 500)
-	panel.size = Vector2(1040, 160)
-	add_child(panel)
+	panel.anchor_left = 0.0
+	panel.anchor_right = 1.0
+	panel.anchor_top = 1.0
+	panel.anchor_bottom = 1.0
+	panel.offset_left = 120
+	panel.offset_right = -120
+	panel.offset_top = -180
+	panel.offset_bottom = -20
+	panel.add_theme_stylebox_override("panel", UiTheme.make_gold_panel(6, 8))
+	root.add_child(panel)
+
+	# 内容 VBox
+	var content := VBoxContainer.new()
+	content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var content_margin := MarginContainer.new()
+	content_margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	content_margin.add_theme_constant_override("margin_left", 24)
+	content_margin.add_theme_constant_override("margin_right", 24)
+	content_margin.add_theme_constant_override("margin_top", 16)
+	content_margin.add_theme_constant_override("margin_bottom", 12)
+	content_margin.add_child(content)
+	panel.add_child(content_margin)
 
 	speaker_label = Label.new()
-	speaker_label.position = Vector2(24, 16)
-	speaker_label.size = Vector2(240, 28)
-	panel.add_child(speaker_label)
+	speaker_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_GOLD)
+	speaker_label.add_theme_font_size_override("font_size", UiTheme.FONT_SIZE_NORMAL)
+	content.add_child(speaker_label)
 
 	text_label = Label.new()
-	text_label.position = Vector2(24, 52)
-	text_label.size = Vector2(880, 56)
-	panel.add_child(text_label)
+	text_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_WARM)
+	text_label.add_theme_font_size_override("font_size", UiTheme.FONT_SIZE_NORMAL)
+	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text_label.custom_minimum_size = Vector2(0, 40)
+	text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(text_label)
+
+	# 底部行: 选项容器 + 继续按钮
+	var bottom_row := HBoxContainer.new()
+	bottom_row.add_theme_constant_override("separation", 8)
+	content.add_child(bottom_row)
+
+	option_container = VBoxContainer.new()
+	option_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	option_container.add_theme_constant_override("separation", 4)
+	bottom_row.add_child(option_container)
 
 	button = Button.new()
 	button.text = "继续"
-	button.position = Vector2(900, 104)
+	button.custom_minimum_size = Vector2(100, 36)
+	UiTheme.apply_button_theme(button)
 	button.pressed.connect(_next_line)
-	panel.add_child(button)
-
-	option_container = VBoxContainer.new()
-	option_container.position = Vector2(24, 104)
-	option_container.size = Vector2(840, 48)
-	panel.add_child(option_container)
+	bottom_row.add_child(button)
 
 	hide()
 
@@ -88,11 +124,12 @@ func _show_options() -> void:
 		if typeof(raw_option) != TYPE_DICTIONARY:
 			continue
 		var option = raw_option.duplicate(true)
-		var option_button = Button.new()
+		var option_button := Button.new()
 		option_button.text = str(option.get("text", "选项"))
 		option_button.disabled = not bool(option.get("available", true))
 		option_button.tooltip_text = str(option.get("unavailable_reason", ""))
 		option_button.custom_minimum_size = Vector2(360, 32)
+		UiTheme.apply_button_theme(option_button)
 		option_button.pressed.connect(func(): _select_option(option))
 		option_container.add_child(option_button)
 

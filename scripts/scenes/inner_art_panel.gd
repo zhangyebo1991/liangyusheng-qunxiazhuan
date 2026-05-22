@@ -1,5 +1,7 @@
 extends PanelContainer
 
+const UiTheme = preload("res://scripts/core/ui_theme.gd")
+
 signal art_upgraded(art_id: String)
 signal art_switched(art_id: String)
 signal panel_closed
@@ -22,7 +24,9 @@ func set_growth_manager(manager: RefCounted) -> void:
 	_refresh_art_list()
 
 func _build_ui() -> void:
-	var main_split = HSplitContainer.new()
+	add_theme_stylebox_override("panel", UiTheme.make_gold_panel())
+
+	var main_split := HSplitContainer.new()
 	main_split.set_anchors_preset(Control.PRESET_FULL_RECT)
 	main_split.split_offset = 220
 	add_child(main_split)
@@ -31,8 +35,10 @@ func _build_ui() -> void:
 	left_panel.custom_minimum_size = Vector2(220, 0)
 	main_split.add_child(left_panel)
 
-	var art_title = Label.new()
+	var art_title := Label.new()
 	art_title.text = "内功心法"
+	art_title.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_GOLD)
+	art_title.add_theme_font_size_override("font_size", UiTheme.FONT_SIZE_TITLE)
 	art_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	left_panel.add_child(art_title)
 
@@ -51,13 +57,15 @@ func _build_ui() -> void:
 	var header = HBoxContainer.new()
 	right_panel.add_child(header)
 
-	var detail_title = Label.new()
+	var detail_title := Label.new()
 	detail_title.text = "心法详情"
+	detail_title.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_GOLD)
 	detail_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(detail_title)
 
-	var close_button = Button.new()
+	var close_button := Button.new()
 	close_button.text = "关闭"
+	UiTheme.apply_close_button_theme(close_button)
 	close_button.pressed.connect(_on_close_pressed)
 	header.add_child(close_button)
 
@@ -68,6 +76,7 @@ func _build_ui() -> void:
 	effects_label = Label.new()
 	effects_label.text = "当前效果：无"
 	effects_label.custom_minimum_size = Vector2(0, 80)
+	effects_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_WARM)
 	right_panel.add_child(effects_label)
 
 func _refresh_art_list() -> void:
