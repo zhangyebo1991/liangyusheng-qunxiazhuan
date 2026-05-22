@@ -248,9 +248,9 @@ func _create_tactical_ui() -> void:
 	panel_objective.anchor_bottom = 0.0
 	panel_objective.offset_left = 8
 	panel_objective.offset_top = 8
-	panel_objective.offset_right = 208
-	panel_objective.offset_bottom = 188
-	panel_objective.custom_minimum_size = Vector2(200, 180)
+	panel_objective.offset_right = 8 + UiTheme.PANEL_SIDE_WIDTH
+	panel_objective.offset_bottom = 8 + UiTheme.PANEL_SIDE_OBJECTIVE_HEIGHT
+	panel_objective.custom_minimum_size = Vector2(UiTheme.PANEL_SIDE_WIDTH, UiTheme.PANEL_SIDE_OBJECTIVE_HEIGHT)
 	add_child(panel_objective)
 	panel_terrain = BattlePanelTerrainScript.new()
 	panel_terrain.anchor_left = 0.0
@@ -258,11 +258,11 @@ func _create_tactical_ui() -> void:
 	panel_terrain.anchor_top = 1.0
 	panel_terrain.anchor_bottom = 1.0
 	panel_terrain.offset_left = 8
-	panel_terrain.offset_right = 208
-	panel_terrain.offset_top = -230
+	panel_terrain.offset_right = 8 + UiTheme.PANEL_SIDE_WIDTH
+	panel_terrain.offset_top = -UiTheme.PANEL_SIDE_LOG_HEIGHT
 	panel_terrain.offset_bottom = 0
-	panel_terrain.size = Vector2(200, 230)
-	panel_terrain.custom_minimum_size = Vector2(200, 230)
+	panel_terrain.size = Vector2(UiTheme.PANEL_SIDE_WIDTH, UiTheme.PANEL_SIDE_LOG_HEIGHT)
+	panel_terrain.custom_minimum_size = Vector2(UiTheme.PANEL_SIDE_WIDTH, UiTheme.PANEL_SIDE_LOG_HEIGHT)
 	add_child(panel_terrain)
 	# Task 15: 右上当前行动角色状态卡。
 	panel_actor = BattlePanelActorScript.new()
@@ -270,11 +270,11 @@ func _create_tactical_ui() -> void:
 	panel_actor.anchor_right = 1.0
 	panel_actor.anchor_top = 0.0
 	panel_actor.anchor_bottom = 0.0
-	panel_actor.offset_left = -208
+	panel_actor.offset_left = -(8 + UiTheme.PANEL_SIDE_WIDTH)
 	panel_actor.offset_right = -8
 	panel_actor.offset_top = 8
-	panel_actor.size = Vector2(200, 240)
-	panel_actor.custom_minimum_size = Vector2(200, 240)
+	panel_actor.size = Vector2(UiTheme.PANEL_SIDE_WIDTH, UiTheme.PANEL_SIDE_ACTOR_HEIGHT)
+	panel_actor.custom_minimum_size = Vector2(UiTheme.PANEL_SIDE_WIDTH, UiTheme.PANEL_SIDE_ACTOR_HEIGHT)
 	add_child(panel_actor)
 	EventBus.hero_mp_changed.connect(_on_hero_mp_changed_for_actor_panel)
 	# Task 16: 右下战斗日志面板。
@@ -283,12 +283,12 @@ func _create_tactical_ui() -> void:
 	battle_log.anchor_right = 1.0
 	battle_log.anchor_top = 1.0
 	battle_log.anchor_bottom = 1.0
-	battle_log.offset_left = -208
+	battle_log.offset_left = -(8 + UiTheme.PANEL_SIDE_WIDTH)
 	battle_log.offset_right = -8
-	battle_log.offset_top = -230
+	battle_log.offset_top = -UiTheme.PANEL_SIDE_LOG_HEIGHT
 	battle_log.offset_bottom = 0
-	battle_log.size = Vector2(200, 230)
-	battle_log.custom_minimum_size = Vector2(200, 230)
+	battle_log.size = Vector2(UiTheme.PANEL_SIDE_WIDTH, UiTheme.PANEL_SIDE_LOG_HEIGHT)
+	battle_log.custom_minimum_size = Vector2(UiTheme.PANEL_SIDE_WIDTH, UiTheme.PANEL_SIDE_LOG_HEIGHT)
 	add_child(battle_log)
 	EventBus.tactical_log_appended.connect(_on_tactical_log_appended)
 	_refresh_terrain_panels_for_current_actor()
@@ -580,7 +580,7 @@ func _show_reward_panel(reward_result: Dictionary) -> void:
 		reward_panel.name = "RewardPanel"
 		reward_panel.set_anchors_preset(Control.PRESET_CENTER)
 		reward_panel.custom_minimum_size = Vector2(440, 300)
-		reward_panel.z_index = 200
+		reward_panel.z_index = UiTheme.Z_LAYER_UI_POPUP
 		add_child(reward_panel)
 		var box = VBoxContainer.new()
 		box.add_theme_constant_override("separation", 10)
@@ -685,14 +685,14 @@ func _unit_at_cell(cell: Dictionary):
 	return null
 
 func _apply_tactical_cell_style(button: Button) -> void:
-	var idle = _make_tactical_cell_style(Color(0.18, 0.24, 0.18, 0.10), Color(0.72, 0.84, 0.62, 0.25))
-	var active = _make_tactical_cell_style(Color(0.22, 0.48, 0.74, 0.24), Color(0.36, 0.66, 0.95, 0.70))
-	var pressed = _make_tactical_cell_style(Color(0.28, 0.58, 0.84, 0.36), Color(0.62, 0.82, 1.0, 0.85))
+	var idle = _make_tactical_cell_style(UiTheme.COLOR_GRID_IDLE_FILL, UiTheme.COLOR_GRID_IDLE_BORDER)
+	var active = _make_tactical_cell_style(UiTheme.COLOR_GRID_ACTIVE_FILL, UiTheme.COLOR_GRID_ACTIVE_BORDER)
+	var pressed = _make_tactical_cell_style(UiTheme.COLOR_GRID_PRESSED_FILL, UiTheme.COLOR_GRID_PRESSED_BORDER)
 	button.add_theme_stylebox_override("normal", active)
 	button.add_theme_stylebox_override("hover", pressed)
 	button.add_theme_stylebox_override("pressed", pressed)
 	button.add_theme_stylebox_override("disabled", idle)
-	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("focus", UiTheme.make_grid_focus_style())
 	button.add_theme_color_override("font_color", Color.WHITE)
 	button.add_theme_color_override("font_hover_color", Color.WHITE)
 	button.add_theme_color_override("font_pressed_color", Color.WHITE)
@@ -839,7 +839,7 @@ func _spawn_feedback_pop_text(unit_id: String, delta: int) -> void:
 	label.add_theme_font_size_override("font_size", 20)
 	label.add_theme_color_override("font_color", color)
 	label.z_as_relative = false
-	label.z_index = 2600
+	label.z_index = UiTheme.Z_LAYER_UI_FEEDBACK
 	var start_pos: Vector2 = (sprite.global_position - global_position) + Vector2(-18, -64)
 	label.position = start_pos
 	add_child(label)

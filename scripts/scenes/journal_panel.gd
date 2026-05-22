@@ -23,8 +23,8 @@ func _ready() -> void:
 	panel.anchor_right = 1.0
 	panel.anchor_top = 0.0
 	panel.anchor_bottom = 1.0
-	panel.offset_left = 120
-	panel.offset_right = -120
+	panel.offset_left = UiTheme.SIDE_MARGIN
+	panel.offset_right = -UiTheme.SIDE_MARGIN
 	panel.offset_top = 64
 	panel.offset_bottom = -64
 	panel.add_theme_stylebox_override("panel", UiTheme.make_gold_panel(6, 10))

@@ -26,8 +26,8 @@ func _ready() -> void:
 	panel.anchor_right = 1.0
 	panel.anchor_top = 1.0
 	panel.anchor_bottom = 1.0
-	panel.offset_left = 120
-	panel.offset_right = -120
+	panel.offset_left = UiTheme.SIDE_MARGIN
+	panel.offset_right = -UiTheme.SIDE_MARGIN
 	panel.offset_top = -180
 	panel.offset_bottom = -20
 	panel.add_theme_stylebox_override("panel", UiTheme.make_gold_panel(6, 8))
@@ -46,6 +46,7 @@ func _ready() -> void:
 	panel.add_child(content_margin)
 
 	speaker_label = Label.new()
+	speaker_label.custom_minimum_size = Vector2(120, 0)
 	speaker_label.add_theme_color_override("font_color", UiTheme.COLOR_TEXT_GOLD)
 	speaker_label.add_theme_font_size_override("font_size", UiTheme.FONT_SIZE_NORMAL)
 	content.add_child(speaker_label)

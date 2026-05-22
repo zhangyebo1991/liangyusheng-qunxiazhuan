@@ -273,7 +273,7 @@ func _create_inventory_panel() -> void:
 	var header_bg := ColorRect.new()
 	header_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	header_bg.color = UiTheme.COLOR_BG_INK_LIGHT
-	header_bg.z_index = -1
+	header_bg.z_index = UiTheme.Z_LAYER_BG
 	header.add_child(header_bg)
 
 	# 装饰竖线
