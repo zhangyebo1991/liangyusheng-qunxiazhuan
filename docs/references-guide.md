@@ -2,21 +2,23 @@
 
 本文档描述 `references/` 目录下所有设计参考资料的内容、结构和策划用途，供 AI 协同设计时参考。
 
+> **格式说明**：结构化数据采用 CSV 格式（非 JSON），原因：这些数据是给人和 AI 阅读的参考资料，不是游戏运行时加载的数据。CSV 更紧凑，减少 token 消耗和视觉噪声。
+
 ---
 
 ## 目录结构
 
 ```
 references/
-├── structured/              # 结构化 JSON 数据（程序可读）
-│   ├── characters.json
-│   ├── martial_arts_master.json
-│   ├── martial_arts_by_novel.json
-│   ├── weapons_hidden.json
-│   ├── wuxia_codex.json
-│   ├── relationships.json
-│   ├── classic_battles.json
-│   └── novels_overview.json
+├── structured/              # 结构化 CSV 数据（人/AI 可读）
+│   ├── characters.csv
+│   ├── martial_arts_master.csv
+│   ├── martial_arts_by_novel.csv
+│   ├── weapons_hidden.csv
+│   ├── wuxia_codex.csv
+│   ├── relationships.csv
+│   ├── classic_battles.csv
+│   └── novels_overview.csv
 ├── scripts/                 # 转换脚本（Python）
 │   ├── convert_characters.py
 │   ├── convert_martial_arts.py
@@ -44,82 +46,82 @@ references/
 
 ## 结构化数据文件说明
 
-### characters.json — 人物数据
+### characters.csv — 人物数据
 
 - **来源**：`全梁著人物资料.xls`（阵子整理）
 - **规模**：34部小说，4593个人物
-- **格式**：按小说分组的数组，每人含 `name`、`description`、`importance`（main/other）
+- **列**：`novel`, `name`, `description`, `importance`（main/other）
 - **用途**：
   - 角色系统设计：主要人物 → 核心可玩角色，其他人物 → NPC/配角
   - 角色图鉴/传记系统的文本素材
   - 跨小说人物引用查询
 
-### martial_arts_master.json — 武功总表
+### martial_arts_master.csv — 武功总表
 
 - **来源**：`全梁著武功资料.xls`（阵子整理）
 - **规模**：591种武功，18个分类（剑法83种、掌法155种、刀法47种、轻功39种等）
-- **格式**：数组，每条含 `category`、`name`、`novels`（出现书目列表）
+- **列**：`category`, `name`, `novels`（分号分隔的书目列表）
 - **用途**：
   - 技能树分类设计：18个分类可直接映射为技能树分支
   - 跨小说武功复用关系查询（如"蹑云十三剑法"出现在15部小说中）
 
-### martial_arts_by_novel.json — 按小说分列的武功
+### martial_arts_by_novel.csv — 按小说分列的武功
 
 - **来源**：`全梁著武功资料.xls`
 - **规模**：34部小说，2295条记录
-- **格式**：按小说分组，每条含 `category`、`name`、`users`（使用者列表）、`school`（门派）
+- **列**：`novel`, `category`, `name`, `users`（分号分隔的使用者列表）, `school`（门派）
 - **用途**：
   - 构建"角色-武功-门派"三角关系
   - 单部小说内的武功配置参考
   - 门派武功体系设计
 
-### weapons_hidden.json — 独门兵器与暗器
+### weapons_hidden.csv — 独门兵器与暗器
 
 - **来源**：`探索梁羽生创作历程之独门兵器和暗器篇.md`（笑笑道人）
 - **规模**：29部小说，76件兵器/暗器
-- **格式**：按小说分组，每件含 `name`、`type`（weapon/hidden_weapon）、`appearance`（式样）、`users`、`combat_description`（临阵描写）、`comment`（简评）
+- **列**：`novel`, `name`, `type`（weapon/hidden_weapon）, `appearance`（式样）, `users`, `combat_description`（临阵描写）, `comment`（简评）
 - **用途**：
   - 装备系统设计：每件武器的式样和特殊效果可直接用于装备描述
   - 暗器系统设计：独立于常规武器的投射物系统
   - 装备描述文本素材（简评可提炼为物品说明）
 
-### wuxia_codex.json — 武学宝典
+### wuxia_codex.csv — 武学宝典
 
 - **来源**：`梁羽生武学宝典.md`（笑笑道人）
 - **规模**：11大类，34子分类，349条条目
 - **分类**：门派武功、门派辈分及掌门人、兵器、暗器、铠甲、信物、宝物、毒药、灵药、秘籍、异兽
-- **格式**：层级结构 `{title, subsections: [{title, entries: [{name, description}]}]}`
+- **列**：`section`, `subsection`, `name`, `description`
 - **用途**：
   - 门派体系设计：门派武功 + 门派辈分数据
   - 道具全品类参考：兵器/暗器/铠甲/信物/宝物/毒药/灵药/秘籍/异兽
   - 毒药/灵药系统设计：完整的药效描述
 
-### relationships.json — 人物关系
+### relationships.csv — 人物关系
 
 - **来源**：`人物关系.txt`（阵子整理）
 - **规模**：433条关系
-- **格式**：数组，每条含 `from`、`to`、`relation`、`novel`、`section`
+- **列**：`from`, `to`, `relation`, `novel`, `section`
 - **关系类型**：父母子女/亲属、夫妻、师徒、情侣、上下属、后人等
 - **用途**：
   - 羁绊系统设计：基于关系触发特殊对话/合体技/增益
   - 剧情条件判断：角色间关系作为任务/事件的前置条件
   - 角色关系图谱可视化
 
-### classic_battles.json — 十场经典大战
+### classic_battles.csv — 十场经典大战
 
 - **来源**：`梁羽生小说经典的十场大战.txt`（天山游龙）
 - **规模**：10场
-- **格式**：数组，每条含 `rank`（1-10）、`title`、`novel`、`description`
+- **列**：`rank`（1-10）, `title`, `novel`, `description`
 - **用途**：
   - Boss战/关卡设计灵感：每场大战都是经过读者检验的经典场景
   - 战斗演出设计：对战双方、兵器、武功搭配的参考
   - 剧情高潮节点设计
 
-### novels_overview.json — 小说概览
+### novels_overview.csv — 小说概览
 
 - **来源**：`梁羽生小说内容简介.txt`（天山游龙，GBK编码）
 - **规模**：19部小说
-- **格式**：数组，每条含 `title`、`summary`（剧情摘要）
+- **列**：`title`, `summary`（剧情摘要）
 - **用途**：
   - 主线/支线任务设计：每部小说的剧情可拆解为任务链
   - 世界观背景参考
@@ -155,35 +157,35 @@ references/
 ### 角色 → 武功 → 门派
 
 ```
-characters.json（选角色）
-  → martial_arts_by_novel.json（查该角色会什么武功）
-    → martial_arts_master.json（查该武功分类）
-      → wuxia_codex.json（查门派详情）
+characters.csv（选角色）
+  → martial_arts_by_novel.csv（查该角色会什么武功）
+    → martial_arts_master.csv（查该武功分类）
+      → wuxia_codex.csv（查门派详情）
 ```
 
 ### 角色 → 兵器 → 装备属性
 
 ```
-characters.json（选角色）
-  → weapons_hidden.json（查其兵器式样和特点）
-  → wuxia_codex.json / 兵器（查更多兵器资料）
+characters.csv（选角色）
+  → weapons_hidden.csv（查其兵器式样和特点）
+  → wuxia_codex.csv / 兵器（查更多兵器资料）
   → 早期设定参考/物品设定集（参考属性框架和品级体系）
 ```
 
 ### 剧情 → 关卡 → 战斗
 
 ```
-novels_overview.json（提取剧情节点）
-  → classic_battles.json（选取经典战斗场景）
-  → martial_arts_by_novel.json（设计战斗参数）
-  → relationships.json（确定角色关系作为剧情条件）
+novels_overview.csv（提取剧情节点）
+  → classic_battles.csv（选取经典战斗场景）
+  → martial_arts_by_novel.csv（设计战斗参数）
+  → relationships.csv（确定角色关系作为剧情条件）
 ```
 
 ### 门派 → 技能树 → 武功解锁
 
 ```
-wuxia_codex.json / 门派武功（门派武功列表）
-  → martial_arts_by_novel.json（每部小说的门派归属）
+wuxia_codex.csv / 门派武功（门派武功列表）
+  → martial_arts_by_novel.csv（每部小说的门派归属）
   → data/skill_trees/（现有技能树结构参考）
 ```
 
@@ -194,7 +196,7 @@ wuxia_codex.json / 门派武功（门派武功列表）
 游戏运行数据在 `data/` 目录（JSON），由 `DataRepository` 自动加载。`references/structured/` 中的数据为**策划参考**，不直接被游戏加载。
 
 如需将参考数据导入游戏，需要：
-1. 按 `data/` 中现有 JSON 的 schema 重新组织字段
+1. 按 `data/` 中现有 JSON 的 schema 重新组织字段（CSV → JSON 转换）
 2. 生成符合 `id` 命名规范的唯一标识
 3. 确保引用关系（如 `martial_arts` 数组中的 id）在目标文件中存在
 
@@ -209,8 +211,9 @@ wuxia_codex.json / 门派武功（门派武功列表）
 
 ## 转换脚本说明
 
-`references/scripts/` 下的 Python 脚本用于将原始资料转换为 JSON。如原始资料更新，可重新运行：
+`references/scripts/` 下的 Python 脚本用于将原始资料转换为 CSV。分两步：
 
+**第一步**：原始资料 → JSON（中间格式）
 ```bash
 python references/scripts/convert_characters.py
 python references/scripts/convert_martial_arts.py
@@ -219,6 +222,11 @@ python references/scripts/convert_codex.py
 python references/scripts/convert_relationships.py
 python references/scripts/convert_battles.py
 python references/scripts/convert_novels.py
+```
+
+**第二步**：JSON → CSV（最终格式）
+```bash
+python references/scripts/json_to_csv.py
 ```
 
 在项目根目录下运行即可。
