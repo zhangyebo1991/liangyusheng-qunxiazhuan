@@ -6,7 +6,7 @@ func run(assertions) -> void:
 	var repository = DataRepositoryScript.new()
 	var content = repository.load_all()
 
-	assertions.assert_eq(content.get("maps", []).size(), 3, "应加载 3 张示例地图")
+	assertions.assert_eq(content.get("maps", []).size(), 4, "应加载 4 张示例地图")
 
 	var mountain = repository.get_map("mountain_pass")
 	assertions.assert_eq(mountain.get("name", ""), "山道", "应按编号读取山道地图")
@@ -101,6 +101,12 @@ func run(assertions) -> void:
 
 	assertions.assert_eq(repository.get_quest("quest_deliver_letter").get("title", ""), "送信到客栈", "应读取送信任务")
 	assertions.assert_eq(repository.get_dialogue("deliver_letter_complete").get("title", ""), "书信送达", "应读取送信完成对白")
+
+	var world = repository.get_map("world")
+	assertions.assert_eq(world.get("name", ""), "世界大地图", "应按编号读取世界大地图")
+	assertions.assert_eq(world.get("scene_path", ""), "res://scenes/world.tscn", "世界大地图应声明场景路径")
+	assertions.assert_true(world.get("spawn_points", {}).has("from_village"), "世界大地图应包含村镇进入出生点")
+
 	assertions.assert_eq(repository.get_map("missing_map"), {}, "缺失地图编号应返回空字典")
 
 	repository.free()

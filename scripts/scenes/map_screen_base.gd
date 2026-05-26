@@ -37,6 +37,7 @@ var map_id: String = ""
 var fallback_spawn: Vector2 = Vector2(160, 320)
 var background_color: Color = Color("#6f8f55")
 var obstacle_color: Color = Color("#476f3f")
+var world_map_ui = null
 
 func configure_map(next_map_id: String, next_fallback_spawn: Vector2, next_background_color: Color, next_obstacle_color: Color) -> void:
 	map_id = next_map_id
@@ -58,6 +59,22 @@ func _process(_delta: float) -> void:
 	_update_nearest_interactable()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("map"):
+		_toggle_world_map()
+		return
+	if event.is_action_pressed("cancel"):
+		if world_map_ui != null:
+			_close_world_map()
+			return
+		if journal_is_open:
+			_close_journal()
+			return
+		return
+	if event.is_action_pressed("save"):
+		var game_state = _get_game_state()
+		var success = game_state != null and game_state.save_to_path("user://save_01.json")
+		hud.show_message("存档成功。" if success else "存档失败。")
+		return
 	if event.is_action_pressed("journal"):
 		if journal_is_open:
 			_close_journal()
@@ -71,10 +88,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("inventory"):
 		_toggle_inventory()
-	elif event.is_action_pressed("cancel"):
-		var game_state = _get_game_state()
-		var success = game_state != null and game_state.save_to_path("user://save_01.json")
-		hud.show_message("存档成功。" if success else "存档失败。")
+
+func _toggle_world_map() -> void:
+	if world_map_ui == null:
+		var WorldMapUIScript = load("res://scripts/scenes/world_map_ui_screen.gd")
+		world_map_ui = WorldMapUIScript.new()
+		world_map_ui.setup(player)
+		world_map_ui.close_requested.connect(_close_world_map)
+		add_child(world_map_ui)
+	else:
+		_close_world_map()
+
+func _close_world_map() -> void:
+	if world_map_ui != null:
+		world_map_ui.queue_free()
+		world_map_ui = null
 
 func _load_map_data() -> void:
 	var data_repository = _get_data_repository()

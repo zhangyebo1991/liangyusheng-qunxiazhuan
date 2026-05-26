@@ -10,6 +10,16 @@
     },
     "objects": [
       {
+        "id": "exit_to_world_map",
+        "type": "exit",
+        "name": "世界大地图(测试)",
+        "position": {"x": 460, "y": 280},
+        "radius": 72,
+        "target_map_id": "world",
+        "target_spawn_id": "from_village",
+        "locked_message": "暂未开放。"
+      },
+      {
         "id": "npc_qingshanke",
         "type": "npc",
         "name": "青衫客",
@@ -181,9 +191,20 @@
     "spawn_points": {
       "village_gate": {"x": 120, "y": 360},
       "return_from_mountain": {"x": 120, "y": 360},
-      "main_street": {"x": 640, "y": 340}
+      "main_street": {"x": 640, "y": 340},
+      "return_from_world": {"x": 100, "y": 360}
     },
     "objects": [
+      {
+        "id": "exit_to_world_map",
+        "type": "exit",
+        "name": "世界大地图",
+        "position": {"x": 20, "y": 360},
+        "radius": 72,
+        "target_map_id": "world",
+        "target_spawn_id": "from_village",
+        "locked_message": "暂未开放。"
+      },
       {
         "id": "exit_to_mountain_pass",
         "type": "exit",
@@ -293,5 +314,15 @@
         "dialogue_id": "road_scholar_intro"
       }
     ]
+  },
+  {
+    "id": "world",
+    "name": "世界大地图",
+    "scene_path": "res://scenes/world.tscn",
+    "spawn_position": {"x": 1800, "y": 1500},
+    "spawn_points": {
+      "from_village": {"x": 1800, "y": 1500}
+    },
+    "objects": []
   }
 ]

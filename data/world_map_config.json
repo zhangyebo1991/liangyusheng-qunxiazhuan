@@ -1,0 +1,58 @@
+{
+  "regions": [
+    {
+      "id": "central",
+      "name": "中原腹地",
+      "color": "#e6d5b8",
+      "boundary": [[1500, 1000], [2500, 1000], [2500, 2000], [1500, 2000]]
+    },
+    {
+      "id": "jiangnan",
+      "name": "江南/金陵",
+      "color": "#b8e6cf",
+      "boundary": [[2500, 2000], [3500, 2000], [3500, 3000], [2500, 3000]]
+    },
+    {
+      "id": "north",
+      "name": "北地/燕京",
+      "color": "#b8cfe6",
+      "boundary": [[2500, 0], [3500, 0], [3500, 1000], [2500, 1000]]
+    },
+    {
+      "id": "yanyun",
+      "name": "燕云/辽东/塞外",
+      "color": "#e6cfb8",
+      "boundary": [[3500, 0], [4000, 0], [4000, 1500], [3500, 1500]]
+    },
+    {
+      "id": "western",
+      "name": "西域/雪山/边疆",
+      "color": "#cfb8e6",
+      "boundary": [[0, 0], [1500, 0], [1500, 1500], [0, 1500]]
+    }
+  ],
+  "landmarks": [
+    {"id": "changan", "name": "长安", "type": "city", "position": {"x": 1800, "y": 1400}, "target_map_id": "changan_city"},
+    {"id": "foot_village", "name": "山脚村镇", "type": "city", "position": {"x": 1800, "y": 1600}, "target_map_id": "foot_village", "target_spawn_id": "return_from_world"},
+    {"id": "luoyang", "name": "洛阳", "type": "city", "position": {"x": 2100, "y": 1450}, "target_map_id": "luoyang_city"},
+    {"id": "wudang", "name": "武当山", "type": "sect", "position": {"x": 1950, "y": 1700}, "target_map_id": "wudang_mountain"},
+    {"id": "shaolin", "name": "少林寺", "type": "sect", "position": {"x": 2150, "y": 1550}, "target_map_id": "shaolin_temple"},
+    {"id": "mangshan", "name": "氓山", "type": "sect", "position": {"x": 2200, "y": 1350}, "target_map_id": "mang_mountain"},
+    {"id": "jindaozhai", "name": "金刀寨", "type": "fortress", "position": {"x": 2300, "y": 1650}, "target_map_id": "golden_knife_fortress"},
+    {"id": "suzhou", "name": "苏州", "type": "city", "position": {"x": 2800, "y": 2300}, "target_map_id": "suzhou_city"},
+    {"id": "taihu", "name": "太湖", "type": "lake", "position": {"x": 2700, "y": 2400}, "target_map_id": "tai_lake"},
+    {"id": "beijing", "name": "北京/京师", "type": "city", "position": {"x": 2900, "y": 700}, "target_map_id": "beijing_city"},
+    {"id": "tumubao", "name": "土木堡", "type": "fortress", "position": {"x": 2750, "y": 650}, "target_map_id": "tumu_fortress"},
+    {"id": "liaodong", "name": "辽东", "type": "region", "position": {"x": 3700, "y": 500}, "target_map_id": "liaodong_front"},
+    {"id": "tianshan", "name": "天山", "type": "sect", "position": {"x": 500, "y": 500}, "target_map_id": "tianshan_mountain"},
+    {"id": "shedao", "name": "蛇岛", "type": "island", "position": {"x": 3800, "y": 1200}, "target_map_id": "snake_island"}
+  ],
+  "routes": [
+    {"from": "foot_village", "to": "changan"},
+    {"from": "changan", "to": "luoyang"},
+    {"from": "luoyang", "to": "beijing"},
+    {"from": "luoyang", "to": "suzhou"},
+    {"from": "beijing", "to": "tumubao"},
+    {"from": "beijing", "to": "liaodong"}
+  ]
+}
