@@ -40,8 +40,13 @@ func run(assertions) -> void:
 	}])
 
 	var row = hud.inventory_list.get_child(0)
-	var header = row.get_child(0)
-	assertions.assert_eq(header.text, "小还丹 x1", "背包物品标题不应显示内部类型")
+	var inner = row.get_child(0)
+	var text_col = inner.get_child(0)
+	var name_row = text_col.get_child(0)
+	var item_name_label = name_row.get_child(0)
+	var quantity_label = name_row.get_child(1)
+	assertions.assert_eq(item_name_label.text, "小还丹", "背包物品名称不应显示内部类型")
+	assertions.assert_eq(quantity_label.text, "×1", "背包物品数量应显示为中文界面数量")
 
 	var requested_items: Array[String] = []
 	hud.shop_buy_requested.connect(func(item_id: String): requested_items.append(item_id))
@@ -59,7 +64,8 @@ func run(assertions) -> void:
 
 	var shop_row = hud.shop_list.get_child(0)
 	var shop_header = shop_row.get_child(0)
-	assertions.assert_eq(shop_header.text, "小还丹 30 文", "商品标题应显示名称和价格")
+	assertions.assert_eq(shop_header.get_child(0).text, "小还丹", "商品标题应显示名称")
+	assertions.assert_eq(shop_header.get_child(1).text, "30 文", "商品标题应显示价格")
 
 	var buy_button = shop_row.get_child(2)
 	assertions.assert_eq(buy_button.text, "购买", "商品行应包含购买按钮")
