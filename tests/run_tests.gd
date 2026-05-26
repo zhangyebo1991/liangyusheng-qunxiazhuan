@@ -72,6 +72,7 @@ const TestTacticalAIScript = preload("res://tests/test_tactical_ai.gd")
 const TestGrowthManagerScript = preload("res://tests/test_growth_manager.gd")
 const TestGameStateGrowthScript = preload("res://tests/test_game_state_growth.gd")
 const TestCharacterSpriteLoaderScript = preload("res://tests/test_character_sprite_loader.gd")
+const TestPlayerDiagonalAnimationScript = preload("res://tests/test_player_diagonal_animation.gd")
 
 func _initialize() -> void:
 	# _initialize 阶段 root 尚未进入树；deferred 后执行可让依赖 SceneTree 的测试稳定运行。
@@ -151,6 +152,7 @@ func _run_all_suites() -> void:
 		TestGrowthManagerScript.new(),
 		TestGameStateGrowthScript.new(),
 		TestCharacterSpriteLoaderScript.new(),
+		TestPlayerDiagonalAnimationScript.new(),
 	]
 
 	for suite in suites:
