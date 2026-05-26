@@ -11,6 +11,11 @@ var facing: String = "down"
 var current_interactable = null
 var sprite: AnimatedSprite2D
 
+# 自动寻路变量
+var target_path: Array[Vector2] = []
+var is_auto_moving: bool = false
+var path_tolerance: float = 8.0
+
 func _ready() -> void:
 	sprite = AnimatedSprite2D.new()
 	sprite.sprite_frames = SimpleSpriteFactory.create_frames(Color("#2f6fdd"), Color("#f1d37b"))
@@ -27,11 +32,51 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	var input_vector = Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	velocity = input_vector * speed
-	move_and_slide()
-	_update_facing(input_vector)
-	_update_animation(input_vector)
+	
+	# 手动打断自动移动
+	if input_vector != Vector2.ZERO and is_auto_moving:
+		stop_auto_move()
+	
+	if is_auto_moving and target_path.size() > 0:
+		_process_auto_move()
+	else:
+		velocity = input_vector * speed
+		move_and_slide()
+		_update_facing(input_vector)
+		_update_animation(input_vector)
+	
 	position_changed.emit(global_position)
+
+func _process_auto_move() -> void:
+	if target_path.is_empty():
+		is_auto_moving = false
+		return
+		
+	var target = target_path[0]
+	if global_position.distance_to(target) <= path_tolerance:
+		target_path.remove_at(0)
+		if target_path.is_empty():
+			is_auto_moving = false
+			velocity = Vector2.ZERO
+			_update_animation(Vector2.ZERO)
+			return
+		target = target_path[0]
+	
+	var direction = global_position.direction_to(target)
+	velocity = direction * speed
+	move_and_slide()
+	_update_facing(direction)
+	_update_animation(direction)
+
+func start_auto_move(path: Array[Vector2]) -> void:
+	if path.is_empty():
+		return
+	target_path = path
+	is_auto_moving = true
+
+func stop_auto_move() -> void:
+	is_auto_moving = false
+	target_path.clear()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact") and current_interactable != null:
