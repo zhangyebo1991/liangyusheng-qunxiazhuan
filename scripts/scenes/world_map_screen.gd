@@ -4,6 +4,7 @@ const WorldMapLandmarkScript = preload("res://scripts/scenes/world_map_landmark.
 var world_config: Dictionary = {}
 
 func _ready() -> void:
+	map_id = "world"
 	_load_world_config()
 	super._ready()
 	_setup_camera_zoom()
