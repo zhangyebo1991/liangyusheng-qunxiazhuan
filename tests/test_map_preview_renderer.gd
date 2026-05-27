@@ -5,6 +5,7 @@ const MapPreviewRendererScript = preload("res://addons/map_preview/map_preview_r
 func run(assertions) -> void:
 	_test_renderer_builds_preview_tree(assertions)
 	_test_renderer_assigns_readable_labels(assertions)
+	_test_renderer_handle_selection_state(assertions)
 	_test_renderer_clears_only_generated_preview(assertions)
 
 func _test_renderer_builds_preview_tree(assertions) -> void:
@@ -54,6 +55,32 @@ func _test_renderer_assigns_readable_labels(assertions) -> void:
 		assertions.assert_eq(unknown_handle.get_label_text(), "unknown_demo / 对象", "未知类型 handle 应回退对象标签")
 		assertions.assert_eq(spawn_handle.get_label_text(), "出生点 / start", "出生点 handle 标签应可读")
 		assertions.assert_eq(obstacle_handle.get_label_text(), "障碍 / wall", "障碍 handle 标签应可读")
+	root.free()
+
+func _test_renderer_handle_selection_state(assertions) -> void:
+	var root = Node2D.new()
+	var renderer = MapPreviewRendererScript.new()
+	var map_data = {
+		"objects": [
+			{"id": "npc_demo", "type": "npc", "name": "演示 NPC"}
+		]
+	}
+	var layout = _sample_layout()
+	renderer.render(root, map_data, layout)
+	var preview = root.get_node_or_null("GeneratedMapPreview")
+	if preview != null:
+		var npc_handle = preview.get_node_or_null("Objects/npc_demo")
+		assertions.assert_true(npc_handle != null, "渲染器应创建可选中的对象 handle")
+		if npc_handle != null:
+			assertions.assert_true(npc_handle.has_method("set_selected"), "对象 handle 应提供 set_selected")
+			assertions.assert_eq(npc_handle.get("selected"), false, "对象 handle 初始不应处于选中状态")
+			assertions.assert_eq(npc_handle.get_label_text(), "演示 NPC / NPC", "选中前标签文本应保持可读")
+			if npc_handle.has_method("set_selected"):
+				npc_handle.set_selected(true)
+				assertions.assert_eq(npc_handle.get("selected"), true, "set_selected(true) 应设置选中状态")
+				assertions.assert_eq(npc_handle.get_label_text(), "演示 NPC / NPC", "选中状态不应改变标签文本")
+				npc_handle.set_selected(false)
+				assertions.assert_eq(npc_handle.get("selected"), false, "set_selected(false) 应清除选中状态")
 	root.free()
 
 func _test_renderer_clears_only_generated_preview(assertions) -> void:
