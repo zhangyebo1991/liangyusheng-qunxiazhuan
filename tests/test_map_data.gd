@@ -107,6 +107,9 @@ func run(assertions) -> void:
 	assertions.assert_eq(world.get("scene_path", ""), "res://scenes/world.tscn", "世界大地图应声明场景路径")
 	assertions.assert_true(world.get("spawn_points", {}).has("from_village"), "世界大地图应包含村镇进入出生点")
 
+	assertions.assert_eq(mountain.get("layout", {}).get("obstacles", []).size(), 6, "山道地图应合并布局障碍")
+	assertions.assert_eq(_find_object(mountain, "exit_to_foot_village").get("position", {}).get("x", 0), 1160, "山道出口坐标应来自布局合并")
+
 	assertions.assert_eq(repository.get_map("missing_map"), {}, "缺失地图编号应返回空字典")
 
 	repository.free()

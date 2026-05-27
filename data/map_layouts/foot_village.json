@@ -1,0 +1,31 @@
+{
+  "map_id": "foot_village",
+  "size": {"x": 1280, "y": 720},
+  "background": {"mode": "color", "color": "#7f8f6a"},
+  "spawn_points": {
+    "village_gate": {"x": 120, "y": 360},
+    "return_from_mountain": {"x": 120, "y": 360},
+    "main_street": {"x": 640, "y": 340},
+    "return_from_world": {"x": 100, "y": 360}
+  },
+  "obstacles": [
+    {"id": "border_top", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 1280, "h": 24}},
+    {"id": "border_bottom", "shape": "rect", "rect": {"x": 0, "y": 696, "w": 1280, "h": 24}},
+    {"id": "border_left", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 24, "h": 720}},
+    {"id": "border_right", "shape": "rect", "rect": {"x": 1256, "y": 0, "w": 24, "h": 720}},
+    {"id": "north_house_west", "shape": "rect", "rect": {"x": 420, "y": 120, "w": 180, "h": 110}},
+    {"id": "north_house_east", "shape": "rect", "rect": {"x": 690, "y": 110, "w": 240, "h": 130}},
+    {"id": "south_house_west", "shape": "rect", "rect": {"x": 360, "y": 500, "w": 180, "h": 100}},
+    {"id": "south_house_east", "shape": "rect", "rect": {"x": 820, "y": 500, "w": 220, "h": 100}}
+  ],
+  "objects": {
+    "exit_to_world_map": {"position": {"x": 20, "y": 360}, "radius": 72},
+    "exit_to_mountain_pass": {"position": {"x": 64, "y": 360}, "radius": 72},
+    "npc_porter_chen": {"position": {"x": 300, "y": 340}, "radius": 72},
+    "notice_foot_village": {"position": {"x": 520, "y": 260}, "radius": 56},
+    "npc_innkeeper_lu": {"position": {"x": 760, "y": 320}, "radius": 72},
+    "shop_foot_village_pharmacy": {"position": {"x": 980, "y": 320}, "radius": 72},
+    "exit_to_road_outskirts": {"position": {"x": 1180, "y": 360}, "radius": 72}
+  },
+  "decorations": []
+}

@@ -1,0 +1,11 @@
+{
+  "map_id": "world",
+  "size": {"x": 4000, "y": 3000},
+  "background": {"mode": "color", "color": "#f4ebd0"},
+  "spawn_points": {
+    "from_village": {"x": 1800, "y": 1500}
+  },
+  "obstacles": [],
+  "objects": {},
+  "decorations": []
+}

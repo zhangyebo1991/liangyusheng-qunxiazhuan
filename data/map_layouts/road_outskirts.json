@@ -1,0 +1,22 @@
+{
+  "map_id": "road_outskirts",
+  "size": {"x": 1280, "y": 720},
+  "background": {"mode": "color", "color": "#6f7658"},
+  "spawn_points": {
+    "from_foot_village": {"x": 120, "y": 360}
+  },
+  "obstacles": [
+    {"id": "border_top", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 1280, "h": 24}},
+    {"id": "border_bottom", "shape": "rect", "rect": {"x": 0, "y": 696, "w": 1280, "h": 24}},
+    {"id": "border_left", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 24, "h": 720}},
+    {"id": "border_right", "shape": "rect", "rect": {"x": 1256, "y": 0, "w": 24, "h": 720}},
+    {"id": "roadside_rocks_west", "shape": "rect", "rect": {"x": 360, "y": 130, "w": 160, "h": 90}},
+    {"id": "roadside_rocks_east", "shape": "rect", "rect": {"x": 760, "y": 470, "w": 180, "h": 100}}
+  ],
+  "objects": {
+    "pickup_roadside_bundle": {"position": {"x": 620, "y": 340}, "radius": 56},
+    "notice_road_outskirts_sign": {"position": {"x": 260, "y": 300}, "radius": 56},
+    "npc_road_scholar": {"position": {"x": 900, "y": 300}, "radius": 72}
+  },
+  "decorations": []
+}

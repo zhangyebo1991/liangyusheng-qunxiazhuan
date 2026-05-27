@@ -1,5 +1,7 @@
 extends Node
 
+const MapLayoutLoaderScript = preload("res://scripts/systems/map_layout_loader.gd")
+
 const DATA_FILES := {
 	"actors": "res://data/actors.json",
 	"items": "res://data/items.json",
@@ -13,6 +15,7 @@ const TERRAINS_FILE := "res://data/terrains.json"
 
 var content: Dictionary = {}
 var terrains: Dictionary = {}
+var layout_loader = MapLayoutLoaderScript.new()
 
 func load_all() -> Dictionary:
 	var loaded: Dictionary = {}
@@ -38,7 +41,10 @@ func get_dialogue(dialogue_id: String) -> Dictionary:
 	return _find_by_id("dialogues", dialogue_id)
 
 func get_map(map_id: String) -> Dictionary:
-	return _find_by_id("maps", map_id)
+	var map_data = _find_by_id("maps", map_id)
+	if map_data.is_empty():
+		return {}
+	return layout_loader.merge_map_layout(map_data, layout_loader.get_layout(map_id))
 
 func get_terrain(terrain_id: String) -> Dictionary:
 	if terrains.is_empty():

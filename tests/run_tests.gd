@@ -21,6 +21,7 @@ const TestStoryEventDataScript = preload("res://tests/test_story_event_data.gd")
 const TestCombatAndSaveScript = preload("res://tests/test_combat_and_save.gd")
 const TestSavePartyEquipmentScript = preload("res://tests/test_save_party_equipment.gd")
 const TestMapDataScript = preload("res://tests/test_map_data.gd")
+const TestMapLayoutLoaderScript = preload("res://tests/test_map_layout_loader.gd")
 const TestMapStateAndFlowScript = preload("res://tests/test_map_state_and_flow.gd")
 const TestInteractionSystemScript = preload("res://tests/test_interaction_system.gd")
 const TestSaveMapStateScript = preload("res://tests/test_save_map_state.gd")
@@ -101,6 +102,7 @@ func _run_all_suites() -> void:
 		TestCombatAndSaveScript.new(),
 		TestSavePartyEquipmentScript.new(),
 		TestMapDataScript.new(),
+		TestMapLayoutLoaderScript.new(),
 		TestMapStateAndFlowScript.new(),
 		TestInteractionSystemScript.new(),
 		TestSaveMapStateScript.new(),

@@ -1,0 +1,26 @@
+{
+  "map_id": "mountain_pass",
+  "size": {"x": 1280, "y": 720},
+  "background": {"mode": "color", "color": "#6f8f55"},
+  "spawn_points": {
+    "start": {"x": 160, "y": 320},
+    "return_from_village": {"x": 1110, "y": 320}
+  },
+  "obstacles": [
+    {"id": "border_top", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 1280, "h": 24}},
+    {"id": "border_bottom", "shape": "rect", "rect": {"x": 0, "y": 696, "w": 1280, "h": 24}},
+    {"id": "border_left", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 24, "h": 720}},
+    {"id": "border_right", "shape": "rect", "rect": {"x": 1256, "y": 0, "w": 24, "h": 720}},
+    {"id": "rock_north", "shape": "rect", "rect": {"x": 520, "y": 120, "w": 120, "h": 120}},
+    {"id": "rock_southeast", "shape": "rect", "rect": {"x": 900, "y": 380, "w": 160, "h": 120}}
+  ],
+  "objects": {
+    "exit_to_world_map": {"position": {"x": 460, "y": 280}, "radius": 72},
+    "npc_qingshanke": {"position": {"x": 360, "y": 280}, "radius": 72},
+    "npc_training_dummy": {"position": {"x": 520, "y": 430}, "radius": 64},
+    "enemy_roaming_bandit": {"position": {"x": 620, "y": 520}, "radius": 56},
+    "enemy_bandit_gate": {"position": {"x": 720, "y": 260}, "radius": 56},
+    "exit_to_foot_village": {"position": {"x": 1160, "y": 320}, "radius": 72}
+  },
+  "decorations": []
+}
