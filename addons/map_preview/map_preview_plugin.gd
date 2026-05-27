@@ -2,7 +2,7 @@
 extends EditorPlugin
 
 const MapLayoutDocumentScript = preload("res://addons/map_preview/map_layout_document.gd")
-const MapIndexDocumentScript = preload("res://addons/map_preview/map_index_document.gd")
+const MapContentDocumentScript = preload("res://addons/map_preview/map_content_document.gd")
 const MapPreviewRendererScript = preload("res://addons/map_preview/map_preview_renderer.gd")
 const MapLayoutLoaderScript = preload("res://scripts/systems/map_layout_loader.gd")
 const MapPreviewTypesScript = preload("res://addons/map_preview/map_preview_type_metadata.gd")
@@ -26,7 +26,7 @@ var obstacle_width_spin: SpinBox
 var obstacle_height_spin: SpinBox
 var selected_map_id := ""
 var selected_object_id := ""
-var map_index = MapIndexDocumentScript.new()
+var content_document = MapContentDocumentScript.new()
 var document = MapLayoutDocumentScript.new()
 var renderer = MapPreviewRendererScript.new()
 var layout_loader = MapLayoutLoaderScript.new()
@@ -69,9 +69,15 @@ func _process(delta: float) -> void:
 			_check_external_refresh()
 
 func _save_external_data() -> void:
+	var saved_any := false
+	if content_document.is_dirty() and not content_document.has_external_change():
+		if content_document.save():
+			saved_any = true
 	if document.is_dirty() and not document.has_external_change():
-		document.save()
-		_update_status("已随项目保存布局。")
+		if document.save():
+			saved_any = true
+	if saved_any:
+		_update_status("已随项目保存地图编辑。")
 
 func _build_dock() -> void:
 	dock = VBoxContainer.new()
@@ -198,11 +204,11 @@ func _build_dock() -> void:
 
 func _load_map_index() -> bool:
 	var restore_map_id = selected_map_id
-	if not map_index.load_from_path(MAP_INDEX_PATH):
-		_update_status(map_index.last_error)
+	if not content_document.load_from_path(MAP_INDEX_PATH):
+		_update_status(content_document.last_error)
 		return false
-	maps_by_id = map_index.get_maps_by_id()
-	scene_path_to_map_id = map_index.get_scene_path_to_map_id()
+	maps_by_id = content_document.get_maps_by_id()
+	scene_path_to_map_id = content_document.get_scene_path_to_map_id()
 	_rebuild_map_selector(restore_map_id)
 	return true
 
@@ -283,7 +289,10 @@ func _render_selected_map() -> void:
 	_reapply_selected_object()
 
 func _check_map_index_refresh() -> void:
-	if not map_index.has_external_change():
+	if not content_document.has_external_change():
+		return
+	if content_document.is_dirty():
+		_update_status("data/maps.json 有外部修改，且编辑器内有未保存内容修改。请选择保存或手动刷新。")
 		return
 	var previous_map_id = selected_map_id
 	var previous_object_id = selected_object_id
@@ -349,13 +358,30 @@ func _save_document() -> void:
 	if document.has_external_change() and document.is_dirty():
 		if not save_conflict_confirm_pending:
 			save_conflict_confirm_pending = true
-			_update_status("检测到外部修改。再次点击保存将覆盖外部版本，或点击重载外部版本。")
+			_update_status("检测到布局外部修改。再次点击保存将覆盖外部版本，或点击重载外部版本。")
 			return
-	if document.save():
+	if content_document.has_external_change() and content_document.is_dirty():
+		if not save_conflict_confirm_pending:
+			save_conflict_confirm_pending = true
+			_update_status("检测到 data/maps.json 外部修改。再次点击保存将覆盖外部版本，或点击刷新。")
+			return
+
+	var content_ok = true
+	if content_document.is_dirty():
+		content_ok = content_document.save()
+	var layout_ok = true
+	if document.is_dirty():
+		layout_ok = document.save()
+
+	if content_ok and layout_ok:
 		save_conflict_confirm_pending = false
-		_update_status("已保存布局：%s" % selected_map_id)
+		_load_map_index()
+		_render_selected_map()
+		_update_status("已保存地图编辑：%s" % selected_map_id)
+	elif not content_ok:
+		_update_status("保存失败：data/maps.json")
 	else:
-		_update_status("保存失败：%s" % selected_map_id)
+		_update_status("保存失败：%s" % document.path)
 
 func _on_map_selected(index: int) -> void:
 	_select_map_id(map_selector.get_item_text(index))
