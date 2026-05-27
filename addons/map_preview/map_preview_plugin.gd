@@ -33,7 +33,9 @@ var layout_loader = MapLayoutLoaderScript.new()
 var maps_by_id: Dictionary = {}
 var scene_path_to_map_id: Dictionary = {}
 var poll_elapsed := 0.0
-var save_conflict_confirm_pending := false
+var layout_save_conflict_confirm_pending := false
+var content_save_conflict_confirm_pending := false
+var manual_content_refresh_confirm_pending := false
 var active_scene_path := ""
 
 func _enter_tree() -> void:
@@ -70,13 +72,26 @@ func _process(delta: float) -> void:
 
 func _save_external_data() -> void:
 	var saved_any := false
-	if content_document.is_dirty() and not content_document.has_external_change():
-		if content_document.save():
+	var blocked_content := false
+	var blocked_layout := false
+	if content_document.is_dirty():
+		if content_document.has_external_change():
+			blocked_content = true
+		elif content_document.save():
 			saved_any = true
-	if document.is_dirty() and not document.has_external_change():
-		if document.save():
+	if document.is_dirty():
+		if document.has_external_change():
+			blocked_layout = true
+		elif document.save():
 			saved_any = true
-	if saved_any:
+	if blocked_content or blocked_layout:
+		var blocked_files := PackedStringArray()
+		if blocked_content:
+			blocked_files.append("data/maps.json")
+		if blocked_layout:
+			blocked_files.append("布局文件")
+		_update_status("项目保存未覆盖外部修改：%s。" % "、".join(blocked_files))
+	elif saved_any:
 		_update_status("已随项目保存地图编辑。")
 
 func _build_dock() -> void:
@@ -210,6 +225,8 @@ func _load_map_index() -> bool:
 	maps_by_id = content_document.get_maps_by_id()
 	scene_path_to_map_id = content_document.get_scene_path_to_map_id()
 	_rebuild_map_selector(restore_map_id)
+	if not content_document.is_dirty():
+		manual_content_refresh_confirm_pending = false
 	return true
 
 func _rebuild_map_selector(preferred_map_id: String) -> void:
@@ -258,6 +275,11 @@ func _select_map_id(map_id: String) -> void:
 	_reload_selected_map()
 
 func _manual_refresh_selected_map() -> void:
+	if content_document.is_dirty() and not manual_content_refresh_confirm_pending:
+		manual_content_refresh_confirm_pending = true
+		_update_status("data/maps.json 有未保存内容修改。再次点击刷新将丢弃这些内容修改。")
+		return
+	manual_content_refresh_confirm_pending = false
 	var current_map_id = selected_map_id
 	if not _load_map_index():
 		return
@@ -272,7 +294,8 @@ func _reload_selected_map() -> void:
 	if not document.load_map(selected_map_id):
 		_update_status("无法加载布局：%s" % selected_map_id)
 		return
-	save_conflict_confirm_pending = false
+	layout_save_conflict_confirm_pending = false
+	content_save_conflict_confirm_pending = false
 	var previous_selected_object_id = selected_object_id
 	_render_selected_map()
 	if previous_selected_object_id.is_empty() or selected_object_id == previous_selected_object_id:
@@ -355,26 +378,38 @@ func _check_external_refresh() -> void:
 func _save_document() -> void:
 	if selected_map_id.is_empty():
 		return
-	if document.has_external_change() and document.is_dirty():
-		if not save_conflict_confirm_pending:
-			save_conflict_confirm_pending = true
+	var layout_conflicted = document.is_dirty() and document.has_external_change()
+	var content_conflicted = content_document.is_dirty() and content_document.has_external_change()
+	if layout_conflicted:
+		if not layout_save_conflict_confirm_pending:
+			layout_save_conflict_confirm_pending = true
 			_update_status("检测到布局外部修改。再次点击保存将覆盖外部版本，或点击重载外部版本。")
 			return
-	if content_document.has_external_change() and content_document.is_dirty():
-		if not save_conflict_confirm_pending:
-			save_conflict_confirm_pending = true
+	else:
+		layout_save_conflict_confirm_pending = false
+	if content_conflicted:
+		if not content_save_conflict_confirm_pending:
+			content_save_conflict_confirm_pending = true
 			_update_status("检测到 data/maps.json 外部修改。再次点击保存将覆盖外部版本，或点击刷新。")
 			return
+	else:
+		content_save_conflict_confirm_pending = false
 
 	var content_ok = true
 	if content_document.is_dirty():
 		content_ok = content_document.save()
+		if content_ok:
+			content_save_conflict_confirm_pending = false
 	var layout_ok = true
 	if document.is_dirty():
 		layout_ok = document.save()
+		if layout_ok:
+			layout_save_conflict_confirm_pending = false
 
 	if content_ok and layout_ok:
-		save_conflict_confirm_pending = false
+		layout_save_conflict_confirm_pending = false
+		content_save_conflict_confirm_pending = false
+		manual_content_refresh_confirm_pending = false
 		_load_map_index()
 		_render_selected_map()
 		_update_status("已保存地图编辑：%s" % selected_map_id)
@@ -387,7 +422,8 @@ func _on_map_selected(index: int) -> void:
 	_select_map_id(map_selector.get_item_text(index))
 
 func _on_preview_handle_changed(kind: String, layout_id: String, payload: Dictionary) -> void:
-	save_conflict_confirm_pending = false
+	layout_save_conflict_confirm_pending = false
+	content_save_conflict_confirm_pending = false
 	var position_data = payload.get("position", {})
 	var position = Vector2(float(position_data.get("x", 0.0)), float(position_data.get("y", 0.0)))
 	match kind:
@@ -407,7 +443,8 @@ func _on_preview_handle_changed(kind: String, layout_id: String, payload: Dictio
 	_update_status("有未保存修改：%s" % layout_id)
 
 func _apply_object_radius() -> void:
-	save_conflict_confirm_pending = false
+	layout_save_conflict_confirm_pending = false
+	content_save_conflict_confirm_pending = false
 	var object_id = object_id_input.text.strip_edges()
 	if object_id.is_empty():
 		_update_status("请输入对象编号。")
@@ -417,7 +454,8 @@ func _apply_object_radius() -> void:
 	_update_status("有未保存半径修改：%s" % object_id)
 
 func _apply_obstacle_size() -> void:
-	save_conflict_confirm_pending = false
+	layout_save_conflict_confirm_pending = false
+	content_save_conflict_confirm_pending = false
 	var obstacle_id = obstacle_id_input.text.strip_edges()
 	if obstacle_id.is_empty():
 		_update_status("请输入障碍编号。")
