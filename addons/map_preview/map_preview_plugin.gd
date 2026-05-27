@@ -63,8 +63,10 @@ func _process(delta: float) -> void:
 		return
 	poll_elapsed = 0.0
 	_refresh_if_scene_changed()
-	if auto_refresh_check != null and auto_refresh_check.button_pressed and not selected_map_id.is_empty():
-		_check_external_refresh()
+	if auto_refresh_check != null and auto_refresh_check.button_pressed:
+		_check_map_index_refresh()
+		if not selected_map_id.is_empty():
+			_check_external_refresh()
 
 func _save_external_data() -> void:
 	if document.is_dirty() and not document.has_external_change():
@@ -279,6 +281,59 @@ func _render_selected_map() -> void:
 	_update_validation(map_data, document.get_layout())
 	_update_readability_panel(map_data)
 	_reapply_selected_object()
+
+func _check_map_index_refresh() -> void:
+	if not map_index.has_external_change():
+		return
+	var previous_map_id = selected_map_id
+	var previous_object_id = selected_object_id
+	if not _load_map_index():
+		return
+	_refresh_after_map_index_change(previous_map_id, previous_object_id)
+
+func _refresh_after_map_index_change(previous_map_id: String, previous_object_id: String) -> void:
+	var scene_root = _edited_scene_root()
+	var scene_map_id := ""
+	if scene_root != null:
+		active_scene_path = scene_root.scene_file_path
+		scene_map_id = str(scene_path_to_map_id.get(scene_root.scene_file_path, ""))
+	if not scene_map_id.is_empty():
+		if selected_map_id != scene_map_id:
+			selected_object_id = ""
+		else:
+			selected_object_id = previous_object_id
+		selected_map_id = scene_map_id
+		_select_map_selector_item(scene_map_id)
+		if document.map_id != scene_map_id:
+			_reload_selected_map()
+		else:
+			_render_selected_map()
+			if selected_object_id == previous_object_id:
+				_update_status("地图内容已刷新：%s" % selected_map_id)
+		return
+	if not previous_map_id.is_empty() and maps_by_id.has(previous_map_id):
+		selected_map_id = previous_map_id
+		selected_object_id = previous_object_id
+		_select_map_selector_item(selected_map_id)
+		if document.map_id != selected_map_id:
+			_reload_selected_map()
+		else:
+			_render_selected_map()
+			if selected_object_id == previous_object_id:
+				_update_status("地图内容已刷新：%s" % selected_map_id)
+		return
+	selected_map_id = ""
+	selected_object_id = ""
+	_clear_current_preview()
+	_update_status("当前地图已从 data/maps.json 移除：%s" % previous_map_id)
+
+func _clear_current_preview() -> void:
+	var scene_root = _edited_scene_root()
+	if scene_root != null:
+		renderer.clear(scene_root)
+	_update_readability_panel({})
+	if validation_label != null:
+		validation_label.text = ""
 
 func _check_external_refresh() -> void:
 	if not document.has_external_change():
