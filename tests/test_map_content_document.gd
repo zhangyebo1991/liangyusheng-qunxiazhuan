@@ -7,8 +7,10 @@ func run(assertions) -> void:
 	_test_add_object_template_marks_dirty_and_updates_index(assertions)
 	_test_add_object_rejects_duplicate_id(assertions)
 	_test_update_object_fields_preserves_existing_fields(assertions)
+	_test_update_object_fields_rejects_id_changes(assertions)
 	_test_save_preserves_other_maps_and_clears_dirty(assertions)
 	_test_detects_external_changes(assertions)
+	_test_deleted_file_counts_as_external_change(assertions)
 
 func _test_load_indexes_maps_and_preserves_unknown_fields(assertions) -> void:
 	var document = MapContentDocumentScript.new()
@@ -63,6 +65,18 @@ func _test_update_object_fields_preserves_existing_fields(assertions) -> void:
 	assertions.assert_eq(object.get("type", ""), "notice", "对象类型应更新")
 	assertions.assert_eq(object.get("dialogue_id", ""), "dialogue_demo", "未修改字段应保留")
 
+func _test_update_object_fields_rejects_id_changes(assertions) -> void:
+	var document = MapContentDocumentScript.new()
+	document.load_from_text(JSON.stringify([_sample_map()], "\t"), "user://map_content_document_reject_id.json")
+	var result = document.update_object_fields("mountain_pass", "npc_demo", {"id": "npc_changed", "name": "不应写入"})
+
+	assertions.assert_false(result.ok, "字段更新不应允许修改对象编号")
+	assertions.assert_eq(result.error, "对象编号不能通过字段更新修改：npc_demo", "修改对象编号应返回明确错误")
+	var object = document.find_object("mountain_pass", "npc_demo")
+	assertions.assert_eq(object.get("id", ""), "npc_demo", "原对象编号应保留")
+	assertions.assert_eq(object.get("name", ""), "演示", "拒绝修改编号时不应写入其他字段")
+	assertions.assert_true(document.find_object("mountain_pass", "npc_changed").is_empty(), "不应创建新编号对象")
+
 func _test_save_preserves_other_maps_and_clears_dirty(assertions) -> void:
 	var path = "user://map_content_document_save.json"
 	var document = MapContentDocumentScript.new()
@@ -90,6 +104,17 @@ func _test_detects_external_changes(assertions) -> void:
 	file.store_string(JSON.stringify([{"id": "mountain_pass", "objects": [{"id": "npc_external"}]}], "\t"))
 	file.close()
 	assertions.assert_true(document.has_external_change(), "外部写入后应检测到变化")
+
+func _test_deleted_file_counts_as_external_change(assertions) -> void:
+	var path = "user://map_content_document_deleted.json"
+	var document = MapContentDocumentScript.new()
+	document.load_from_text(JSON.stringify([_sample_map()], "\t"), path)
+	assertions.assert_true(document.save(), "初始保存应成功")
+	assertions.assert_false(document.has_external_change(), "刚保存的内容不应有外部变化")
+
+	var absolute_path = ProjectSettings.globalize_path(path)
+	DirAccess.remove_absolute(absolute_path)
+	assertions.assert_true(document.has_external_change(), "已删除文件应被视为外部变化")
 
 func _sample_map() -> Dictionary:
 	return {

@@ -85,6 +85,8 @@ func update_object_fields(map_id: String, object_id: String, fields: Dictionary)
 	var clean_object_id = object_id.strip_edges()
 	if clean_object_id.is_empty():
 		return _error("对象编号不能为空。")
+	if fields.has("id"):
+		return _error("对象编号不能通过字段更新修改：%s" % clean_object_id)
 
 	var object_data = find_object(clean_map_id, clean_object_id)
 	if object_data.is_empty():
@@ -95,11 +97,13 @@ func update_object_fields(map_id: String, object_id: String, fields: Dictionary)
 	return _ok()
 
 func has_external_change() -> bool:
-	if path.is_empty() or not FileAccess.file_exists(path):
+	if path.is_empty():
 		return false
+	if not FileAccess.file_exists(path):
+		return true
 	var file = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return false
+		return true
 	return _hash_text(file.get_as_text()) != loaded_hash
 
 func save() -> bool:
