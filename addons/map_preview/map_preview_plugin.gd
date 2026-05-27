@@ -322,7 +322,7 @@ func _on_scene_changed(_scene_root: Node) -> void:
 
 func _select_map_id(map_id: String) -> void:
 	if selected_map_id != map_id:
-		selected_object_id = ""
+		_clear_selected_layout_element()
 	selected_map_id = map_id
 	_select_map_selector_item(map_id)
 	_reload_selected_map()
@@ -383,7 +383,7 @@ func _refresh_after_map_index_change(previous_map_id: String, previous_object_id
 		scene_map_id = str(scene_path_to_map_id.get(scene_root.scene_file_path, ""))
 	if not scene_map_id.is_empty():
 		if selected_map_id != scene_map_id:
-			selected_object_id = ""
+			_clear_selected_layout_element()
 		else:
 			selected_object_id = previous_object_id
 		selected_map_id = scene_map_id
@@ -407,7 +407,6 @@ func _refresh_after_map_index_change(previous_map_id: String, previous_object_id
 				_update_status("地图内容已刷新：%s" % selected_map_id)
 		return
 	selected_map_id = ""
-	selected_object_id = ""
 	_clear_current_preview()
 	_update_status("当前地图已从 data/maps.json 移除：%s" % previous_map_id)
 
@@ -418,6 +417,7 @@ func _clear_current_preview() -> void:
 	_update_readability_panel({})
 	if validation_label != null:
 		validation_label.text = ""
+	_clear_selected_layout_element()
 
 func _check_external_refresh() -> void:
 	if not document.has_external_change():
@@ -547,9 +547,13 @@ func _apply_selected_position() -> void:
 
 func _apply_object_fields() -> void:
 	_reset_save_conflict_confirmations()
+	manual_content_refresh_confirm_pending = false
 	var object_id = object_id_input.text.strip_edges()
 	if object_id.is_empty():
 		_update_status("请输入对象编号。")
+		return
+	if selected_layout_kind != "object" or object_id != selected_object_id:
+		_update_status("请先从对象列表选择要编辑的对象。")
 		return
 	var result = content_document.update_object_fields(selected_map_id, object_id, {
 		"name": object_name_input.text.strip_edges(),
@@ -601,8 +605,7 @@ func _reapply_selected_object() -> void:
 	var object_id = selected_object_id
 	var handle = _find_object_handle(object_id)
 	if handle == null:
-		_clear_selected_object_highlight()
-		selected_object_id = ""
+		_clear_selected_layout_element()
 		_update_status("选中对象已不存在：%s" % object_id)
 		return
 	_apply_object_selection(object_id, handle)
@@ -622,6 +625,26 @@ func _clear_selected_object_highlight() -> void:
 		return
 	for child in objects_root.get_children():
 		_set_handle_selected(child, false)
+
+func _clear_selected_layout_element() -> void:
+	_clear_selected_object_highlight()
+	selected_object_id = ""
+	selected_layout_kind = ""
+	selected_layout_id = ""
+	if selection_label != null:
+		selection_label.text = "未选择"
+	if position_x_spin != null:
+		position_x_spin.value = 0.0
+	if position_y_spin != null:
+		position_y_spin.value = 0.0
+	if object_id_input != null:
+		object_id_input.text = ""
+	if object_name_input != null:
+		object_name_input.text = ""
+	if object_type_input != null:
+		object_type_input.text = ""
+	if obstacle_id_input != null:
+		obstacle_id_input.text = ""
 
 func _set_handle_selected(handle: Node, is_selected: bool) -> void:
 	if handle != null and handle.has_method("set_selected"):
