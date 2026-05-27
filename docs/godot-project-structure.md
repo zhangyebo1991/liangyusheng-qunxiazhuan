@@ -44,6 +44,10 @@ Godot 编辑器插件位于 `addons/map_preview/`。打开地图场景后，插�
 
 AI 修改布局文件后，插件会自动刷新预览；AI 修改 `data/maps.json` 中的对象名称、类型、新增对象或删除对象后，插件也会自动刷新当前地图内容。用户在编辑器中拖拽预览 handle 并点击保存后，插件会把新的坐标或尺寸写回同一个布局文件。运行时通过 `DataRepository.get_map()` 合并玩法数据和布局数据，所以编辑器预览与实际运行应保持一致。
 
+地图编辑闭环 v1 支持在 Dock 中编辑已选对象、出生点和矩形障碍物的坐标、半径和尺寸。Dock 也可以用模板新增 NPC、出口、拾取物、战斗点、出生点和矩形障碍物。玩法对象模板写入 `data/maps.json`，布局坐标和尺寸写入 `data/map_layouts/<map_id>.json`。
+
+地图编辑器只负责创建剧情入口引用，例如 `dialogue_id`、`target_map_id`、`target_spawn_id` 和 `battle_id`。对白正文、任务链、战斗配置和奖励配置由后续独立剧情内容工作台负责。
+
 ## 任务奖励与效果数据化基础切片
 
 任务奖励与效果数据化切片使用 `EffectSystem` 统一执行内容数据声明的结果。`data/quests.json` 的 `complete_effects` 描述任务完成效果，`data/maps.json` 的拾取对象 `effects` 描述拾取结果，战斗胜利回流可通过 `victory_effects` 或兼容字段生成效果。`EffectSystem` 支持添加物品、添加铜钱、设置 flag、设置任务状态、标记地图对象已解决和增加武学熟练度。场景脚本只负责触发和展示消息，不直接硬写奖励、线索或任务状态。
