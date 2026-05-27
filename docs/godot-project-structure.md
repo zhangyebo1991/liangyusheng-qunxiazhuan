@@ -34,6 +34,14 @@
 
 村外官道切片让 `data/maps.json` 声明地图场景路径、出口条件和拾取奖励。`GameState` 通过地图数据读取场景路径，`MapTransitionSystem` 校验任务状态后开放出口，`MapObjectSpawner` 根据任务状态和已解决对象过滤生成对象。`MapRewardSystem` 是拾取奖励发放入口，官道路边包裹领取后写入 `MapState.resolved_objects`，读档后不再生成。
 
+## 双向地图预览编辑器
+
+探索地图布局使用 `data/map_layouts/<map_id>.json` 保存地图尺寸、背景、出生点、障碍物、对象坐标和交互半径。`data/maps.json` 继续保存任务、对白、战斗、奖励、商店和出口目标等玩法字段。
+
+Godot 编辑器插件位于 `addons/map_preview/`。打开地图场景后，插件会根据 `data/maps.json` 的 `scene_path` 匹配 `map_id`，读取布局文件并在场景根节点下生成 `GeneratedMapPreview`。这些预览节点只用于编辑器预览和微调，默认不作为正式 `.tscn` 内容提交。
+
+AI 修改布局文件后，插件会自动刷新预览。用户在编辑器中拖拽预览 handle 并点击保存后，插件会把新的坐标或尺寸写回同一个布局文件。运行时通过 `DataRepository.get_map()` 合并玩法数据和布局数据，所以编辑器预览与实际运行应保持一致。
+
 ## 任务奖励与效果数据化基础切片
 
 任务奖励与效果数据化切片使用 `EffectSystem` 统一执行内容数据声明的结果。`data/quests.json` 的 `complete_effects` 描述任务完成效果，`data/maps.json` 的拾取对象 `effects` 描述拾取结果，战斗胜利回流可通过 `victory_effects` 或兼容字段生成效果。`EffectSystem` 支持添加物品、添加铜钱、设置 flag、设置任务状态、标记地图对象已解决和增加武学熟练度。场景脚本只负责触发和展示消息，不直接硬写奖励、线索或任务状态。
