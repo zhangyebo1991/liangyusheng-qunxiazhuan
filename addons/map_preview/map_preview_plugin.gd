@@ -20,6 +20,13 @@ var auto_refresh_check: CheckBox
 var legend_label: RichTextLabel
 var object_list_container: VBoxContainer
 var object_id_input: LineEdit
+var selected_layout_kind := ""
+var selected_layout_id := ""
+var selection_label: Label
+var position_x_spin: SpinBox
+var position_y_spin: SpinBox
+var object_name_input: LineEdit
+var object_type_input: LineEdit
 var radius_spin: SpinBox
 var obstacle_id_input: LineEdit
 var obstacle_width_spin: SpinBox
@@ -153,6 +160,39 @@ func _build_dock() -> void:
 	object_list_container = VBoxContainer.new()
 	object_list_scroll.add_child(object_list_container)
 
+	var selection_box = VBoxContainer.new()
+	dock.add_child(selection_box)
+
+	var selection_title = Label.new()
+	selection_title.text = "当前选择"
+	selection_box.add_child(selection_title)
+
+	selection_label = Label.new()
+	selection_label.text = "未选择"
+	selection_box.add_child(selection_label)
+
+	var position_row = HBoxContainer.new()
+	selection_box.add_child(position_row)
+
+	position_x_spin = SpinBox.new()
+	position_x_spin.min_value = -4096.0
+	position_x_spin.max_value = 4096.0
+	position_x_spin.step = 1.0
+	position_x_spin.prefix = "x "
+	position_row.add_child(position_x_spin)
+
+	position_y_spin = SpinBox.new()
+	position_y_spin.min_value = -4096.0
+	position_y_spin.max_value = 4096.0
+	position_y_spin.step = 1.0
+	position_y_spin.prefix = "y "
+	position_row.add_child(position_y_spin)
+
+	var position_button = Button.new()
+	position_button.text = "应用坐标"
+	position_button.pressed.connect(_apply_selected_position)
+	selection_box.add_child(position_button)
+
 	var object_box = VBoxContainer.new()
 	dock.add_child(object_box)
 
@@ -163,6 +203,19 @@ func _build_dock() -> void:
 	object_id_input = LineEdit.new()
 	object_id_input.placeholder_text = "object_id"
 	object_box.add_child(object_id_input)
+
+	object_name_input = LineEdit.new()
+	object_name_input.placeholder_text = "对象名称"
+	object_box.add_child(object_name_input)
+
+	object_type_input = LineEdit.new()
+	object_type_input.placeholder_text = "对象类型"
+	object_box.add_child(object_type_input)
+
+	var object_fields_button = Button.new()
+	object_fields_button.text = "应用对象字段"
+	object_fields_button.pressed.connect(_apply_object_fields)
+	object_box.add_child(object_fields_button)
 
 	radius_spin = SpinBox.new()
 	radius_spin.min_value = 1.0
@@ -294,8 +347,7 @@ func _reload_selected_map() -> void:
 	if not document.load_map(selected_map_id):
 		_update_status("无法加载布局：%s" % selected_map_id)
 		return
-	layout_save_conflict_confirm_pending = false
-	content_save_conflict_confirm_pending = false
+	_reset_save_conflict_confirmations()
 	var previous_selected_object_id = selected_object_id
 	_render_selected_map()
 	if previous_selected_object_id.is_empty() or selected_object_id == previous_selected_object_id:
@@ -422,12 +474,14 @@ func _on_map_selected(index: int) -> void:
 	_select_map_id(map_selector.get_item_text(index))
 
 func _on_preview_handle_changed(kind: String, layout_id: String, payload: Dictionary) -> void:
-	layout_save_conflict_confirm_pending = false
-	content_save_conflict_confirm_pending = false
+	_reset_save_conflict_confirmations()
 	var position_data = payload.get("position", {})
 	var position = Vector2(float(position_data.get("x", 0.0)), float(position_data.get("y", 0.0)))
+	_select_layout_element(kind, layout_id)
+	_fill_position_fields(position)
 	match kind:
 		"object":
+			selected_object_id = layout_id
 			object_id_input.text = layout_id
 			document.update_object_position(layout_id, position)
 		"spawn":
@@ -443,8 +497,7 @@ func _on_preview_handle_changed(kind: String, layout_id: String, payload: Dictio
 	_update_status("有未保存修改：%s" % layout_id)
 
 func _apply_object_radius() -> void:
-	layout_save_conflict_confirm_pending = false
-	content_save_conflict_confirm_pending = false
+	_reset_save_conflict_confirmations()
 	var object_id = object_id_input.text.strip_edges()
 	if object_id.is_empty():
 		_update_status("请输入对象编号。")
@@ -454,8 +507,7 @@ func _apply_object_radius() -> void:
 	_update_status("有未保存半径修改：%s" % object_id)
 
 func _apply_obstacle_size() -> void:
-	layout_save_conflict_confirm_pending = false
-	content_save_conflict_confirm_pending = false
+	_reset_save_conflict_confirmations()
 	var obstacle_id = obstacle_id_input.text.strip_edges()
 	if obstacle_id.is_empty():
 		_update_status("请输入障碍编号。")
@@ -468,6 +520,48 @@ func _apply_obstacle_size() -> void:
 	document.update_obstacle_rect(obstacle_id, current_rect)
 	_render_selected_map()
 	_update_status("有未保存障碍尺寸修改：%s" % obstacle_id)
+
+func _reset_save_conflict_confirmations() -> void:
+	layout_save_conflict_confirm_pending = false
+	content_save_conflict_confirm_pending = false
+
+func _apply_selected_position() -> void:
+	_reset_save_conflict_confirmations()
+	if selected_layout_kind.is_empty() or selected_layout_id.is_empty():
+		_update_status("请先选择地图元素。")
+		return
+	var position = Vector2(float(position_x_spin.value), float(position_y_spin.value))
+	match selected_layout_kind:
+		"object":
+			document.update_object_position(selected_layout_id, position)
+		"spawn":
+			document.update_spawn_position(selected_layout_id, position)
+		"obstacle":
+			var rect = _find_obstacle_rect(selected_layout_id)
+			if rect.size == Vector2.ZERO:
+				_update_status("找不到障碍：%s" % selected_layout_id)
+				return
+			document.update_obstacle_rect(selected_layout_id, Rect2(position, rect.size))
+	_render_selected_map()
+	_update_status("有未保存坐标修改：%s" % selected_layout_id)
+
+func _apply_object_fields() -> void:
+	_reset_save_conflict_confirmations()
+	var object_id = object_id_input.text.strip_edges()
+	if object_id.is_empty():
+		_update_status("请输入对象编号。")
+		return
+	var result = content_document.update_object_fields(selected_map_id, object_id, {
+		"name": object_name_input.text.strip_edges(),
+		"type": object_type_input.text.strip_edges(),
+	})
+	if not result.ok:
+		_update_status(result.error)
+		return
+	maps_by_id = content_document.get_maps_by_id()
+	scene_path_to_map_id = content_document.get_scene_path_to_map_id()
+	_render_selected_map()
+	_update_status("有未保存对象字段修改：%s" % object_id)
 
 func _find_obstacle_rect(obstacle_id: String) -> Rect2:
 	for obstacle in document.get_layout().get("obstacles", []):
@@ -492,6 +586,8 @@ func _select_preview_object(object_id: String) -> void:
 		_update_status("找不到预览对象：%s" % object_id)
 		return
 	selected_object_id = object_id
+	selected_layout_kind = "object"
+	selected_layout_id = object_id
 	_apply_object_selection(object_id, handle)
 	_refresh_object_list_selection_state()
 	if _select_editor_node(handle):
@@ -515,7 +611,7 @@ func _reapply_selected_object() -> void:
 func _apply_object_selection(object_id: String, handle: Node) -> void:
 	_clear_selected_object_highlight()
 	_set_handle_selected(handle, true)
-	_fill_object_edit_fields(object_id)
+	_select_layout_element("object", object_id)
 
 func _clear_selected_object_highlight() -> void:
 	var scene_root = _edited_scene_root()
@@ -540,8 +636,54 @@ func _find_object_handle(object_id: String) -> Node:
 func _fill_object_edit_fields(object_id: String) -> void:
 	if object_id_input != null:
 		object_id_input.text = object_id
+	var object_record = _find_map_object(object_id)
+	if object_name_input != null:
+		object_name_input.text = str(object_record.get("name", ""))
+	if object_type_input != null:
+		object_type_input.text = str(object_record.get("type", ""))
 	if radius_spin != null:
 		radius_spin.value = _current_object_radius(object_id)
+	if not object_record.is_empty():
+		var position_data = document.get_layout().get("objects", {}).get(object_id, {}).get("position", object_record.get("position", {}))
+		_fill_position_fields(Vector2(float(position_data.get("x", 0.0)), float(position_data.get("y", 0.0))))
+
+func _select_layout_element(kind: String, layout_id: String) -> void:
+	selected_layout_kind = kind
+	selected_layout_id = layout_id
+	if kind != "object" and not selected_object_id.is_empty():
+		_clear_selected_object_highlight()
+		selected_object_id = ""
+		_refresh_object_list_selection_state()
+	if selection_label != null:
+		selection_label.text = "%s：%s" % [kind, layout_id]
+	match kind:
+		"object":
+			_fill_object_edit_fields(layout_id)
+		"spawn":
+			_fill_position_fields(_current_spawn_position(layout_id))
+		"obstacle":
+			_fill_obstacle_fields(layout_id)
+
+func _fill_position_fields(position: Vector2) -> void:
+	if position_x_spin != null:
+		position_x_spin.value = position.x
+	if position_y_spin != null:
+		position_y_spin.value = position.y
+
+func _current_spawn_position(spawn_id: String) -> Vector2:
+	var spawn_points = document.get_layout().get("spawn_points", {})
+	var position_data = spawn_points.get(spawn_id, {})
+	return Vector2(float(position_data.get("x", 0.0)), float(position_data.get("y", 0.0)))
+
+func _fill_obstacle_fields(obstacle_id: String) -> void:
+	if obstacle_id_input != null:
+		obstacle_id_input.text = obstacle_id
+	var rect = _find_obstacle_rect(obstacle_id)
+	_fill_position_fields(rect.position)
+	if obstacle_width_spin != null:
+		obstacle_width_spin.value = rect.size.x
+	if obstacle_height_spin != null:
+		obstacle_height_spin.value = rect.size.y
 
 func _current_object_radius(object_id: String) -> float:
 	var layout_objects = document.get_layout().get("objects", {})
