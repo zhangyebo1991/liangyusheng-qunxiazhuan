@@ -4,6 +4,7 @@ extends EditorPlugin
 const MapLayoutDocumentScript = preload("res://addons/map_preview/map_layout_document.gd")
 const MapPreviewRendererScript = preload("res://addons/map_preview/map_preview_renderer.gd")
 const MapLayoutLoaderScript = preload("res://scripts/systems/map_layout_loader.gd")
+const MapPreviewTypesScript = preload("res://addons/map_preview/map_preview_type_metadata.gd")
 
 var dock: VBoxContainer
 var map_selector: OptionButton
@@ -13,6 +14,8 @@ var refresh_button: Button
 var save_button: Button
 var reload_button: Button
 var auto_refresh_check: CheckBox
+var legend_label: RichTextLabel
+var object_list_label: RichTextLabel
 var object_id_input: LineEdit
 var radius_spin: SpinBox
 var obstacle_id_input: LineEdit
@@ -85,7 +88,7 @@ func _build_dock() -> void:
 
 	refresh_button = Button.new()
 	refresh_button.text = "刷新"
-	refresh_button.pressed.connect(_reload_selected_map)
+	refresh_button.pressed.connect(_manual_refresh_selected_map)
 	buttons.add_child(refresh_button)
 
 	save_button = Button.new()
@@ -97,6 +100,29 @@ func _build_dock() -> void:
 	reload_button.text = "重载外部版本"
 	reload_button.pressed.connect(_reload_selected_map)
 	buttons.add_child(reload_button)
+
+	var readability_box = VBoxContainer.new()
+	dock.add_child(readability_box)
+
+	var legend_title = Label.new()
+	legend_title.text = "类型图例"
+	readability_box.add_child(legend_title)
+
+	legend_label = RichTextLabel.new()
+	legend_label.bbcode_enabled = true
+	legend_label.fit_content = true
+	legend_label.custom_minimum_size = Vector2(260, 72)
+	readability_box.add_child(legend_label)
+
+	var object_list_title = Label.new()
+	object_list_title.text = "对象列表"
+	readability_box.add_child(object_list_title)
+
+	object_list_label = RichTextLabel.new()
+	object_list_label.bbcode_enabled = true
+	object_list_label.fit_content = true
+	object_list_label.custom_minimum_size = Vector2(260, 160)
+	readability_box.add_child(object_list_label)
 
 	var object_box = VBoxContainer.new()
 	dock.add_child(object_box)
@@ -217,6 +243,14 @@ func _select_map_id(map_id: String) -> void:
 			break
 	_reload_selected_map()
 
+func _manual_refresh_selected_map() -> void:
+	var current_map_id = selected_map_id
+	_load_map_index()
+	if not current_map_id.is_empty() and maps_by_id.has(current_map_id):
+		_select_map_id(current_map_id)
+	else:
+		_refresh_from_current_scene()
+
 func _reload_selected_map() -> void:
 	if selected_map_id.is_empty():
 		return
@@ -234,6 +268,7 @@ func _render_selected_map() -> void:
 	var map_data = maps_by_id.get(selected_map_id, {})
 	renderer.render(scene_root, map_data, document.get_layout())
 	_update_validation(map_data, document.get_layout())
+	_update_readability_panel(map_data)
 
 func _check_external_refresh() -> void:
 	if not document.has_external_change():
@@ -312,6 +347,46 @@ func _find_obstacle_rect(obstacle_id: String) -> Rect2:
 		var rect = obstacle.get("rect", {})
 		return Rect2(float(rect.get("x", 0.0)), float(rect.get("y", 0.0)), float(rect.get("w", 0.0)), float(rect.get("h", 0.0)))
 	return Rect2()
+
+func _update_readability_panel(map_data: Dictionary) -> void:
+	if legend_label == null or object_list_label == null:
+		return
+	var summary = MapPreviewTypesScript.build_object_summary(map_data.get("objects", []))
+	legend_label.text = _build_legend_text(summary.get("counts", {}))
+	object_list_label.text = _build_object_list_text(summary.get("rows", []))
+
+func _build_legend_text(counts: Dictionary) -> String:
+	var lines := PackedStringArray()
+	for type_key in MapPreviewTypesScript.TYPE_ORDER:
+		var count = int(counts.get(type_key, 0))
+		if count <= 0:
+			continue
+		lines.append("[color=#%s]■[/color] %s %d" % [
+			MapPreviewTypesScript.color_html(type_key),
+			MapPreviewTypesScript.type_label(type_key),
+			count,
+		])
+	if lines.is_empty():
+		lines.append("无对象")
+	return "\n".join(lines)
+
+func _build_object_list_text(rows: Array) -> String:
+	var lines := PackedStringArray()
+	for row in rows:
+		if typeof(row) != TYPE_DICTIONARY:
+			continue
+		lines.append("[color=#%s]■[/color] %s / %s / %s" % [
+			str(row.get("color", "666666")),
+			_bbcode_escape(str(row.get("name", ""))),
+			_bbcode_escape(str(row.get("type_label", ""))),
+			_bbcode_escape(str(row.get("id", ""))),
+		])
+	if lines.is_empty():
+		lines.append("无对象")
+	return "\n".join(lines)
+
+func _bbcode_escape(value: String) -> String:
+	return value.replace("[", "[lb]").replace("]", "[rb]")
 
 func _update_validation(map_data: Dictionary, layout: Dictionary) -> void:
 	var errors = layout_loader.validate_layout(layout, map_data)
