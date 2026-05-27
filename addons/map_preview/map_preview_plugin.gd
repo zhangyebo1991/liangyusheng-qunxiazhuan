@@ -25,6 +25,7 @@ var layout_loader = MapLayoutLoaderScript.new()
 var maps_by_id: Dictionary = {}
 var scene_path_to_map_id: Dictionary = {}
 var poll_elapsed := 0.0
+var save_conflict_confirm_pending := false
 
 func _enter_tree() -> void:
 	_build_dock()
@@ -203,6 +204,7 @@ func _reload_selected_map() -> void:
 	if not document.load_map(selected_map_id):
 		_update_status("无法加载布局：%s" % selected_map_id)
 		return
+	save_conflict_confirm_pending = false
 	_render_selected_map()
 	_update_status("已刷新：%s" % selected_map_id)
 
@@ -226,9 +228,12 @@ func _save_document() -> void:
 	if selected_map_id.is_empty():
 		return
 	if document.has_external_change() and document.is_dirty():
-		_update_status("检测到外部修改。请先重载外部版本，或再次确认后手动保存当前版本。")
-		return
+		if not save_conflict_confirm_pending:
+			save_conflict_confirm_pending = true
+			_update_status("检测到外部修改。再次点击保存将覆盖外部版本，或点击重载外部版本。")
+			return
 	if document.save():
+		save_conflict_confirm_pending = false
 		_update_status("已保存布局：%s" % selected_map_id)
 	else:
 		_update_status("保存失败：%s" % selected_map_id)
@@ -237,6 +242,7 @@ func _on_map_selected(index: int) -> void:
 	_select_map_id(map_selector.get_item_text(index))
 
 func _on_preview_handle_changed(kind: String, layout_id: String, payload: Dictionary) -> void:
+	save_conflict_confirm_pending = false
 	var position_data = payload.get("position", {})
 	var position = Vector2(float(position_data.get("x", 0.0)), float(position_data.get("y", 0.0)))
 	match kind:
@@ -256,6 +262,7 @@ func _on_preview_handle_changed(kind: String, layout_id: String, payload: Dictio
 	_update_status("有未保存修改：%s" % layout_id)
 
 func _apply_object_radius() -> void:
+	save_conflict_confirm_pending = false
 	var object_id = object_id_input.text.strip_edges()
 	if object_id.is_empty():
 		_update_status("请输入对象编号。")
@@ -265,6 +272,7 @@ func _apply_object_radius() -> void:
 	_update_status("有未保存半径修改：%s" % object_id)
 
 func _apply_obstacle_size() -> void:
+	save_conflict_confirm_pending = false
 	var obstacle_id = obstacle_id_input.text.strip_edges()
 	if obstacle_id.is_empty():
 		_update_status("请输入障碍编号。")
