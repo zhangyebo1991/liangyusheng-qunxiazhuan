@@ -31,6 +31,16 @@ var radius_spin: SpinBox
 var obstacle_id_input: LineEdit
 var obstacle_width_spin: SpinBox
 var obstacle_height_spin: SpinBox
+var new_element_type_selector: OptionButton
+var new_element_id_input: LineEdit
+var new_element_name_input: LineEdit
+var new_element_reference_input: LineEdit
+var new_element_spawn_input: LineEdit
+var new_element_x_spin: SpinBox
+var new_element_y_spin: SpinBox
+var new_element_radius_spin: SpinBox
+var new_element_width_spin: SpinBox
+var new_element_height_spin: SpinBox
 var selected_map_id := ""
 var selected_object_id := ""
 var content_document = MapContentDocumentScript.new()
@@ -258,6 +268,85 @@ func _build_dock() -> void:
 	obstacle_button.text = "应用尺寸"
 	obstacle_button.pressed.connect(_apply_obstacle_size)
 	obstacle_box.add_child(obstacle_button)
+
+	var create_box = VBoxContainer.new()
+	dock.add_child(create_box)
+
+	var create_title = Label.new()
+	create_title.text = "新增元素"
+	create_box.add_child(create_title)
+
+	new_element_type_selector = OptionButton.new()
+	for type_label in ["NPC", "出口", "拾取物", "战斗点", "出生点", "矩形障碍"]:
+		new_element_type_selector.add_item(type_label)
+	create_box.add_child(new_element_type_selector)
+
+	new_element_id_input = LineEdit.new()
+	new_element_id_input.placeholder_text = "id"
+	create_box.add_child(new_element_id_input)
+
+	new_element_name_input = LineEdit.new()
+	new_element_name_input.placeholder_text = "名称"
+	create_box.add_child(new_element_name_input)
+
+	new_element_reference_input = LineEdit.new()
+	new_element_reference_input.placeholder_text = "引用：dialogue_id / target_map_id / battle_id"
+	create_box.add_child(new_element_reference_input)
+
+	new_element_spawn_input = LineEdit.new()
+	new_element_spawn_input.placeholder_text = "出口目标 spawn_id"
+	create_box.add_child(new_element_spawn_input)
+
+	var create_position_row = HBoxContainer.new()
+	create_box.add_child(create_position_row)
+
+	new_element_x_spin = SpinBox.new()
+	new_element_x_spin.min_value = -4096.0
+	new_element_x_spin.max_value = 4096.0
+	new_element_x_spin.step = 1.0
+	new_element_x_spin.value = 640.0
+	new_element_x_spin.prefix = "x "
+	create_position_row.add_child(new_element_x_spin)
+
+	new_element_y_spin = SpinBox.new()
+	new_element_y_spin.min_value = -4096.0
+	new_element_y_spin.max_value = 4096.0
+	new_element_y_spin.step = 1.0
+	new_element_y_spin.value = 360.0
+	new_element_y_spin.prefix = "y "
+	create_position_row.add_child(new_element_y_spin)
+
+	new_element_radius_spin = SpinBox.new()
+	new_element_radius_spin.min_value = 1.0
+	new_element_radius_spin.max_value = 512.0
+	new_element_radius_spin.step = 1.0
+	new_element_radius_spin.value = 48.0
+	new_element_radius_spin.prefix = "半径 "
+	create_box.add_child(new_element_radius_spin)
+
+	var create_size_row = HBoxContainer.new()
+	create_box.add_child(create_size_row)
+
+	new_element_width_spin = SpinBox.new()
+	new_element_width_spin.min_value = 1.0
+	new_element_width_spin.max_value = 4096.0
+	new_element_width_spin.step = 1.0
+	new_element_width_spin.value = 80.0
+	new_element_width_spin.prefix = "w "
+	create_size_row.add_child(new_element_width_spin)
+
+	new_element_height_spin = SpinBox.new()
+	new_element_height_spin.min_value = 1.0
+	new_element_height_spin.max_value = 4096.0
+	new_element_height_spin.step = 1.0
+	new_element_height_spin.value = 80.0
+	new_element_height_spin.prefix = "h "
+	create_size_row.add_child(new_element_height_spin)
+
+	var create_button = Button.new()
+	create_button.text = "创建模板"
+	create_button.pressed.connect(_create_template_element)
+	create_box.add_child(create_button)
 
 	status_label = Label.new()
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -574,6 +663,110 @@ func _apply_object_fields() -> void:
 	scene_path_to_map_id = content_document.get_scene_path_to_map_id()
 	_render_selected_map()
 	_update_status("有未保存对象字段修改：%s" % object_id)
+
+func _create_template_element() -> void:
+	_reset_save_conflict_confirmations()
+	manual_content_refresh_confirm_pending = false
+	if selected_map_id.is_empty():
+		_update_status("请先打开地图场景。")
+		return
+	var template_label = new_element_type_selector.get_item_text(new_element_type_selector.selected)
+	var element_id = new_element_id_input.text.strip_edges()
+	var position = Vector2(float(new_element_x_spin.value), float(new_element_y_spin.value))
+	match template_label:
+		"NPC", "出口", "拾取物", "战斗点":
+			_create_object_template(template_label, element_id, position)
+		"出生点":
+			_create_spawn_template(element_id, position)
+		"矩形障碍":
+			_create_obstacle_template(element_id, position)
+
+func _create_object_template(template_label: String, object_id: String, position: Vector2) -> void:
+	if object_id.is_empty():
+		_update_status("请输入对象编号。")
+		return
+	if not _find_map_object(object_id).is_empty():
+		_update_status("对象编号已存在：%s" % object_id)
+		return
+	var layout_objects = document.get_layout().get("objects", {})
+	if typeof(layout_objects) == TYPE_DICTIONARY and layout_objects.has(object_id):
+		_update_status("对象布局已存在：%s" % object_id)
+		return
+	var radius = float(new_element_radius_spin.value)
+	if radius <= 0.0:
+		_update_status("对象半径必须为正数：%s" % object_id)
+		return
+	var object_record = _build_object_template(template_label, object_id)
+	var content_result = content_document.add_object_to_map(selected_map_id, object_record)
+	if not content_result.ok:
+		_update_status(content_result.error)
+		return
+	var layout_result = document.add_object_layout(object_id, position, radius)
+	if not layout_result.ok:
+		_update_status(layout_result.error)
+		return
+	maps_by_id = content_document.get_maps_by_id()
+	scene_path_to_map_id = content_document.get_scene_path_to_map_id()
+	selected_object_id = object_id
+	_render_selected_map()
+	_select_preview_object(object_id)
+	_update_status("已创建模板，尚未保存：%s" % object_id)
+
+func _build_object_template(template_label: String, object_id: String) -> Dictionary:
+	var object_name = new_element_name_input.text.strip_edges()
+	if object_name.is_empty():
+		object_name = object_id
+	var reference = new_element_reference_input.text.strip_edges()
+	match template_label:
+		"NPC":
+			return {
+				"id": object_id,
+				"type": "npc",
+				"name": object_name,
+				"dialogue_id": reference if not reference.is_empty() else "dialogue_%s" % object_id,
+			}
+		"出口":
+			return {
+				"id": object_id,
+				"type": "exit",
+				"name": object_name,
+				"target_map_id": reference,
+				"target_spawn_id": new_element_spawn_input.text.strip_edges(),
+			}
+		"拾取物":
+			return {
+				"id": object_id,
+				"type": "pickup",
+				"name": object_name,
+				"effects": [],
+			}
+		"战斗点":
+			return {
+				"id": object_id,
+				"type": "battle_trigger",
+				"name": object_name,
+				"battle_id": reference if not reference.is_empty() else "battle_%s" % object_id,
+			}
+	return {"id": object_id, "type": "notice", "name": object_name}
+
+func _create_spawn_template(spawn_id: String, position: Vector2) -> void:
+	var result = document.add_spawn_point(spawn_id, position)
+	if not result.ok:
+		_update_status(result.error)
+		return
+	_render_selected_map()
+	_select_layout_element("spawn", spawn_id)
+	_update_status("已创建出生点，尚未保存：%s" % spawn_id)
+
+func _create_obstacle_template(obstacle_id: String, position: Vector2) -> void:
+	var rect = Rect2(position, Vector2(float(new_element_width_spin.value), float(new_element_height_spin.value)))
+	var result = document.add_rect_obstacle(obstacle_id, rect)
+	if not result.ok:
+		_update_status(result.error)
+		return
+	_render_selected_map()
+	_select_layout_element("obstacle", obstacle_id)
+	_update_status("已创建矩形障碍，尚未保存：%s" % obstacle_id)
 
 func _find_obstacle_rect(obstacle_id: String) -> Rect2:
 	for obstacle in document.get_layout().get("obstacles", []):
