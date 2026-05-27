@@ -26,6 +26,7 @@ const TestMapLayoutDocumentScript = preload("res://tests/test_map_layout_documen
 const TestMapIndexDocumentScript = preload("res://tests/test_map_index_document.gd")
 const TestMapContentDocumentScript = preload("res://tests/test_map_content_document.gd")
 const TestMapPreviewRendererScript = preload("res://tests/test_map_preview_renderer.gd")
+const TestMapPreviewPluginSelectionScript = preload("res://tests/test_map_preview_plugin_selection.gd")
 const TestMapPreviewTypeMetadataScript = preload("res://tests/test_map_preview_type_metadata.gd")
 const TestMapStateAndFlowScript = preload("res://tests/test_map_state_and_flow.gd")
 const TestMapScreenLayoutScript = preload("res://tests/test_map_screen_layout.gd")
@@ -113,6 +114,7 @@ func _run_all_suites() -> void:
 		TestMapIndexDocumentScript.new(),
 		TestMapContentDocumentScript.new(),
 		TestMapPreviewRendererScript.new(),
+		TestMapPreviewPluginSelectionScript.new(),
 		TestMapPreviewTypeMetadataScript.new(),
 		TestMapStateAndFlowScript.new(),
 		TestMapScreenLayoutScript.new(),

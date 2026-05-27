@@ -452,6 +452,7 @@ func _render_selected_map() -> void:
 	_update_readability_panel(map_data)
 	_reapply_selected_object()
 	_reapply_selected_layout_element()
+	_queue_editor_reselect_after_render()
 
 func _check_map_index_refresh() -> void:
 	if not content_document.has_external_change():
@@ -661,7 +662,7 @@ func _apply_object_fields() -> void:
 		return
 	maps_by_id = content_document.get_maps_by_id()
 	scene_path_to_map_id = content_document.get_scene_path_to_map_id()
-	_render_selected_map()
+	_refresh_selected_object_handle_fields(object_id)
 	_update_status("有未保存对象字段修改：%s" % object_id)
 
 func _create_template_element() -> void:
@@ -822,6 +823,38 @@ func _reapply_selected_object() -> void:
 		return
 	_apply_object_selection(object_id, handle)
 	_select_editor_node(handle)
+
+func _queue_editor_reselect_after_render() -> void:
+	if selected_object_id.is_empty():
+		return
+	call_deferred("_reselect_selected_object_after_render", selected_map_id, selected_object_id)
+
+func _reselect_selected_object_after_render(expected_map_id: String, object_id: String) -> void:
+	if selected_map_id != expected_map_id:
+		return
+	if selected_object_id != object_id:
+		return
+	if selected_layout_kind != "object" or selected_layout_id != object_id:
+		return
+	var handle = _find_object_handle(object_id)
+	if handle == null:
+		return
+	_clear_selected_object_highlight()
+	_set_handle_selected(handle, true)
+	_select_editor_node(handle)
+
+func _refresh_selected_object_handle_fields(object_id: String) -> void:
+	var scene_root = _edited_scene_root()
+	var map_data = maps_by_id.get(selected_map_id, {})
+	if scene_root != null and renderer.update_object_handle(scene_root, map_data, document.get_layout(), object_id):
+		var handle = _find_object_handle(object_id)
+		if handle != null:
+			_apply_object_selection(object_id, handle)
+			_select_editor_node(handle)
+		_update_validation(map_data, document.get_layout())
+		_update_readability_panel(map_data)
+		return
+	_render_selected_map()
 
 func _reapply_selected_layout_element() -> void:
 	if selected_layout_kind.is_empty() or selected_layout_kind == "object":

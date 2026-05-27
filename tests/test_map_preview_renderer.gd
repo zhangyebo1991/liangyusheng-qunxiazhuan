@@ -6,6 +6,7 @@ func run(assertions) -> void:
 	_test_renderer_builds_preview_tree(assertions)
 	_test_renderer_assigns_readable_labels(assertions)
 	_test_renderer_handle_selection_state(assertions)
+	_test_renderer_updates_object_handle_without_rebuilding_selection(assertions)
 	_test_renderer_clears_only_generated_preview(assertions)
 
 func _test_renderer_builds_preview_tree(assertions) -> void:
@@ -81,6 +82,34 @@ func _test_renderer_handle_selection_state(assertions) -> void:
 				assertions.assert_eq(npc_handle.get_label_text(), "演示 NPC / NPC", "选中状态不应改变标签文本")
 				npc_handle.set_selected(false)
 				assertions.assert_eq(npc_handle.get("selected"), false, "set_selected(false) 应清除选中状态")
+	root.free()
+
+func _test_renderer_updates_object_handle_without_rebuilding_selection(assertions) -> void:
+	var root = Node2D.new()
+	var renderer = MapPreviewRendererScript.new()
+	var map_data = {
+		"objects": [
+			{"id": "npc_demo", "type": "npc", "name": "演示 NPC"}
+		]
+	}
+	var layout = _sample_layout()
+	renderer.render(root, map_data, layout)
+	var preview = root.get_node_or_null("GeneratedMapPreview")
+	if preview != null:
+		var npc_handle = preview.get_node_or_null("Objects/npc_demo")
+		assertions.assert_true(npc_handle != null, "测试应先创建对象 handle")
+		if npc_handle != null and npc_handle.has_method("set_selected"):
+			npc_handle.set_selected(true)
+			var updated = renderer.update_object_handle(root, {
+				"objects": [
+					{"id": "npc_demo", "type": "exit", "name": "改名 NPC"}
+				]
+			}, layout, "npc_demo")
+			var same_handle = preview.get_node_or_null("Objects/npc_demo")
+			assertions.assert_true(updated, "渲染器应能原地更新已有对象 handle")
+			assertions.assert_true(same_handle == npc_handle, "原地更新不应替换已选中的对象节点")
+			assertions.assert_eq(npc_handle.get("selected"), true, "原地更新对象字段后应保留选中状态")
+			assertions.assert_eq(npc_handle.get_label_text(), "改名 NPC / 出口", "原地更新应刷新对象标签和类型")
 	root.free()
 
 func _test_renderer_clears_only_generated_preview(assertions) -> void:

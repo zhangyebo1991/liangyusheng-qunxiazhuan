@@ -53,6 +53,20 @@ func render(scene_root: Node, map_data: Dictionary, layout: Dictionary) -> Node2
 		objects.add_child(handle)
 	return preview
 
+func update_object_handle(scene_root: Node, map_data: Dictionary, layout: Dictionary, object_id: String) -> bool:
+	var handle = scene_root.get_node_or_null("GeneratedMapPreview/Objects/%s" % object_id)
+	if handle == null or not handle.has_method("setup_object"):
+		return false
+	var object_record = _find_object_record(map_data, object_id)
+	if object_record.is_empty():
+		return false
+	var object_layouts = layout.get("objects", {})
+	var object_layout = {}
+	if typeof(object_layouts) == TYPE_DICTIONARY:
+		object_layout = object_layouts.get(object_id, {})
+	handle.setup_object(object_record, object_layout)
+	return true
+
 func clear(scene_root: Node) -> void:
 	var existing = scene_root.get_node_or_null("GeneratedMapPreview")
 	if existing != null and existing.get_meta("map_preview_generated", false):
@@ -71,3 +85,9 @@ func _create_background(layout: Dictionary) -> ColorRect:
 
 func _on_handle_changed(kind: String, layout_id: String, payload: Dictionary) -> void:
 	handle_changed.emit(kind, layout_id, payload)
+
+func _find_object_record(map_data: Dictionary, object_id: String) -> Dictionary:
+	for object_record in map_data.get("objects", []):
+		if typeof(object_record) == TYPE_DICTIONARY and str(object_record.get("id", "")) == object_id:
+			return object_record
+	return {}
