@@ -15,13 +15,14 @@ var save_button: Button
 var reload_button: Button
 var auto_refresh_check: CheckBox
 var legend_label: RichTextLabel
-var object_list_label: RichTextLabel
+var object_list_container: VBoxContainer
 var object_id_input: LineEdit
 var radius_spin: SpinBox
 var obstacle_id_input: LineEdit
 var obstacle_width_spin: SpinBox
 var obstacle_height_spin: SpinBox
 var selected_map_id := ""
+var selected_object_id := ""
 var document = MapLayoutDocumentScript.new()
 var renderer = MapPreviewRendererScript.new()
 var layout_loader = MapLayoutLoaderScript.new()
@@ -118,11 +119,12 @@ func _build_dock() -> void:
 	object_list_title.text = "对象列表"
 	readability_box.add_child(object_list_title)
 
-	object_list_label = RichTextLabel.new()
-	object_list_label.bbcode_enabled = true
-	object_list_label.fit_content = true
-	object_list_label.custom_minimum_size = Vector2(260, 160)
-	readability_box.add_child(object_list_label)
+	var object_list_scroll = ScrollContainer.new()
+	object_list_scroll.custom_minimum_size = Vector2(260, 180)
+	readability_box.add_child(object_list_scroll)
+
+	object_list_container = VBoxContainer.new()
+	object_list_scroll.add_child(object_list_container)
 
 	var object_box = VBoxContainer.new()
 	dock.add_child(object_box)
@@ -236,6 +238,8 @@ func _on_scene_changed(_scene_root: Node) -> void:
 	call_deferred("_refresh_from_current_scene")
 
 func _select_map_id(map_id: String) -> void:
+	if selected_map_id != map_id:
+		selected_object_id = ""
 	selected_map_id = map_id
 	for index in range(map_selector.get_item_count()):
 		if map_selector.get_item_text(index) == map_id:
@@ -258,8 +262,10 @@ func _reload_selected_map() -> void:
 		_update_status("无法加载布局：%s" % selected_map_id)
 		return
 	save_conflict_confirm_pending = false
+	var previous_selected_object_id = selected_object_id
 	_render_selected_map()
-	_update_status("已刷新：%s" % selected_map_id)
+	if previous_selected_object_id.is_empty() or selected_object_id == previous_selected_object_id:
+		_update_status("已刷新：%s" % selected_map_id)
 
 func _render_selected_map() -> void:
 	var scene_root = _edited_scene_root()
@@ -269,6 +275,7 @@ func _render_selected_map() -> void:
 	renderer.render(scene_root, map_data, document.get_layout())
 	_update_validation(map_data, document.get_layout())
 	_update_readability_panel(map_data)
+	_reapply_selected_object()
 
 func _check_external_refresh() -> void:
 	if not document.has_external_change():
@@ -348,12 +355,107 @@ func _find_obstacle_rect(obstacle_id: String) -> Rect2:
 		return Rect2(float(rect.get("x", 0.0)), float(rect.get("y", 0.0)), float(rect.get("w", 0.0)), float(rect.get("h", 0.0)))
 	return Rect2()
 
+func _select_preview_object(object_id: String) -> void:
+	if object_id.is_empty():
+		return
+	var scene_root = _edited_scene_root()
+	if scene_root == null:
+		_update_status("当前没有打开地图场景。")
+		return
+	var handle = _find_object_handle(object_id)
+	if handle == null:
+		_clear_selected_object_highlight()
+		selected_object_id = ""
+		_refresh_object_list_selection_state()
+		_update_status("找不到预览对象：%s" % object_id)
+		return
+	selected_object_id = object_id
+	_apply_object_selection(object_id, handle)
+	_refresh_object_list_selection_state()
+	if _select_editor_node(handle):
+		_update_status("已选中对象：%s" % object_id)
+	else:
+		_update_status("已高亮对象：%s（编辑器选择不可用）" % object_id)
+
+func _reapply_selected_object() -> void:
+	if selected_object_id.is_empty():
+		return
+	var object_id = selected_object_id
+	var handle = _find_object_handle(object_id)
+	if handle == null:
+		_clear_selected_object_highlight()
+		selected_object_id = ""
+		_update_status("选中对象已不存在：%s" % object_id)
+		return
+	_apply_object_selection(object_id, handle)
+	_select_editor_node(handle)
+
+func _apply_object_selection(object_id: String, handle: Node) -> void:
+	_clear_selected_object_highlight()
+	_set_handle_selected(handle, true)
+	_fill_object_edit_fields(object_id)
+
+func _clear_selected_object_highlight() -> void:
+	var scene_root = _edited_scene_root()
+	if scene_root == null:
+		return
+	var objects_root = scene_root.get_node_or_null("GeneratedMapPreview/Objects")
+	if objects_root == null:
+		return
+	for child in objects_root.get_children():
+		_set_handle_selected(child, false)
+
+func _set_handle_selected(handle: Node, is_selected: bool) -> void:
+	if handle != null and handle.has_method("set_selected"):
+		handle.call("set_selected", is_selected)
+
+func _find_object_handle(object_id: String) -> Node:
+	var scene_root = _edited_scene_root()
+	if scene_root == null:
+		return null
+	return scene_root.get_node_or_null("GeneratedMapPreview/Objects/%s" % object_id)
+
+func _fill_object_edit_fields(object_id: String) -> void:
+	if object_id_input != null:
+		object_id_input.text = object_id
+	if radius_spin != null:
+		radius_spin.value = _current_object_radius(object_id)
+
+func _current_object_radius(object_id: String) -> float:
+	var layout_objects = document.get_layout().get("objects", {})
+	if typeof(layout_objects) == TYPE_DICTIONARY and layout_objects.has(object_id):
+		var object_layout = layout_objects.get(object_id, {})
+		if typeof(object_layout) == TYPE_DICTIONARY:
+			return float(object_layout.get("radius", 48.0))
+	var object_record = _find_map_object(object_id)
+	if not object_record.is_empty():
+		return float(object_record.get("radius", 48.0))
+	return float(radius_spin.value) if radius_spin != null else 48.0
+
+func _find_map_object(object_id: String) -> Dictionary:
+	var map_data = maps_by_id.get(selected_map_id, {})
+	for object_record in map_data.get("objects", []):
+		if typeof(object_record) == TYPE_DICTIONARY and str(object_record.get("id", "")) == object_id:
+			return object_record
+	return {}
+
+func _select_editor_node(node: Node) -> bool:
+	var editor_interface = get_editor_interface()
+	if editor_interface == null:
+		return false
+	var selection = editor_interface.get_selection()
+	if selection == null:
+		return false
+	selection.clear()
+	selection.add_node(node)
+	return true
+
 func _update_readability_panel(map_data: Dictionary) -> void:
-	if legend_label == null or object_list_label == null:
+	if legend_label == null or object_list_container == null:
 		return
 	var summary = MapPreviewTypesScript.build_object_summary(map_data.get("objects", []))
 	legend_label.text = _build_legend_text(summary.get("counts", {}))
-	object_list_label.text = _build_object_list_text(summary.get("rows", []))
+	_rebuild_object_list(summary.get("rows", []))
 
 func _build_legend_text(counts: Dictionary) -> String:
 	var lines := PackedStringArray()
@@ -370,23 +472,37 @@ func _build_legend_text(counts: Dictionary) -> String:
 		lines.append("无对象")
 	return "\n".join(lines)
 
-func _build_object_list_text(rows: Array) -> String:
-	var lines := PackedStringArray()
+func _rebuild_object_list(rows: Array) -> void:
+	for child in object_list_container.get_children():
+		object_list_container.remove_child(child)
+		child.queue_free()
+	if rows.is_empty():
+		var empty_label = Label.new()
+		empty_label.text = "无对象"
+		object_list_container.add_child(empty_label)
+		return
 	for row in rows:
 		if typeof(row) != TYPE_DICTIONARY:
 			continue
-		lines.append("[color=#%s]■[/color] %s / %s / %s" % [
-			str(row.get("color", "666666")),
-			_bbcode_escape(str(row.get("name", ""))),
-			_bbcode_escape(str(row.get("type_label", ""))),
-			_bbcode_escape(str(row.get("id", ""))),
-		])
-	if lines.is_empty():
-		lines.append("无对象")
-	return "\n".join(lines)
+		object_list_container.add_child(_build_object_list_button(row))
 
-func _bbcode_escape(value: String) -> String:
-	return value.replace("[", "[lb]").replace("]", "[rb]")
+func _build_object_list_button(row: Dictionary) -> Button:
+	var object_id = str(row.get("id", ""))
+	var button = Button.new()
+	button.text = MapPreviewTypesScript.object_list_button_text(row, selected_object_id)
+	button.tooltip_text = object_id
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.custom_minimum_size = Vector2(260, 28)
+	button.pressed.connect(_on_object_list_item_pressed.bind(object_id))
+	return button
+
+func _on_object_list_item_pressed(object_id: String) -> void:
+	_select_preview_object(object_id)
+
+func _refresh_object_list_selection_state() -> void:
+	if selected_map_id.is_empty():
+		return
+	_update_readability_panel(maps_by_id.get(selected_map_id, {}))
 
 func _update_validation(map_data: Dictionary, layout: Dictionary) -> void:
 	var errors = layout_loader.validate_layout(layout, map_data)

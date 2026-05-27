@@ -6,6 +6,7 @@ func run(assertions) -> void:
 	_test_type_labels_and_colors(assertions)
 	_test_object_label_fallback(assertions)
 	_test_object_summary_rows_and_counts(assertions)
+	_test_object_list_button_text(assertions)
 
 func _test_type_labels_and_colors(assertions) -> void:
 	assertions.assert_eq(MapPreviewTypesScript.type_label("npc"), "NPC", "NPC 类型应显示为 NPC")
@@ -41,3 +42,30 @@ func _test_object_summary_rows_and_counts(assertions) -> void:
 	assertions.assert_eq(rows[0].get("label", ""), "演示 NPC / NPC", "摘要行应包含可读标签")
 	assertions.assert_eq(rows[3].get("name", ""), "unknown_demo", "未知类型对象缺少名称时应回退 id")
 	assertions.assert_eq(rows[3].get("type_label", ""), "对象", "未知类型对象行应显示对象")
+
+func _test_object_list_button_text(assertions) -> void:
+	var row = {
+		"id": "npc_demo",
+		"name": "演示 NPC",
+		"type_label": "NPC",
+	}
+	var has_helper = _script_has_method(MapPreviewTypesScript, "object_list_button_text")
+	assertions.assert_true(has_helper, "类型元数据应提供对象列表按钮文本 helper")
+	if not has_helper:
+		return
+	assertions.assert_eq(
+		MapPreviewTypesScript.object_list_button_text(row, ""),
+		"  ■ 演示 NPC / NPC / npc_demo",
+		"未选中对象列表行应显示名称、类型和编号"
+	)
+	assertions.assert_eq(
+		MapPreviewTypesScript.object_list_button_text(row, "npc_demo"),
+		"> ■ 演示 NPC / NPC / npc_demo",
+		"选中对象列表行应显示选中标记"
+	)
+
+func _script_has_method(script: Script, method_name: String) -> bool:
+	for method in script.get_script_method_list():
+		if str(method.get("name", "")) == method_name:
+			return true
+	return false

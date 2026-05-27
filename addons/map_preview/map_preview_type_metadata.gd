@@ -55,6 +55,16 @@ static func spawn_label(spawn_id: String) -> String:
 static func obstacle_label(obstacle_id: String) -> String:
 	return "障碍 / %s" % str(obstacle_id)
 
+static func object_list_button_text(row: Dictionary, selected_object_id: String) -> String:
+	var object_id = str(row.get("id", ""))
+	var marker = ">" if object_id == str(selected_object_id) and not object_id.is_empty() else " "
+	return "%s ■ %s / %s / %s" % [
+		marker,
+		str(row.get("name", "")),
+		str(row.get("type_label", "")),
+		object_id,
+	]
+
 static func build_object_summary(objects: Array) -> Dictionary:
 	var counts := {}
 	var rows := []
