@@ -26,17 +26,22 @@ var maps_by_id: Dictionary = {}
 var scene_path_to_map_id: Dictionary = {}
 var poll_elapsed := 0.0
 var save_conflict_confirm_pending := false
+var active_scene_path := ""
 
 func _enter_tree() -> void:
 	_build_dock()
 	add_control_to_dock(DOCK_SLOT_RIGHT_UL, dock)
 	renderer.handle_changed.connect(_on_preview_handle_changed)
+	if not scene_changed.is_connected(_on_scene_changed):
+		scene_changed.connect(_on_scene_changed)
 	_load_map_index()
 	set_process(true)
-	_refresh_from_current_scene()
+	call_deferred("_refresh_from_current_scene")
 
 func _exit_tree() -> void:
 	set_process(false)
+	if scene_changed.is_connected(_on_scene_changed):
+		scene_changed.disconnect(_on_scene_changed)
 	var scene_root = _edited_scene_root()
 	if scene_root != null:
 		renderer.clear(scene_root)
@@ -49,6 +54,7 @@ func _process(delta: float) -> void:
 	if poll_elapsed < 1.0:
 		return
 	poll_elapsed = 0.0
+	_refresh_if_scene_changed()
 	if auto_refresh_check != null and auto_refresh_check.button_pressed and not selected_map_id.is_empty():
 		_check_external_refresh()
 
@@ -59,7 +65,7 @@ func _save_external_data() -> void:
 
 func _build_dock() -> void:
 	dock = VBoxContainer.new()
-	dock.name = "MapPreviewDock"
+	dock.name = "地图预览"
 
 	var title = Label.new()
 	title.text = "地图预览"
@@ -184,11 +190,24 @@ func _refresh_from_current_scene() -> void:
 		_update_status("当前没有打开地图场景。")
 		return
 	var scene_file_path = scene_root.scene_file_path
+	active_scene_path = scene_file_path
 	var map_id = str(scene_path_to_map_id.get(scene_file_path, ""))
 	if map_id.is_empty():
 		_update_status("当前场景未匹配到 data/maps.json 中的地图。")
 		return
 	_select_map_id(map_id)
+
+func _refresh_if_scene_changed() -> void:
+	var scene_root = _edited_scene_root()
+	if scene_root == null:
+		return
+	var scene_file_path = scene_root.scene_file_path
+	if scene_file_path == active_scene_path:
+		return
+	_refresh_from_current_scene()
+
+func _on_scene_changed(_scene_root: Node) -> void:
+	call_deferred("_refresh_from_current_scene")
 
 func _select_map_id(map_id: String) -> void:
 	selected_map_id = map_id
