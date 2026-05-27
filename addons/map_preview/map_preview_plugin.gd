@@ -685,11 +685,17 @@ func _create_object_template(template_label: String, object_id: String, position
 	if object_id.is_empty():
 		_update_status("请输入对象编号。")
 		return
+	if not maps_by_id.has(selected_map_id):
+		_update_status("地图编号不存在：%s" % selected_map_id)
+		return
 	if not _find_map_object(object_id).is_empty():
 		_update_status("对象编号已存在：%s" % object_id)
 		return
 	var layout_objects = document.get_layout().get("objects", {})
-	if typeof(layout_objects) == TYPE_DICTIONARY and layout_objects.has(object_id):
+	if typeof(layout_objects) != TYPE_DICTIONARY:
+		_update_status("对象布局必须是字典：%s" % object_id)
+		return
+	if layout_objects.has(object_id):
 		_update_status("对象布局已存在：%s" % object_id)
 		return
 	var radius = float(new_element_radius_spin.value)
@@ -697,13 +703,18 @@ func _create_object_template(template_label: String, object_id: String, position
 		_update_status("对象半径必须为正数：%s" % object_id)
 		return
 	var object_record = _build_object_template(template_label, object_id)
-	var content_result = content_document.add_object_to_map(selected_map_id, object_record)
-	if not content_result.ok:
-		_update_status(content_result.error)
-		return
+	var layout_was_dirty = document.is_dirty()
 	var layout_result = document.add_object_layout(object_id, position, radius)
 	if not layout_result.ok:
 		_update_status(layout_result.error)
+		return
+	var content_result = content_document.add_object_to_map(selected_map_id, object_record)
+	if not content_result.ok:
+		layout_objects = document.get_layout().get("objects", {})
+		if typeof(layout_objects) == TYPE_DICTIONARY and layout_objects.has(object_id):
+			layout_objects.erase(object_id)
+		document.dirty = layout_was_dirty
+		_update_status(content_result.error)
 		return
 	maps_by_id = content_document.get_maps_by_id()
 	scene_path_to_map_id = content_document.get_scene_path_to_map_id()
