@@ -84,6 +84,54 @@ func update_obstacle_rect(obstacle_id: String, rect: Rect2) -> void:
 			_mark_dirty()
 			return
 
+func add_object_layout(object_id: String, position: Vector2, radius: float) -> Dictionary:
+	object_id = object_id.strip_edges()
+	if object_id.is_empty():
+		return _error("请输入对象编号。")
+	if radius <= 0.0:
+		return _error("对象半径必须为正数：%s" % object_id)
+	var objects = _ensure_dictionary("objects")
+	if objects.has(object_id):
+		return _error("对象布局已存在：%s" % object_id)
+	objects[object_id] = {
+		"position": _vector_to_dictionary(position),
+		"radius": radius,
+	}
+	_mark_dirty()
+	return _ok()
+
+func add_spawn_point(spawn_id: String, position: Vector2) -> Dictionary:
+	spawn_id = spawn_id.strip_edges()
+	if spawn_id.is_empty():
+		return _error("请输入出生点编号。")
+	var spawn_points = _ensure_dictionary("spawn_points")
+	if spawn_points.has(spawn_id):
+		return _error("出生点已存在：%s" % spawn_id)
+	spawn_points[spawn_id] = _vector_to_dictionary(position)
+	_mark_dirty()
+	return _ok()
+
+func add_rect_obstacle(obstacle_id: String, rect: Rect2) -> Dictionary:
+	obstacle_id = obstacle_id.strip_edges()
+	if obstacle_id.is_empty():
+		return _error("请输入障碍编号。")
+	if rect.size.x <= 0.0 or rect.size.y <= 0.0:
+		return _error("矩形障碍尺寸必须为正数：%s" % obstacle_id)
+	var obstacles = layout.get("obstacles", [])
+	if typeof(obstacles) != TYPE_ARRAY:
+		obstacles = []
+	for obstacle in obstacles:
+		if typeof(obstacle) == TYPE_DICTIONARY and str(obstacle.get("id", "")) == obstacle_id:
+			return _error("障碍编号已存在：%s" % obstacle_id)
+	obstacles.append({
+		"id": obstacle_id,
+		"shape": "rect",
+		"rect": _rect_to_dictionary(rect),
+	})
+	layout["obstacles"] = obstacles
+	_mark_dirty()
+	return _ok()
+
 func save() -> bool:
 	if path.is_empty():
 		return false
@@ -115,6 +163,12 @@ func _ensure_dictionary(key: String) -> Dictionary:
 
 func _mark_dirty() -> void:
 	dirty = true
+
+func _ok() -> Dictionary:
+	return {"ok": true, "error": ""}
+
+func _error(message: String) -> Dictionary:
+	return {"ok": false, "error": message}
 
 func _vector_to_dictionary(value: Vector2) -> Dictionary:
 	return {"x": value.x, "y": value.y}

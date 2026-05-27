@@ -4,6 +4,8 @@ const MapLayoutDocumentScript = preload("res://addons/map_preview/map_layout_doc
 
 func run(assertions) -> void:
 	_test_document_updates_fields(assertions)
+	_test_document_adds_layout_elements(assertions)
+	_test_document_rejects_duplicate_layout_ids(assertions)
 	_test_document_preserves_unknown_fields_on_save(assertions)
 	_test_document_detects_external_changes(assertions)
 
@@ -25,6 +27,33 @@ func _test_document_updates_fields(assertions) -> void:
 	else:
 		assertions.assert_true(false, "文档应保留障碍列表")
 	assertions.assert_true(document.is_dirty(), "字段修改后文档应为脏状态")
+
+func _test_document_adds_layout_elements(assertions) -> void:
+	var document = MapLayoutDocumentScript.new()
+	document.load_from_data("demo", _sample_layout(), "user://demo_layout_add.json")
+
+	var object_result = document.add_object_layout("npc_new", Vector2(70, 80), 64.0)
+	var spawn_result = document.add_spawn_point("return", Vector2(12, 34))
+	var obstacle_result = document.add_rect_obstacle("rock_new", Rect2(5, 6, 40, 50))
+
+	assertions.assert_true(object_result.ok, "新增对象布局应成功")
+	assertions.assert_true(spawn_result.ok, "新增出生点应成功")
+	assertions.assert_true(obstacle_result.ok, "新增矩形障碍应成功")
+
+	var layout = document.get_layout()
+	assertions.assert_eq(layout.get("objects", {}).get("npc_new", {}).get("position", {}).get("x", 0), 70.0, "新增对象布局应写入横坐标")
+	assertions.assert_eq(layout.get("objects", {}).get("npc_new", {}).get("radius", 0), 64.0, "新增对象布局应写入半径")
+	assertions.assert_eq(layout.get("spawn_points", {}).get("return", {}).get("y", 0), 34.0, "新增出生点应写入坐标")
+	assertions.assert_eq(layout.get("obstacles", [])[1].get("rect", {}).get("w", 0), 40.0, "新增障碍应写入宽度")
+	assertions.assert_true(document.is_dirty(), "新增布局元素后文档应为脏状态")
+
+func _test_document_rejects_duplicate_layout_ids(assertions) -> void:
+	var document = MapLayoutDocumentScript.new()
+	document.load_from_data("demo", _sample_layout(), "user://demo_layout_duplicate.json")
+
+	assertions.assert_false(document.add_object_layout("npc_demo", Vector2(1, 2), 48.0).ok, "重复对象布局应被拒绝")
+	assertions.assert_false(document.add_spawn_point("start", Vector2(1, 2)).ok, "重复出生点应被拒绝")
+	assertions.assert_false(document.add_rect_obstacle("wall", Rect2(1, 2, 3, 4)).ok, "重复障碍应被拒绝")
 
 func _test_document_preserves_unknown_fields_on_save(assertions) -> void:
 	var path = "user://map_layout_document_save_test.json"
