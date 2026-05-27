@@ -2,9 +2,12 @@
 extends EditorPlugin
 
 const MapLayoutDocumentScript = preload("res://addons/map_preview/map_layout_document.gd")
+const MapIndexDocumentScript = preload("res://addons/map_preview/map_index_document.gd")
 const MapPreviewRendererScript = preload("res://addons/map_preview/map_preview_renderer.gd")
 const MapLayoutLoaderScript = preload("res://scripts/systems/map_layout_loader.gd")
 const MapPreviewTypesScript = preload("res://addons/map_preview/map_preview_type_metadata.gd")
+
+const MAP_INDEX_PATH := "res://data/maps.json"
 
 var dock: VBoxContainer
 var map_selector: OptionButton
@@ -23,6 +26,7 @@ var obstacle_width_spin: SpinBox
 var obstacle_height_spin: SpinBox
 var selected_map_id := ""
 var selected_object_id := ""
+var map_index = MapIndexDocumentScript.new()
 var document = MapLayoutDocumentScript.new()
 var renderer = MapPreviewRendererScript.new()
 var layout_loader = MapLayoutLoaderScript.new()
@@ -190,27 +194,28 @@ func _build_dock() -> void:
 	validation_label.custom_minimum_size = Vector2(260, 120)
 	dock.add_child(validation_label)
 
-func _load_map_index() -> void:
-	maps_by_id.clear()
-	scene_path_to_map_id.clear()
+func _load_map_index() -> bool:
+	var restore_map_id = selected_map_id
+	if not map_index.load_from_path(MAP_INDEX_PATH):
+		_update_status(map_index.last_error)
+		return false
+	maps_by_id = map_index.get_maps_by_id()
+	scene_path_to_map_id = map_index.get_scene_path_to_map_id()
+	_rebuild_map_selector(restore_map_id)
+	return true
+
+func _rebuild_map_selector(preferred_map_id: String) -> void:
 	map_selector.clear()
-	var file = FileAccess.open("res://data/maps.json", FileAccess.READ)
-	if file == null:
-		_update_status("无法读取 data/maps.json。")
-		return
-	var parsed = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) != TYPE_ARRAY:
-		_update_status("data/maps.json 必须是数组。")
-		return
-	for map_data in parsed:
-		if typeof(map_data) != TYPE_DICTIONARY:
-			continue
-		var map_id = str(map_data.get("id", ""))
-		if map_id.is_empty():
-			continue
-		maps_by_id[map_id] = map_data
-		scene_path_to_map_id[str(map_data.get("scene_path", ""))] = map_id
-		map_selector.add_item(map_id)
+	for map_id in maps_by_id.keys():
+		map_selector.add_item(str(map_id))
+	if not preferred_map_id.is_empty():
+		_select_map_selector_item(preferred_map_id)
+
+func _select_map_selector_item(map_id: String) -> void:
+	for index in range(map_selector.get_item_count()):
+		if map_selector.get_item_text(index) == map_id:
+			map_selector.select(index)
+			return
 
 func _refresh_from_current_scene() -> void:
 	var scene_root = _edited_scene_root()
@@ -241,15 +246,13 @@ func _select_map_id(map_id: String) -> void:
 	if selected_map_id != map_id:
 		selected_object_id = ""
 	selected_map_id = map_id
-	for index in range(map_selector.get_item_count()):
-		if map_selector.get_item_text(index) == map_id:
-			map_selector.select(index)
-			break
+	_select_map_selector_item(map_id)
 	_reload_selected_map()
 
 func _manual_refresh_selected_map() -> void:
 	var current_map_id = selected_map_id
-	_load_map_index()
+	if not _load_map_index():
+		return
 	if not current_map_id.is_empty() and maps_by_id.has(current_map_id):
 		_select_map_id(current_map_id)
 	else:
