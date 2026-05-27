@@ -20,11 +20,7 @@ func _load_world_config() -> void:
 		push_error("无法加载世界地图配置")
 
 func _create_terrain() -> void:
-	# 背景底色
-	_add_background(Vector2(4000, 3000))
-	var bg_rect = get_node("Background") if has_node("Background") else null
-	if bg_rect is ColorRect:
-		bg_rect.color = Color("#f4ebd0") # 古朴纸张色
+	super._create_terrain()
 
 func _setup_camera_zoom() -> void:
 	var camera = player.get_node("Camera2D") if player and player.has_node("Camera2D") else null

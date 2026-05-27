@@ -116,7 +116,18 @@ func _load_map_data() -> void:
 		}
 
 func _create_terrain() -> void:
-	_add_background(Vector2(1280, 720))
+	var layout = _get_layout_data()
+	var size = _read_size(layout.get("size", {}), Vector2(1280, 720))
+	_add_background(size)
+	for obstacle in layout.get("obstacles", []):
+		if typeof(obstacle) != TYPE_DICTIONARY:
+			continue
+		if str(obstacle.get("shape", "rect")) != "rect":
+			continue
+		var rect = _read_rect(obstacle.get("rect", {}))
+		if rect.size.x <= 0.0 or rect.size.y <= 0.0:
+			continue
+		_add_obstacle(rect)
 
 func _add_background(size: Vector2) -> void:
 	var terrain = TileMapLayer.new()
@@ -124,7 +135,8 @@ func _add_background(size: Vector2) -> void:
 	add_child(terrain)
 
 	var background = ColorRect.new()
-	background.color = background_color
+	background.name = "Background"
+	background.color = _read_background_color(_get_layout_data().get("background", {}))
 	background.size = size
 	background.position = Vector2.ZERO
 	add_child(background)
@@ -142,10 +154,46 @@ func _add_obstacle(rect: Rect2) -> void:
 	add_child(body)
 
 	var visual = ColorRect.new()
+	visual.name = "ObstacleVisual"
 	visual.color = obstacle_color
 	visual.position = rect.position
 	visual.size = rect.size
 	add_child(visual)
+
+func _get_layout_data() -> Dictionary:
+	var layout = map_data.get("layout", {})
+	if typeof(layout) == TYPE_DICTIONARY:
+		return layout
+	return {}
+
+func _read_size(value: Variant, fallback: Vector2) -> Vector2:
+	if typeof(value) != TYPE_DICTIONARY:
+		return fallback
+	var width = float(value.get("x", fallback.x))
+	var height = float(value.get("y", fallback.y))
+	if width <= 0.0 or height <= 0.0:
+		return fallback
+	return Vector2(width, height)
+
+func _read_rect(value: Variant) -> Rect2:
+	if typeof(value) != TYPE_DICTIONARY:
+		return Rect2()
+	return Rect2(
+		float(value.get("x", 0.0)),
+		float(value.get("y", 0.0)),
+		float(value.get("w", 0.0)),
+		float(value.get("h", 0.0))
+	)
+
+func _read_background_color(value: Variant) -> Color:
+	if typeof(value) != TYPE_DICTIONARY:
+		return background_color
+	if str(value.get("mode", "color")) != "color":
+		return background_color
+	var html = str(value.get("color", ""))
+	if html.is_empty() or not Color.html_is_valid(html):
+		return background_color
+	return Color(html)
 
 func _create_player() -> void:
 	player = PlayerControllerScript.new()

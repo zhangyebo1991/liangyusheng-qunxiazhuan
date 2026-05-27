@@ -5,13 +5,7 @@ func _ready() -> void:
 	super._ready()
 
 func _create_terrain() -> void:
-	_add_background(Vector2(1280, 720))
-	_add_obstacle(Rect2(0, 0, 1280, 24))
-	_add_obstacle(Rect2(0, 696, 1280, 24))
-	_add_obstacle(Rect2(0, 0, 24, 720))
-	_add_obstacle(Rect2(1256, 0, 24, 720))
-	_add_obstacle(Rect2(360, 130, 160, 90))
-	_add_obstacle(Rect2(760, 470, 180, 100))
+	super._create_terrain()
 
 func _interact_with(interactable) -> void:
 	if interactable == null:
