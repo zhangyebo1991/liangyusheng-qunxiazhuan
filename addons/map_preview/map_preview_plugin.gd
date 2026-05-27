@@ -362,6 +362,7 @@ func _render_selected_map() -> void:
 	_update_validation(map_data, document.get_layout())
 	_update_readability_panel(map_data)
 	_reapply_selected_object()
+	_reapply_selected_layout_element()
 
 func _check_map_index_refresh() -> void:
 	if not content_document.has_external_change():
@@ -535,11 +536,18 @@ func _apply_selected_position() -> void:
 		"object":
 			document.update_object_position(selected_layout_id, position)
 		"spawn":
+			if not document.get_layout().get("spawn_points", {}).has(selected_layout_id):
+				var missing_id = selected_layout_id
+				_clear_selected_layout_element()
+				_update_status("选中出生点已不存在：%s" % missing_id)
+				return
 			document.update_spawn_position(selected_layout_id, position)
 		"obstacle":
 			var rect = _find_obstacle_rect(selected_layout_id)
 			if rect.size == Vector2.ZERO:
-				_update_status("找不到障碍：%s" % selected_layout_id)
+				var missing_id = selected_layout_id
+				_clear_selected_layout_element()
+				_update_status("选中障碍已不存在：%s" % missing_id)
 				return
 			document.update_obstacle_rect(selected_layout_id, Rect2(position, rect.size))
 	_render_selected_map()
@@ -611,6 +619,21 @@ func _reapply_selected_object() -> void:
 	_apply_object_selection(object_id, handle)
 	_select_editor_node(handle)
 
+func _reapply_selected_layout_element() -> void:
+	if selected_layout_kind.is_empty() or selected_layout_kind == "object":
+		return
+	match selected_layout_kind:
+		"spawn":
+			if not document.get_layout().get("spawn_points", {}).has(selected_layout_id):
+				var missing_id = selected_layout_id
+				_clear_selected_layout_element()
+				_update_status("选中出生点已不存在：%s" % missing_id)
+		"obstacle":
+			if _find_obstacle_rect(selected_layout_id).size == Vector2.ZERO:
+				var missing_id = selected_layout_id
+				_clear_selected_layout_element()
+				_update_status("选中障碍已不存在：%s" % missing_id)
+
 func _apply_object_selection(object_id: String, handle: Node) -> void:
 	_clear_selected_object_highlight()
 	_set_handle_selected(handle, true)
@@ -643,8 +666,14 @@ func _clear_selected_layout_element() -> void:
 		object_name_input.text = ""
 	if object_type_input != null:
 		object_type_input.text = ""
+	if radius_spin != null:
+		radius_spin.value = 48.0
 	if obstacle_id_input != null:
 		obstacle_id_input.text = ""
+	if obstacle_width_spin != null:
+		obstacle_width_spin.value = 64.0
+	if obstacle_height_spin != null:
+		obstacle_height_spin.value = 64.0
 
 func _set_handle_selected(handle: Node, is_selected: bool) -> void:
 	if handle != null and handle.has_method("set_selected"):
