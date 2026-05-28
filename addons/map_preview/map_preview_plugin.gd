@@ -6,6 +6,7 @@ const MapContentDocumentScript = preload("res://addons/map_preview/map_content_d
 const MapPreviewRendererScript = preload("res://addons/map_preview/map_preview_renderer.gd")
 const MapLayoutLoaderScript = preload("res://scripts/systems/map_layout_loader.gd")
 const ContentReferenceValidatorScript = preload("res://addons/map_preview/content_reference_validator.gd")
+const StoryContentDocumentScript = preload("res://addons/map_preview/story_content_document.gd")
 const MapPreviewTypesScript = preload("res://addons/map_preview/map_preview_type_metadata.gd")
 
 const MAP_INDEX_PATH := "res://data/maps.json"
@@ -28,6 +29,19 @@ var position_x_spin: SpinBox
 var position_y_spin: SpinBox
 var object_name_input: LineEdit
 var object_type_input: LineEdit
+var story_panel: VBoxContainer
+var story_entry_label: RichTextLabel
+var story_dialogue_status_label: RichTextLabel
+var story_dialogue_title_input: LineEdit
+var story_dialogue_lines_container: VBoxContainer
+var story_add_dialogue_line_button: Button
+var story_save_dialogue_button: Button
+var story_create_dialogue_template_button: Button
+var story_quest_list_container: VBoxContainer
+var selected_story_dialogue_id := ""
+var missing_story_dialogue_id := ""
+var missing_story_quest_id := ""
+var story_quest_controls: Dictionary = {}
 var radius_spin: SpinBox
 var obstacle_id_input: LineEdit
 var obstacle_width_spin: SpinBox
@@ -49,6 +63,7 @@ var document = MapLayoutDocumentScript.new()
 var renderer = MapPreviewRendererScript.new()
 var layout_loader = MapLayoutLoaderScript.new()
 var content_reference_validator = ContentReferenceValidatorScript.new()
+var story_content_document = StoryContentDocumentScript.new()
 var maps_by_id: Dictionary = {}
 var scene_path_to_map_id: Dictionary = {}
 var poll_elapsed := 0.0
@@ -64,6 +79,7 @@ func _enter_tree() -> void:
 	if not scene_changed.is_connected(_on_scene_changed):
 		scene_changed.connect(_on_scene_changed)
 	_load_map_index()
+	story_content_document.load_all()
 	set_process(true)
 	call_deferred("_refresh_from_current_scene")
 
@@ -350,6 +366,8 @@ func _build_dock() -> void:
 	create_button.pressed.connect(_create_template_element)
 	create_box.add_child(create_button)
 
+	_build_story_workbench_panel()
+
 	status_label = Label.new()
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.text = "等待地图场景。"
@@ -360,6 +378,65 @@ func _build_dock() -> void:
 	validation_label.fit_content = true
 	validation_label.custom_minimum_size = Vector2(260, 120)
 	dock.add_child(validation_label)
+
+func _build_story_workbench_panel() -> void:
+	story_panel = VBoxContainer.new()
+	story_panel.name = "剧情内容"
+	dock.add_child(story_panel)
+
+	var title = Label.new()
+	title.text = "剧情内容"
+	story_panel.add_child(title)
+
+	story_entry_label = RichTextLabel.new()
+	story_entry_label.bbcode_enabled = true
+	story_entry_label.fit_content = true
+	story_entry_label.custom_minimum_size = Vector2(260, 72)
+	story_panel.add_child(story_entry_label)
+
+	var dialogue_title = Label.new()
+	dialogue_title.text = "对白"
+	story_panel.add_child(dialogue_title)
+
+	story_dialogue_status_label = RichTextLabel.new()
+	story_dialogue_status_label.bbcode_enabled = true
+	story_dialogue_status_label.fit_content = true
+	story_dialogue_status_label.custom_minimum_size = Vector2(260, 48)
+	story_panel.add_child(story_dialogue_status_label)
+
+	story_dialogue_title_input = LineEdit.new()
+	story_dialogue_title_input.placeholder_text = "对白标题"
+	story_panel.add_child(story_dialogue_title_input)
+
+	story_dialogue_lines_container = VBoxContainer.new()
+	story_panel.add_child(story_dialogue_lines_container)
+
+	var dialogue_buttons = HBoxContainer.new()
+	story_panel.add_child(dialogue_buttons)
+
+	story_add_dialogue_line_button = Button.new()
+	story_add_dialogue_line_button.text = "添加对白行"
+	story_add_dialogue_line_button.pressed.connect(_add_empty_dialogue_line_row)
+	dialogue_buttons.add_child(story_add_dialogue_line_button)
+
+	story_save_dialogue_button = Button.new()
+	story_save_dialogue_button.text = "保存对白"
+	story_save_dialogue_button.pressed.connect(_save_selected_dialogue)
+	dialogue_buttons.add_child(story_save_dialogue_button)
+
+	story_create_dialogue_template_button = Button.new()
+	story_create_dialogue_template_button.text = "创建对白模板"
+	story_create_dialogue_template_button.pressed.connect(_create_missing_dialogue_template)
+	story_panel.add_child(story_create_dialogue_template_button)
+
+	var quest_title = Label.new()
+	quest_title.text = "任务"
+	story_panel.add_child(quest_title)
+
+	story_quest_list_container = VBoxContainer.new()
+	story_panel.add_child(story_quest_list_container)
+
+	_render_story_empty("未选中剧情对象")
 
 func _load_map_index() -> bool:
 	var restore_map_id = selected_map_id
@@ -855,6 +932,7 @@ func _refresh_selected_object_handle_fields(object_id: String) -> void:
 			_select_editor_node(handle)
 		_update_validation(map_data, document.get_layout())
 		_update_readability_panel(map_data)
+		_update_story_workbench_for_selection(object_id)
 		return
 	_render_selected_map()
 
@@ -913,6 +991,7 @@ func _clear_selected_layout_element() -> void:
 		obstacle_width_spin.value = 64.0
 	if obstacle_height_spin != null:
 		obstacle_height_spin.value = 64.0
+	_render_story_empty("未选中剧情对象")
 
 func _set_handle_selected(handle: Node, is_selected: bool) -> void:
 	if handle != null and handle.has_method("set_selected"):
@@ -950,10 +1029,13 @@ func _select_layout_element(kind: String, layout_id: String) -> void:
 	match kind:
 		"object":
 			_fill_object_edit_fields(layout_id)
+			_update_story_workbench_for_selection(layout_id)
 		"spawn":
 			_fill_position_fields(_current_spawn_position(layout_id))
+			_render_story_empty("未选中剧情对象")
 		"obstacle":
 			_fill_obstacle_fields(layout_id)
+			_render_story_empty("未选中剧情对象")
 
 func _fill_position_fields(position: Vector2) -> void:
 	if position_x_spin != null:
@@ -1058,6 +1140,338 @@ func _refresh_object_list_selection_state() -> void:
 	if selected_map_id.is_empty():
 		return
 	_update_readability_panel(maps_by_id.get(selected_map_id, {}))
+
+func _update_story_workbench_for_selection(object_id: String = "") -> void:
+	if story_panel == null:
+		return
+	_refresh_story_document_if_clean()
+	var target_object_id = object_id.strip_edges()
+	if target_object_id.is_empty():
+		target_object_id = selected_object_id
+	if target_object_id.is_empty():
+		_render_story_empty("未选中剧情对象")
+		return
+	var object_record = _find_map_object(target_object_id)
+	if object_record.is_empty():
+		_render_story_empty("未选中剧情对象")
+		return
+	_render_story_workbench(object_record)
+
+func _refresh_story_document_if_clean() -> void:
+	if story_content_document.dialogues_dirty or story_content_document.quests_dirty:
+		return
+	if story_content_document.dialogues_have_external_change() or story_content_document.quests_have_external_change():
+		story_content_document.load_all()
+
+func _render_story_empty(message: String) -> void:
+	selected_story_dialogue_id = ""
+	missing_story_dialogue_id = ""
+	missing_story_quest_id = ""
+	story_quest_controls = {}
+	if story_entry_label != null:
+		story_entry_label.text = "[color=gray]%s[/color]" % message
+	if story_dialogue_status_label != null:
+		story_dialogue_status_label.text = ""
+	if story_dialogue_title_input != null:
+		story_dialogue_title_input.text = ""
+		story_dialogue_title_input.editable = false
+	if story_dialogue_lines_container != null:
+		_clear_container(story_dialogue_lines_container)
+	if story_add_dialogue_line_button != null:
+		story_add_dialogue_line_button.disabled = true
+	if story_save_dialogue_button != null:
+		story_save_dialogue_button.disabled = true
+	if story_create_dialogue_template_button != null:
+		story_create_dialogue_template_button.visible = false
+	if story_quest_list_container != null:
+		_clear_container(story_quest_list_container)
+
+func _render_story_workbench(object_record: Dictionary) -> void:
+	var dialogue_id = str(object_record.get("dialogue_id", "")).strip_edges()
+	selected_story_dialogue_id = dialogue_id
+	missing_story_dialogue_id = ""
+	missing_story_quest_id = ""
+	story_quest_controls = {}
+	if story_entry_label != null:
+		story_entry_label.text = _story_entry_text(object_record)
+	_render_dialogue_section(dialogue_id)
+	_render_quest_section(object_record, dialogue_id)
+
+func _story_entry_text(object_record: Dictionary) -> String:
+	var lines := PackedStringArray()
+	lines.append("对象：%s / %s / %s" % [
+		str(object_record.get("id", "")),
+		str(object_record.get("name", "")),
+		str(object_record.get("type", "")),
+	])
+	lines.append("对白：%s" % str(object_record.get("dialogue_id", "")))
+	lines.append("任务：%s" % str(object_record.get("quest_id", "")))
+	lines.append("前置任务：%s" % str(object_record.get("required_quest_id", "")))
+	return "\n".join(lines)
+
+func _render_dialogue_section(dialogue_id: String) -> void:
+	if story_dialogue_lines_container != null:
+		_clear_container(story_dialogue_lines_container)
+	if story_create_dialogue_template_button != null:
+		story_create_dialogue_template_button.visible = false
+	if story_dialogue_title_input != null:
+		story_dialogue_title_input.text = ""
+		story_dialogue_title_input.editable = false
+	if story_add_dialogue_line_button != null:
+		story_add_dialogue_line_button.disabled = true
+	if story_save_dialogue_button != null:
+		story_save_dialogue_button.disabled = true
+
+	if dialogue_id.is_empty():
+		if story_dialogue_status_label != null:
+			story_dialogue_status_label.text = "[color=gray]当前对象没有对白入口[/color]"
+		return
+
+	var dialogue = story_content_document.get_dialogue(dialogue_id)
+	if dialogue.is_empty():
+		missing_story_dialogue_id = dialogue_id
+		if story_dialogue_status_label != null:
+			story_dialogue_status_label.text = "[color=red]对白不存在：%s[/color]" % dialogue_id
+		if story_create_dialogue_template_button != null:
+			story_create_dialogue_template_button.visible = true
+		return
+
+	if story_dialogue_status_label != null:
+		story_dialogue_status_label.text = _dialogue_status_text(dialogue)
+	if story_dialogue_title_input != null:
+		story_dialogue_title_input.editable = true
+		story_dialogue_title_input.text = str(dialogue.get("title", ""))
+	var lines = dialogue.get("lines", [])
+	if typeof(lines) != TYPE_ARRAY:
+		lines = []
+	for line in lines:
+		if typeof(line) == TYPE_DICTIONARY:
+			_add_dialogue_line_row(str(line.get("speaker", "")), str(line.get("text", "")))
+	if story_add_dialogue_line_button != null:
+		story_add_dialogue_line_button.disabled = false
+	if story_save_dialogue_button != null:
+		story_save_dialogue_button.disabled = false
+
+func _dialogue_status_text(dialogue: Dictionary) -> String:
+	var options = dialogue.get("options", [])
+	if typeof(options) == TYPE_ARRAY and options.size() > 0:
+		return "[color=yellow]包含 %d 个选项，v1 暂不编辑[/color]" % options.size()
+	return "[color=green]对白可编辑[/color]"
+
+func _render_quest_section(object_record: Dictionary, dialogue_id: String) -> void:
+	if story_quest_list_container == null:
+		return
+	_clear_container(story_quest_list_container)
+	var refs = _collect_story_quest_refs(object_record, dialogue_id)
+	if refs.is_empty():
+		var empty_label = Label.new()
+		empty_label.text = "当前对象没有任务入口"
+		story_quest_list_container.add_child(empty_label)
+		return
+	for ref in refs:
+		_add_story_quest_row(ref)
+
+func _collect_story_quest_refs(object_record: Dictionary, dialogue_id: String) -> Array:
+	var refs: Array = []
+	var seen := {}
+	for field in ["quest_id", "required_quest_id"]:
+		var quest_id = str(object_record.get(field, "")).strip_edges()
+		if quest_id.is_empty():
+			continue
+		refs.append({"quest_id": quest_id, "source": "对象 %s" % field, "can_create": true})
+		seen["%s|%s" % [quest_id, field]] = true
+	if not dialogue_id.is_empty():
+		for quest_ref in story_content_document.find_quests_for_dialogue(dialogue_id):
+			var quest_id = str(quest_ref.get("quest_id", "")).strip_edges()
+			var source_field = str(quest_ref.get("field", "")).strip_edges()
+			var key = "%s|%s" % [quest_id, source_field]
+			if seen.has(key):
+				continue
+			refs.append({"quest_id": quest_id, "source": "%s 引用当前对白" % source_field, "can_create": false})
+			seen[key] = true
+	return refs
+
+func _add_story_quest_row(ref: Dictionary) -> void:
+	var quest_id = str(ref.get("quest_id", "")).strip_edges()
+	var source = str(ref.get("source", ""))
+	var can_create = bool(ref.get("can_create", false))
+	var quest = story_content_document.get_quest(quest_id)
+
+	var box = VBoxContainer.new()
+	story_quest_list_container.add_child(box)
+
+	var label = Label.new()
+	label.text = "%s（%s）" % [quest_id, source]
+	box.add_child(label)
+
+	if quest.is_empty():
+		if can_create and missing_story_quest_id.is_empty():
+			missing_story_quest_id = quest_id
+		var missing = RichTextLabel.new()
+		missing.bbcode_enabled = true
+		missing.fit_content = true
+		missing.text = "[color=red]任务不存在：%s[/color]" % quest_id
+		box.add_child(missing)
+		if can_create:
+			var create_button = Button.new()
+			create_button.text = "创建任务模板"
+			create_button.pressed.connect(_create_missing_quest_template.bind(quest_id))
+			box.add_child(create_button)
+		return
+
+	var title_input = LineEdit.new()
+	title_input.text = str(quest.get("title", ""))
+	box.add_child(title_input)
+
+	var description_input = TextEdit.new()
+	description_input.text = str(quest.get("description", ""))
+	description_input.custom_minimum_size = Vector2(260, 72)
+	box.add_child(description_input)
+
+	var summary = _quest_complex_summary(quest)
+	if not summary.is_empty():
+		var summary_label = Label.new()
+		summary_label.text = summary
+		box.add_child(summary_label)
+
+	var save_button = Button.new()
+	save_button.text = "保存任务"
+	save_button.pressed.connect(_save_selected_quest.bind(quest_id))
+	box.add_child(save_button)
+
+	story_quest_controls[quest_id] = {
+		"title": title_input,
+		"description": description_input,
+	}
+
+func _quest_complex_summary(quest: Dictionary) -> String:
+	var parts := PackedStringArray()
+	for field in ["complete_effects", "reward_items", "reward_item_amounts", "reward_coins", "reward_flags"]:
+		if quest.has(field):
+			parts.append("%s 暂不编辑" % field)
+	return "；".join(parts)
+
+func _add_empty_dialogue_line_row() -> void:
+	_add_dialogue_line_row("", "")
+
+func _add_dialogue_line_row(speaker: String, text: String) -> void:
+	if story_dialogue_lines_container == null:
+		return
+	var row = HBoxContainer.new()
+	story_dialogue_lines_container.add_child(row)
+
+	var speaker_input = LineEdit.new()
+	speaker_input.text = speaker
+	speaker_input.placeholder_text = "说话人"
+	speaker_input.custom_minimum_size = Vector2(88, 0)
+	row.add_child(speaker_input)
+
+	var text_input = LineEdit.new()
+	text_input.text = text
+	text_input.placeholder_text = "对白文本"
+	text_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(text_input)
+
+	var delete_button = Button.new()
+	delete_button.text = "删除"
+	delete_button.pressed.connect(_remove_dialogue_line_row.bind(row))
+	row.add_child(delete_button)
+
+func _remove_dialogue_line_row(row: Control) -> void:
+	if row == null:
+		return
+	row.queue_free()
+
+func _collect_dialogue_lines_from_panel() -> Array:
+	var result: Array = []
+	if story_dialogue_lines_container == null:
+		return result
+	for row in story_dialogue_lines_container.get_children():
+		if not (row is HBoxContainer):
+			continue
+		var speaker := ""
+		var text := ""
+		var line_edits: Array = []
+		for child in row.get_children():
+			if child is LineEdit:
+				line_edits.append(child)
+		if line_edits.size() > 0:
+			speaker = str(line_edits[0].text)
+		if line_edits.size() > 1:
+			text = str(line_edits[1].text)
+		result.append({"speaker": speaker, "text": text})
+	return result
+
+func _clear_container(container: Node) -> void:
+	if container == null:
+		return
+	for child in container.get_children():
+		container.remove_child(child)
+		child.queue_free()
+
+func _save_selected_dialogue() -> void:
+	if selected_story_dialogue_id.is_empty():
+		_update_status("当前没有可保存的对白。")
+		return
+	var title_result = story_content_document.update_dialogue_title(selected_story_dialogue_id, story_dialogue_title_input.text)
+	if not title_result.get("ok", false):
+		_update_status(str(title_result.get("error", "")))
+		return
+	var lines_result = story_content_document.set_dialogue_lines(selected_story_dialogue_id, _collect_dialogue_lines_from_panel())
+	if not lines_result.get("ok", false):
+		_update_status(str(lines_result.get("error", "")))
+		return
+	if story_content_document.save_dialogues():
+		story_content_document.load_all()
+		_update_story_workbench_for_selection()
+		_update_status("对白已保存：%s" % selected_story_dialogue_id)
+	else:
+		_update_status(story_content_document.last_error)
+
+func _save_selected_quest(quest_id: String) -> void:
+	var controls = story_quest_controls.get(quest_id, {})
+	if typeof(controls) != TYPE_DICTIONARY or controls.is_empty():
+		_update_status("当前没有可保存的任务：%s" % quest_id)
+		return
+	var title_input = controls.get("title", null)
+	var description_input = controls.get("description", null)
+	var title = title_input.text if title_input is LineEdit else ""
+	var description = description_input.text if description_input is TextEdit else ""
+	var result = story_content_document.update_quest_summary(quest_id, title, description)
+	if not result.get("ok", false):
+		_update_status(str(result.get("error", "")))
+		return
+	if story_content_document.save_quests():
+		story_content_document.load_all()
+		_update_story_workbench_for_selection()
+		_update_status("任务已保存：%s" % quest_id)
+	else:
+		_update_status(story_content_document.last_error)
+
+func _create_missing_dialogue_template() -> void:
+	if missing_story_dialogue_id.is_empty():
+		_update_status("当前没有可创建的对白模板。")
+		return
+	var result = story_content_document.create_dialogue_template(missing_story_dialogue_id)
+	if not result.get("ok", false):
+		_update_status(str(result.get("error", "")))
+		return
+	_update_story_workbench_for_selection()
+	_update_status("已创建对白模板，尚未保存：%s" % missing_story_dialogue_id)
+
+func _create_missing_quest_template(quest_id: String = "") -> void:
+	var target_quest_id = quest_id.strip_edges()
+	if target_quest_id.is_empty():
+		target_quest_id = missing_story_quest_id
+	if target_quest_id.is_empty():
+		_update_status("当前没有可创建的任务模板。")
+		return
+	var result = story_content_document.create_quest_template(target_quest_id)
+	if not result.get("ok", false):
+		_update_status(str(result.get("error", "")))
+		return
+	_update_story_workbench_for_selection()
+	_update_status("已创建任务模板，尚未保存：%s" % target_quest_id)
 
 func _update_validation(map_data: Dictionary, layout: Dictionary) -> void:
 	var issues: Array[Dictionary] = []

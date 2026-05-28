@@ -6,6 +6,7 @@ const PLUGIN_PATH := "res://addons/map_preview/map_preview_plugin.gd"
 func run(assertions) -> void:
 	_test_render_queues_deferred_object_reselect(assertions)
 	_test_validation_aggregates_layout_and_content_references(assertions)
+	_test_story_workbench_is_wired_into_map_preview_dock(assertions)
 
 func _test_render_queues_deferred_object_reselect(assertions) -> void:
 	var source = _read_plugin_source()
@@ -58,6 +59,53 @@ func _test_validation_aggregates_layout_and_content_references(assertions) -> vo
 	assertions.assert_true(
 		source.contains("[color=red]") and source.contains("[color=yellow]") and source.contains("[color=green]校验通过[/color]"),
 		"校验结果应覆盖 error、warning 和通过三种颜色状态"
+	)
+
+func _test_story_workbench_is_wired_into_map_preview_dock(assertions) -> void:
+	var source = _read_plugin_source()
+	var build_body = _function_body(source, "_build_dock")
+	var select_body = _function_body(source, "_select_layout_element")
+	var clear_body = _function_body(source, "_clear_selected_layout_element")
+	var save_body = _function_body(source, "_save_document")
+	assertions.assert_true(
+		source.contains("StoryContentDocumentScript"),
+		"地图预览插件应 preload 剧情内容文档"
+	)
+	assertions.assert_true(
+		source.contains("story_content_document = StoryContentDocumentScript.new()"),
+		"地图预览插件应持有剧情内容文档实例"
+	)
+	assertions.assert_true(
+		build_body.contains("_build_story_workbench_panel()"),
+		"Dock 构建时应创建剧情内容面板"
+	)
+	assertions.assert_true(
+		select_body.contains("_update_story_workbench_for_selection(layout_id)"),
+		"选中地图对象时应刷新剧情内容面板"
+	)
+	assertions.assert_true(
+		clear_body.contains("_render_story_empty"),
+		"清空选择时应清空剧情内容面板"
+	)
+	assertions.assert_true(
+		source.contains("func _save_selected_dialogue"),
+		"剧情内容面板应提供保存对白入口"
+	)
+	assertions.assert_true(
+		source.contains("func _save_selected_quest"),
+		"剧情内容面板应提供保存任务入口"
+	)
+	assertions.assert_true(
+		source.contains("func _create_missing_dialogue_template"),
+		"剧情内容面板应提供创建缺失对白模板入口"
+	)
+	assertions.assert_true(
+		source.contains("func _create_missing_quest_template"),
+		"剧情内容面板应提供创建缺失任务模板入口"
+	)
+	assertions.assert_false(
+		save_body.contains("save_dialogues") or save_body.contains("save_quests"),
+		"地图主保存按钮不应保存对白或任务"
 	)
 
 func _read_plugin_source() -> String:
