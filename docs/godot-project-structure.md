@@ -50,6 +50,8 @@ AI 修改布局文件后，插件会自动刷新预览；AI 修改 `data/maps.js
 
 内容引用校验器 v1 会在地图预览 Dock 中校验当前地图对象的直接引用，包括 `dialogue_id`、`quest_id`、`required_quest_id`、`target_map_id`、`target_spawn_id`、`actor_id`、战斗触发点单位角色、地图对象直接 `effects` 和掉落表物品。校验器只报告当前地图入口是否连得上已有内容，不追进对白树、任务完成效果或完整战斗配置。当前项目还没有独立 battle 数据源，因此非空 `battle_id` 只显示 warning。
 
+剧情内容工作台 v1 嵌入地图预览 Dock。选中地图对象后，Dock 会显示该对象的 `dialogue_id`、`quest_id` 和 `required_quest_id`，并可查看和轻量编辑对应对白标题、对白行、任务标题和任务描述。对象已有占位 ID 但对白或任务缺失时，可以创建最小模板。对白和任务使用独立保存按钮写回 `data/dialogues.json` 和 `data/quests.json`，不会被地图主保存按钮一起保存。v1 只处理对白与任务入口闭环，`options`、`conditions`、`effects`、奖励和战斗上下文仍只显示摘要，不在 Dock 中编辑。
+
 ## 任务奖励与效果数据化基础切片
 
 任务奖励与效果数据化切片使用 `EffectSystem` 统一执行内容数据声明的结果。`data/quests.json` 的 `complete_effects` 描述任务完成效果，`data/maps.json` 的拾取对象 `effects` 描述拾取结果，战斗胜利回流可通过 `victory_effects` 或兼容字段生成效果。`EffectSystem` 支持添加物品、添加铜钱、设置 flag、设置任务状态、标记地图对象已解决和增加武学熟练度。场景脚本只负责触发和展示消息，不直接硬写奖励、线索或任务状态。
