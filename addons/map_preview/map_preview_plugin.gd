@@ -5,6 +5,7 @@ const MapLayoutDocumentScript = preload("res://addons/map_preview/map_layout_doc
 const MapContentDocumentScript = preload("res://addons/map_preview/map_content_document.gd")
 const MapPreviewRendererScript = preload("res://addons/map_preview/map_preview_renderer.gd")
 const MapLayoutLoaderScript = preload("res://scripts/systems/map_layout_loader.gd")
+const ContentReferenceValidatorScript = preload("res://addons/map_preview/content_reference_validator.gd")
 const MapPreviewTypesScript = preload("res://addons/map_preview/map_preview_type_metadata.gd")
 
 const MAP_INDEX_PATH := "res://data/maps.json"
@@ -47,6 +48,7 @@ var content_document = MapContentDocumentScript.new()
 var document = MapLayoutDocumentScript.new()
 var renderer = MapPreviewRendererScript.new()
 var layout_loader = MapLayoutLoaderScript.new()
+var content_reference_validator = ContentReferenceValidatorScript.new()
 var maps_by_id: Dictionary = {}
 var scene_path_to_map_id: Dictionary = {}
 var poll_elapsed := 0.0
@@ -1058,11 +1060,51 @@ func _refresh_object_list_selection_state() -> void:
 	_update_readability_panel(maps_by_id.get(selected_map_id, {}))
 
 func _update_validation(map_data: Dictionary, layout: Dictionary) -> void:
-	var errors = layout_loader.validate_layout(layout, map_data)
-	if errors.is_empty():
-		validation_label.text = "[color=green]校验通过[/color]"
-	else:
-		validation_label.text = "[color=red]%s[/color]" % "\n".join(PackedStringArray(errors))
+	var issues: Array[Dictionary] = []
+	for layout_error in layout_loader.validate_layout(layout, map_data):
+		issues.append({
+			"severity": "error",
+			"object_id": "",
+			"field": "layout",
+			"message": str(layout_error),
+		})
+	for reference_issue in content_reference_validator.validate_map(map_data):
+		if typeof(reference_issue) == TYPE_DICTIONARY:
+			issues.append(reference_issue)
+	validation_label.text = _format_validation_issues(issues)
+
+func _format_validation_issues(issues: Array) -> String:
+	var errors := PackedStringArray()
+	var warnings := PackedStringArray()
+	for issue in issues:
+		if typeof(issue) != TYPE_DICTIONARY:
+			continue
+		var line = _validation_issue_text(issue)
+		if str(issue.get("severity", "error")) == "warning":
+			warnings.append(line)
+		else:
+			errors.append(line)
+	if not errors.is_empty():
+		var lines := PackedStringArray()
+		for error in errors:
+			lines.append(error)
+		for warning in warnings:
+			lines.append(warning)
+		return "[color=red]%s[/color]" % "\n".join(lines)
+	if not warnings.is_empty():
+		return "[color=yellow]%s[/color]" % "\n".join(warnings)
+	return "[color=green]校验通过[/color]"
+
+func _validation_issue_text(issue: Dictionary) -> String:
+	var object_id = str(issue.get("object_id", "")).strip_edges()
+	var field = str(issue.get("field", "")).strip_edges()
+	var message = str(issue.get("message", "")).strip_edges()
+	var prefix := ""
+	if not object_id.is_empty() and not field.is_empty():
+		prefix = "[%s.%s] " % [object_id, field]
+	elif not field.is_empty():
+		prefix = "[%s] " % field
+	return "%s%s" % [prefix, message]
 
 func _update_status(message: String) -> void:
 	if status_label != null:

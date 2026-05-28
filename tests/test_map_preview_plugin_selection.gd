@@ -5,6 +5,7 @@ const PLUGIN_PATH := "res://addons/map_preview/map_preview_plugin.gd"
 
 func run(assertions) -> void:
 	_test_render_queues_deferred_object_reselect(assertions)
+	_test_validation_aggregates_layout_and_content_references(assertions)
 
 func _test_render_queues_deferred_object_reselect(assertions) -> void:
 	var source = _read_plugin_source()
@@ -29,6 +30,34 @@ func _test_render_queues_deferred_object_reselect(assertions) -> void:
 	assertions.assert_true(
 		apply_fields_body.contains("_refresh_selected_object_handle_fields(object_id)"),
 		"应用对象字段后应原地刷新当前对象 handle，避免重建预览导致丢选中"
+	)
+
+func _test_validation_aggregates_layout_and_content_references(assertions) -> void:
+	var source = _read_plugin_source()
+	var validation_body = _function_body(source, "_update_validation")
+	assertions.assert_true(
+		source.contains("ContentReferenceValidatorScript"),
+		"地图预览插件应 preload 内容引用校验器"
+	)
+	assertions.assert_true(
+		source.contains("content_reference_validator = ContentReferenceValidatorScript.new()"),
+		"地图预览插件应持有内容引用校验器实例"
+	)
+	assertions.assert_true(
+		validation_body.contains("layout_loader.validate_layout(layout, map_data)"),
+		"Dock 校验应保留布局校验"
+	)
+	assertions.assert_true(
+		validation_body.contains("content_reference_validator.validate_map(map_data)"),
+		"Dock 校验应合并内容引用校验"
+	)
+	assertions.assert_true(
+		source.contains("func _format_validation_issues"),
+		"地图预览插件应封装校验结果格式化"
+	)
+	assertions.assert_true(
+		source.contains("[color=red]") and source.contains("[color=yellow]") and source.contains("[color=green]校验通过[/color]"),
+		"校验结果应覆盖 error、warning 和通过三种颜色状态"
 	)
 
 func _read_plugin_source() -> String:
