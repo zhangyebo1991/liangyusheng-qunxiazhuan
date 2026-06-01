@@ -20,3 +20,4 @@ tmp/
 # 本地参考材料压缩包，不提交
 references/*.zip
 /.antigravitycli
+/node_modules
