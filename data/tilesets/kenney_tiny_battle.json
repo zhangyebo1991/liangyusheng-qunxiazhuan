@@ -1,0 +1,17 @@
+{
+  "id": "kenney_tiny_battle",
+  "name": "Kenney Tiny Battle",
+  "path": "res://assets/kenney_tiny-battle/Tilemap/tilemap.png",
+  "tile_size": {"x": 128, "y": 128},
+  "columns": 16,
+  "rows": 16,
+  "terrain_map": {
+    "grass": {"tile_index": 0, "name": "草地", "passable": true, "move_cost": 1},
+    "water": {"tile_index": 1, "name": "水域", "passable": false, "move_cost": 99},
+    "path": {"tile_index": 2, "name": "山路", "passable": true, "move_cost": 1},
+    "mountain": {"tile_index": 3, "name": "山壁", "passable": false, "move_cost": 99},
+    "bridge": {"tile_index": 4, "name": "桥", "passable": true, "move_cost": 1},
+    "steps": {"tile_index": 5, "name": "石阶", "passable": true, "move_cost": 1},
+    "tree": {"tile_index": 6, "name": "树丛", "passable": false, "move_cost": 99}
+  }
+}
