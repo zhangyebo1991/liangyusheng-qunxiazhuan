@@ -37,6 +37,7 @@ var map_id: String = ""
 var fallback_spawn: Vector2 = Vector2(160, 320)
 var background_color: Color = Color("#6f8f55")
 var obstacle_color: Color = Color("#476f3f")
+var _map_size := Vector2(1280, 720)
 var world_map_ui = null
 
 func configure_map(next_map_id: String, next_fallback_spawn: Vector2, next_background_color: Color, next_obstacle_color: Color) -> void:
@@ -117,7 +118,18 @@ func _load_map_data() -> void:
 
 func _create_terrain() -> void:
 	var layout = _get_layout_data()
+	var mode = str(layout.get("mode", ""))
+	match mode:
+		"big_image":
+			_create_image_background(layout)
+		"tile_map":
+			_create_tile_map_background(layout)
+		_:
+			_create_color_background(layout)
+
+func _create_color_background(layout: Dictionary) -> void:
 	var size = _read_size(layout.get("size", {}), Vector2(1280, 720))
+	_apply_map_bounds(size)
 	_add_background(size)
 	for obstacle in layout.get("obstacles", []):
 		if typeof(obstacle) != TYPE_DICTIONARY:
@@ -128,6 +140,59 @@ func _create_terrain() -> void:
 		if rect.size.x <= 0.0 or rect.size.y <= 0.0:
 			continue
 		_add_obstacle(rect)
+
+func _create_image_background(layout: Dictionary) -> void:
+	var bg = layout.get("background", {})
+	var image_path = str(bg.get("path", ""))
+	if image_path.is_empty():
+		push_error("大图底图模式缺少 background.path")
+		_create_color_background(layout)
+		return
+
+	var texture: Texture2D = null
+	if ResourceLoader.exists(image_path, "Texture2D"):
+		texture = load(image_path)
+	else:
+		var image = Image.load_from_file(ProjectSettings.globalize_path(image_path))
+		if image != null:
+			image.convert(Image.FORMAT_RGBA8)
+			texture = ImageTexture.create_from_image(image)
+
+	if texture == null:
+		push_warning("无法加载底图: %s，回退到纯色背景" % image_path)
+		_create_color_background(layout)
+		return
+
+	var sprite = Sprite2D.new()
+	sprite.name = "Background"
+	sprite.texture = texture
+	sprite.centered = false
+	sprite.position = Vector2.ZERO
+	sprite.z_index = -100
+	add_child(sprite)
+
+	# 若 size 未指定，从 texture 推导
+	var size = _read_size(layout.get("size", {}), Vector2.ZERO)
+	if size == Vector2.ZERO:
+		size = Vector2(float(texture.get_width()), float(texture.get_height()))
+	if size != Vector2.ZERO:
+		_apply_map_bounds(size)
+
+	# 创建底图下的纯色填充（防止透明区域露底）
+	var fill = ColorRect.new()
+	fill.name = "BackgroundFill"
+	fill.color = background_color
+	fill.size = size
+	fill.position = Vector2.ZERO
+	add_child(fill)
+	move_child(fill, 0)
+
+func _create_tile_map_background(_layout: Dictionary) -> void:
+	push_warning("TileMap 模式将在后续任务中实现")
+	_create_color_background({"size": {"x": 2560, "y": 1920}})
+
+func _apply_map_bounds(size: Vector2) -> void:
+	_map_size = size
 
 func _add_background(size: Vector2) -> void:
 	var terrain = TileMapLayer.new()
