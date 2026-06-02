@@ -146,5 +146,35 @@
     "defense": 8,
     "martial_arts": ["rough_fist"],
     "sprite_tile_id": "tile_0101"
+  },
+  {
+    "id": "villager_01",
+    "name": "村民",
+    "character_id": "villager",
+    "sprite_set": "res://assets/characters/villager/",
+    "directions": ["down_left", "down_right", "up_left", "up_right"],
+    "animations": ["walk"],
+    "collision_size": {"w": 16, "h": 24},
+    "interaction_radius": 48
+  },
+  {
+    "id": "merchant_01",
+    "name": "掌柜",
+    "character_id": "merchant",
+    "sprite_set": "res://assets/characters/merchant/",
+    "directions": ["down_left", "down_right", "up_left", "up_right"],
+    "animations": ["walk"],
+    "collision_size": {"w": 16, "h": 24},
+    "interaction_radius": 48
+  },
+  {
+    "id": "scholar_01",
+    "name": "书生",
+    "character_id": "scholar",
+    "sprite_set": "res://assets/characters/scholar/",
+    "directions": ["down_left", "down_right", "up_left", "up_right"],
+    "animations": ["walk"],
+    "collision_size": {"w": 16, "h": 24},
+    "interaction_radius": 48
   }
 ]
