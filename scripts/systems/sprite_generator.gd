@@ -63,3 +63,127 @@ static func _fill_rect(image: Image, x: int, y: int, w: int, h: int, color: Colo
 	for py in range(max(0, y), min(image.get_height(), y + h)):
 		for px in range(max(0, x), min(image.get_width(), x + w)):
 			image.set_pixel(px, py, color)
+
+
+## 装饰物程序纹理
+
+static func generate_decoration_texture(deco_type: String) -> Texture2D:
+	var image: Image
+	match deco_type:
+		"tree":
+			image = _make_tree_texture()
+		"bush":
+			image = _make_bush_texture()
+		"rock":
+			image = _make_rock_texture()
+		"signpost":
+			image = _make_signpost_texture()
+		"lantern":
+			image = _make_lantern_texture()
+		"building":
+			image = _make_building_texture()
+		"bridge":
+			image = _make_bridge_texture()
+		_:
+			image = Image.create(32, 32, false, Image.FORMAT_RGBA8)
+			image.fill(Color.GRAY)
+	return ImageTexture.create_from_image(image)
+
+
+static func _make_tree_texture() -> Image:
+	var img := Image.create(64, 96, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# 树干 (棕色矩形)
+	for y in range(48, 96):
+		for x in range(26, 38):
+			img.set_pixel(x, y, Color(0.55, 0.35, 0.15))
+	# 树冠 (绿色椭圆)
+	for y in range(0, 56):
+		for x in range(4, 60):
+			var dx := float(x - 32) / 28.0
+			var dy := float(y - 28) / 28.0
+			if dx * dx + dy * dy <= 1.0:
+				img.set_pixel(x, y, Color(0.2, 0.55, 0.15))
+	return img
+
+
+static func _make_bush_texture() -> Image:
+	var img := Image.create(32, 20, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in range(0, 20):
+		for x in range(0, 32):
+			var dx := float(x - 16) / 16.0
+			var dy := float(y - 10) / 10.0
+			if dx * dx + dy * dy * 1.5 <= 1.0:
+				img.set_pixel(x, y, Color(0.15, 0.5, 0.1))
+	return img
+
+
+static func _make_rock_texture() -> Image:
+	var img := Image.create(40, 24, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in range(0, 24):
+		for x in range(0, 40):
+			var dx := float(x - 20) / 20.0
+			var dy := float(y - 12) / 12.0
+			if dx * dx + dy * dy * 0.7 <= 1.0:
+				img.set_pixel(x, y, Color(0.45, 0.42, 0.38))
+	return img
+
+
+static func _make_signpost_texture() -> Image:
+	var img := Image.create(12, 40, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in range(0, 40):
+		for x in range(4, 8):
+			img.set_pixel(x, y, Color(0.5, 0.35, 0.15))
+	for y in range(4, 14):
+		for x in range(0, 12):
+			img.set_pixel(x, y, Color(0.6, 0.45, 0.25))
+	return img
+
+
+static func _make_lantern_texture() -> Image:
+	var img := Image.create(16, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in range(0, 20):
+		for x in range(7, 9):
+			img.set_pixel(x, y, Color(0.4, 0.3, 0.2))
+	for y in range(20, 32):
+		for x in range(3, 13):
+			var dx := float(x - 8) / 5.0
+			var dy := float(y - 26) / 6.0
+			if dx * dx + dy * dy <= 1.0:
+				img.set_pixel(x, y, Color(0.9, 0.2, 0.1))
+	return img
+
+
+static func _make_building_texture() -> Image:
+	var img := Image.create(160, 160, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# 屋身
+	for y in range(48, 160):
+		for x in range(16, 144):
+			img.set_pixel(x, y, Color(0.55, 0.4, 0.25))
+	# 屋顶三角
+	for y in range(0, 52):
+		for x in range(0, 160):
+			var roof_slope := abs(float(x - 80) / 80.0)
+			if roof_slope < float(y) / 52.0:
+				img.set_pixel(x, y, Color(0.35, 0.25, 0.15))
+	return img
+
+
+static func _make_bridge_texture() -> Image:
+	var img := Image.create(128, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in range(8, 24):
+		for x in range(4, 124):
+			img.set_pixel(x, y, Color(0.55, 0.4, 0.2))
+	# 栏杆柱
+	for i in range(0, 5):
+		var cx := 16 + i * 24
+		for y in range(0, 32):
+			for x in range(cx - 2, cx + 2):
+				img.set_pixel(x, y, Color(0.45, 0.3, 0.15))
+	return img

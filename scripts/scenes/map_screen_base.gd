@@ -13,7 +13,7 @@ const MapRewardSystemScript = preload("res://scripts/systems/map_reward_system.g
 const EffectSystemScript = preload("res://scripts/systems/effect_system.gd")
 const EventSystemScript = preload("res://scripts/systems/event_system.gd")
 const JournalSystemScript = preload("res://scripts/systems/journal_system.gd")
-const JournalPanelScript = preload("res://scripts/scenes/journal_panel.gd")
+const SpriteGeneratorScript = preload("res://scripts/systems/sprite_generator.gd")
 
 var player
 var hud
@@ -57,6 +57,7 @@ func _ready() -> void:
 	_create_layers()
 	_create_player()
 	_create_camera()
+	_spawn_decorations()
 	_create_ui()
 	_spawn_objects()
 	_update_quest_text()
@@ -481,6 +482,80 @@ func _spawn_objects() -> void:
 		interactable.player_exited.connect(_on_interactable_exited)
 		interactables.append(interactable)
 		world_layer.add_child(interactable)
+
+
+func _spawn_decorations() -> void:
+	var layout = _get_layout_data()
+	var decorations = layout.get("decorations", [])
+	if typeof(decorations) != TYPE_ARRAY:
+		return
+
+	for deco in decorations:
+		if typeof(deco) != TYPE_DICTIONARY:
+			continue
+		var deco_type = str(deco.get("type", ""))
+		var position = Vector2(
+			float(deco.get("position", {}).get("x", 0.0)),
+			float(deco.get("position", {}).get("y", 0.0))
+		)
+		var has_overlay = bool(deco.get("has_overlay", false))
+		var has_collision = bool(deco.get("has_collision", false))
+
+		if has_overlay and deco_type in ["tree", "building"]:
+			# 拆分：下半进 WorldLayer，上半进 OverlayLayer
+			_spawn_split_decoration(deco_type, position, has_collision)
+		else:
+			var sprite = Sprite2D.new()
+			sprite.texture = SpriteGeneratorScript.generate_decoration_texture(deco_type)
+			sprite.position = position
+			if has_overlay:
+				overlay_layer.add_child(sprite)
+			else:
+				world_layer.add_child(sprite)
+
+			if has_collision:
+				var body = StaticBody2D.new()
+				body.position = position
+				var shape = CollisionShape2D.new()
+				var rect = RectangleShape2D.new()
+				rect.size = Vector2(32, 16)
+				shape.shape = rect
+				body.add_child(shape)
+				add_child(body)
+
+
+func _spawn_split_decoration(deco_type: String, position: Vector2, has_collision: bool) -> void:
+	var full_texture = SpriteGeneratorScript.generate_decoration_texture(deco_type)
+	var tex_height := float(full_texture.get_height())
+	var split_y := tex_height * 0.5
+
+	# 下半 — WorldLayer
+	var lower = Sprite2D.new()
+	lower.texture = full_texture
+	lower.position = position
+	lower.region_enabled = true
+	lower.region_rect = Rect2(0, split_y, full_texture.get_width(), tex_height - split_y)
+	lower.offset = Vector2(0, -split_y)
+	world_layer.add_child(lower)
+
+	# 上半 — OverlayLayer
+	var upper = Sprite2D.new()
+	upper.texture = full_texture
+	upper.position = position
+	upper.region_enabled = true
+	upper.region_rect = Rect2(0, 0, full_texture.get_width(), split_y)
+	overlay_layer.add_child(upper)
+
+	if has_collision:
+		var body = StaticBody2D.new()
+		body.position = position + Vector2(0, tex_height * 0.5)
+		var shape = CollisionShape2D.new()
+		var rect = RectangleShape2D.new()
+		rect.size = Vector2(full_texture.get_width() * 0.5, tex_height * 0.3)
+		shape.shape = rect
+		shape.position = Vector2(0, tex_height * 0.15)
+		body.add_child(shape)
+		add_child(body)
 
 func _update_nearest_interactable() -> void:
 	if player == null or hud == null:
