@@ -426,6 +426,27 @@ func _create_camera() -> void:
 	player.add_child(camera)
 	camera.make_current()
 
+	# 读取 camera 配置
+	var layout = _get_layout_data()
+	var camera_config = layout.get("camera", {})
+	if typeof(camera_config) == TYPE_DICTIONARY:
+		var zoom_value = float(camera_config.get("zoom", 1.0))
+		if zoom_value > 0.0:
+			camera.zoom = Vector2(zoom_value, zoom_value)
+
+		var bounds = camera_config.get("bounds", {})
+		if typeof(bounds) == TYPE_DICTIONARY:
+			camera.limit_left = int(bounds.get("x", -10000000))
+			camera.limit_top = int(bounds.get("y", -10000000))
+			camera.limit_right = int(bounds.get("x", 0)) + int(bounds.get("w", 10000000))
+			camera.limit_bottom = int(bounds.get("y", 0)) + int(bounds.get("h", 10000000))
+		elif _map_size != Vector2.ZERO:
+			# 无显式 bounds 时用 map size
+			camera.limit_left = 0
+			camera.limit_top = 0
+			camera.limit_right = int(_map_size.x)
+			camera.limit_bottom = int(_map_size.y)
+
 func _create_ui() -> void:
 	hud = HudScript.new()
 	hud.item_use_requested.connect(_on_item_use_requested)
