@@ -123,7 +123,7 @@ func _create_tile_preview(layout: Dictionary) -> Node2D:
 		float(tileset_data.get("tile_size", {}).get("x", 128.0)),
 		float(tileset_data.get("tile_size", {}).get("y", 128.0))
 	)
-	var layer_colors := {"ground": Color.GREEN.darkened(0.6), "decoration": Color.ORANGE.darkened(0.6), "overlay": Color.RED.darkened(0.6)}
+	var layer_colors: Dictionary = {"ground": Color.GREEN.darkened(0.6), "decoration": Color.ORANGE.darkened(0.6), "overlay": Color.RED.darkened(0.6)}
 
 	for layer_name in ["ground", "decoration", "overlay"]:
 		var grid = layers.get(layer_name, [])
@@ -148,7 +148,7 @@ func _create_tile_preview(layout: Dictionary) -> Node2D:
 	return container
 
 
-func _create_color_preview(layout: Dictionary) -> ColorRect:
+func _create_color_preview(layout: Dictionary) -> Node2D:
 	var background = ColorRect.new()
 	background.name = "Background"
 	var size_data = layout.get("size", {})

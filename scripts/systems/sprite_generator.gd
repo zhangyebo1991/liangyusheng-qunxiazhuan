@@ -168,7 +168,7 @@ static func _make_building_texture() -> Image:
 	# 屋顶三角
 	for y in range(0, 52):
 		for x in range(0, 160):
-			var roof_slope := abs(float(x - 80) / 80.0)
+			var roof_slope: float = abs(float(x - 80) / 80.0)
 			if roof_slope < float(y) / 52.0:
 				img.set_pixel(x, y, Color(0.35, 0.25, 0.15))
 	return img
