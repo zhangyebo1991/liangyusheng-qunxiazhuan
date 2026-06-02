@@ -15,3 +15,4 @@ signal tactical_log_appended(line: String)
 # Task 19: 战棋单位移动动画结束、move_unit 已落地后广播；
 # from_cell / to_cell 用 Vector2i(x=q, y=r) 与 tactical_range_system 坐标系一致。
 signal tactical_unit_moved(unit_id: String, from_cell: Vector2i, to_cell: Vector2i)
+signal debug_toggled(visible: bool)

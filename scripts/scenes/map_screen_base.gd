@@ -37,6 +37,7 @@ var map_id: String = ""
 var fallback_spawn: Vector2 = Vector2(160, 320)
 var background_color: Color = Color("#6f8f55")
 var obstacle_color: Color = Color("#476f3f")
+var debug_visible := false
 var _map_size := Vector2(1280, 720)
 var world_layer: Node2D
 var overlay_layer: Node2D
@@ -91,6 +92,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_P:
 		_toggle_party_panel()
 		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
+		debug_visible = not debug_visible
+		var bus = _get_autoload("EventBus")
+		if bus != null:
+			bus.debug_toggled.emit(debug_visible)
+		_update_debug_display()
+		return
 	if event.is_action_pressed("inventory"):
 		_toggle_inventory()
 
@@ -138,12 +146,7 @@ func _create_color_background(layout: Dictionary) -> void:
 	for obstacle in layout.get("obstacles", []):
 		if typeof(obstacle) != TYPE_DICTIONARY:
 			continue
-		if str(obstacle.get("shape", "rect")) != "rect":
-			continue
-		var rect = _read_rect(obstacle.get("rect", {}))
-		if rect.size.x <= 0.0 or rect.size.y <= 0.0:
-			continue
-		_add_obstacle(rect)
+		_add_obstacle(obstacle)
 
 func _create_image_background(layout: Dictionary) -> void:
 	var bg = layout.get("background", {})
@@ -308,22 +311,51 @@ func _add_background(size: Vector2) -> void:
 	add_child(background)
 	move_child(background, 0)
 
-func _add_obstacle(rect: Rect2) -> void:
+func _add_obstacle(obstacle: Dictionary) -> void:
 	var body = StaticBody2D.new()
-	body.position = rect.position
-	var shape = CollisionShape2D.new()
-	var rectangle = RectangleShape2D.new()
-	rectangle.size = rect.size
-	shape.shape = rectangle
-	shape.position = rect.size / 2.0
-	body.add_child(shape)
+	body.name = str(obstacle.get("id", "Obstacle"))
+	var shape_type = str(obstacle.get("shape", "rect"))
+
+	match shape_type:
+		"polygon":
+			var points = obstacle.get("points", [])
+			if typeof(points) != TYPE_ARRAY or points.size() < 3:
+				push_warning("多边形碰撞缺少顶点: %s" % str(obstacle.get("id", "")))
+				return
+			var polygon = CollisionPolygon2D.new()
+			var vertex_array := PackedVector2Array()
+			for point in points:
+				if typeof(point) == TYPE_DICTIONARY:
+					vertex_array.append(Vector2(float(point.get("x", 0.0)), float(point.get("y", 0.0))))
+			polygon.polygon = vertex_array
+			body.add_child(polygon)
+		_:
+			var rect = _read_rect(obstacle.get("rect", {}))
+			if rect.size.x <= 0.0 or rect.size.y <= 0.0:
+				return
+			body.position = rect.position
+			var shape = CollisionShape2D.new()
+			var rectangle = RectangleShape2D.new()
+			rectangle.size = rect.size
+			shape.shape = rectangle
+			shape.position = rect.size / 2.0
+			body.add_child(shape)
+
 	add_child(body)
 
+	# Visual for the obstacle
 	var visual = ColorRect.new()
 	visual.name = "ObstacleVisual"
 	visual.color = obstacle_color
-	visual.position = rect.position
-	visual.size = rect.size
+	if shape_type == "polygon":
+		# For polygons, place the visual at the first vertex with a rough size
+		var first = Vector2(float(obstacle.get("points", [{}])[0].get("x", 0)), float(obstacle.get("points", [{}])[0].get("y", 0)))
+		visual.position = first
+		visual.size = Vector2(48, 48)  # rough default for polygon visual
+	else:
+		var rect = _read_rect(obstacle.get("rect", {}))
+		visual.position = rect.position
+		visual.size = rect.size
 	add_child(visual)
 
 func _get_layout_data() -> Dictionary:
@@ -860,6 +892,18 @@ func _on_player_position_changed(position: Vector2) -> void:
 	var game_state = _get_game_state()
 	if game_state != null:
 		game_state.set_player_position(position)
+
+func _update_debug_display() -> void:
+	# Simple toggle: change obstacle visual alpha to show/hide collision zones
+	for child in get_children():
+		if child is ColorRect and child.name == "ObstacleVisual":
+			child.visible = debug_visible
+			child.modulate.a = 0.3 if debug_visible else 1.0
+	# Also toggle interactable radius visualization
+	for interactable in interactables:
+		if interactable.has_node("CollisionShape2D"):
+			var shape = interactable.get_node("CollisionShape2D")
+			shape.visible = debug_visible
 
 func _update_quest_text() -> void:
 	pass
