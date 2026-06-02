@@ -1,11 +1,14 @@
 extends Area2D
 
+const NPCSpriteLoader = preload("res://scripts/scenes/npc_sprite_loader.gd")
+
 signal clicked(interactable)
 signal player_entered(interactable)
 signal player_exited(interactable)
 
 var record: Dictionary = {}
 var label: Label
+var npc_visual: Node2D
 
 func setup(next_record: Dictionary) -> void:
 	record = next_record.duplicate(true)
@@ -18,15 +21,23 @@ func setup(next_record: Dictionary) -> void:
 	shape.shape = circle
 	add_child(shape)
 
-	var visual = ColorRect.new()
-	visual.size = Vector2(24, 24)
-	visual.position = Vector2(-12, -12)
-	visual.color = _read_color()
-	add_child(visual)
+	var is_npc := str(record.get("type", "")) == "npc"
+
+	if is_npc:
+		# NPC 使用 AnimatedSprite2D（或回退程序纹理）
+		npc_visual = NPCSpriteLoader.create_npc_sprite(record)
+		npc_visual.position = Vector2(-12, -16)
+		add_child(npc_visual)
+	else:
+		var visual = ColorRect.new()
+		visual.size = Vector2(24, 24)
+		visual.position = Vector2(-12, -12)
+		visual.color = _read_color()
+		add_child(visual)
 
 	label = Label.new()
 	label.text = str(record.get("name", ""))
-	label.position = Vector2(-32, -36)
+	label.position = Vector2(-32, -44) if is_npc else Vector2(-32, -36)
 	label.size = Vector2(96, 24)
 	add_child(label)
 
