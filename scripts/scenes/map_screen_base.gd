@@ -38,6 +38,9 @@ var fallback_spawn: Vector2 = Vector2(160, 320)
 var background_color: Color = Color("#6f8f55")
 var obstacle_color: Color = Color("#476f3f")
 var _map_size := Vector2(1280, 720)
+var world_layer: Node2D
+var overlay_layer: Node2D
+var particle_layer: Node2D
 var world_map_ui = null
 
 func configure_map(next_map_id: String, next_fallback_spawn: Vector2, next_background_color: Color, next_obstacle_color: Color) -> void:
@@ -50,6 +53,7 @@ func _ready() -> void:
 	dialogue_system.set_repository(_get_data_repository())
 	_load_map_data()
 	_create_terrain()
+	_create_layers()
 	_create_player()
 	_create_camera()
 	_create_ui()
@@ -260,13 +264,32 @@ func _read_background_color(value: Variant) -> Color:
 		return background_color
 	return Color(html)
 
+func _create_layers() -> void:
+	# WorldLayer — 核心遮挡排序层
+	world_layer = Node2D.new()
+	world_layer.name = "WorldLayer"
+	world_layer.y_sort_enabled = true
+	add_child(world_layer)
+
+	# OverlayLayer — 始终在角色上方
+	overlay_layer = Node2D.new()
+	overlay_layer.name = "OverlayLayer"
+	overlay_layer.z_index = 50
+	add_child(overlay_layer)
+
+	# ParticleLayer — 粒子氛围
+	particle_layer = Node2D.new()
+	particle_layer.name = "ParticleLayer"
+	particle_layer.z_index = 25
+	add_child(particle_layer)
+
 func _create_player() -> void:
 	player = PlayerControllerScript.new()
 	player.name = "Player"
 	player.global_position = _read_spawn_position()
 	player.position_changed.connect(_on_player_position_changed)
 	player.interact_requested.connect(_interact_with)
-	add_child(player)
+	world_layer.add_child(player)
 
 func _create_camera() -> void:
 	var camera = Camera2D.new()
@@ -307,7 +330,7 @@ func _spawn_objects() -> void:
 		interactable.player_entered.connect(_on_interactable_entered)
 		interactable.player_exited.connect(_on_interactable_exited)
 		interactables.append(interactable)
-		add_child(interactable)
+		world_layer.add_child(interactable)
 
 func _update_nearest_interactable() -> void:
 	if player == null or hud == null:
