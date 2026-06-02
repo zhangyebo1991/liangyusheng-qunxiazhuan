@@ -1,0 +1,62 @@
+{
+  "map_id": "jiangnan_town",
+  "mode": "big_image",
+  "size": {"x": 2560, "y": 1920},
+  "background": {
+    "mode": "image",
+    "path": "res://assets/maps/jiangnan_town/background.png"
+  },
+  "camera": {
+    "zoom": 1.0,
+    "bounds": {"x": 0, "y": 0, "w": 2560, "h": 1920}
+  },
+  "spawn_points": {
+    "start": {"x": 200, "y": 960}
+  },
+  "obstacles": [
+    {"id": "border_top", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 2560, "h": 16}},
+    {"id": "border_bottom", "shape": "rect", "rect": {"x": 0, "y": 1904, "w": 2560, "h": 16}},
+    {"id": "border_left", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 16, "h": 1920}},
+    {"id": "border_right", "shape": "rect", "rect": {"x": 2544, "y": 0, "w": 16, "h": 1920}},
+    {"id": "river_collision", "shape": "polygon", "points": [
+      {"x": 0, "y": 1248}, {"x": 400, "y": 1220}, {"x": 700, "y": 1200},
+      {"x": 896, "y": 1240}, {"x": 896, "y": 1920}, {"x": 0, "y": 1920}
+    ]},
+    {"id": "wall_north", "shape": "rect", "rect": {"x": 300, "y": 200, "w": 400, "h": 16}},
+    {"id": "wall_east", "shape": "rect", "rect": {"x": 1100, "y": 350, "w": 16, "h": 200}}
+  ],
+  "objects": {
+    "npc_villager_wang": {"position": {"x": 500, "y": 400}, "radius": 72},
+    "npc_merchant_li": {"position": {"x": 1000, "y": 600}, "radius": 72},
+    "exit_to_world": {"position": {"x": 200, "y": 960}, "radius": 72},
+    "exit_to_wilderness": {"position": {"x": 2400, "y": 960}, "radius": 72},
+    "pickup_herb_town": {"position": {"x": 1800, "y": 700}, "radius": 56}
+  },
+  "decorations": [
+    {"id": "tree_01", "type": "tree", "position": {"x": 350, "y": 350}, "has_collision": true, "has_overlay": true},
+    {"id": "tree_02", "type": "tree", "position": {"x": 700, "y": 500}, "has_collision": true, "has_overlay": true},
+    {"id": "tree_03", "type": "tree", "position": {"x": 1300, "y": 300}, "has_collision": true, "has_overlay": true},
+    {"id": "bush_01", "type": "bush", "position": {"x": 450, "y": 280}, "has_collision": false, "has_overlay": false},
+    {"id": "bush_02", "type": "bush", "position": {"x": 600, "y": 550}, "has_collision": false, "has_overlay": false},
+    {"id": "bush_03", "type": "bush", "position": {"x": 850, "y": 420}, "has_collision": false, "has_overlay": false},
+    {"id": "bush_04", "type": "bush", "position": {"x": 1400, "y": 500}, "has_collision": false, "has_overlay": false},
+    {"id": "bush_05", "type": "bush", "position": {"x": 2000, "y": 400}, "has_collision": false, "has_overlay": false},
+    {"id": "rock_01", "type": "rock", "position": {"x": 300, "y": 500}, "has_collision": true, "has_overlay": false},
+    {"id": "rock_02", "type": "rock", "position": {"x": 900, "y": 300}, "has_collision": true, "has_overlay": false},
+    {"id": "rock_03", "type": "rock", "position": {"x": 1500, "y": 600}, "has_collision": true, "has_overlay": false},
+    {"id": "rock_04", "type": "rock", "position": {"x": 2200, "y": 800}, "has_collision": true, "has_overlay": false},
+    {"id": "signpost_01", "type": "signpost", "position": {"x": 350, "y": 900}, "has_collision": false, "has_overlay": false},
+    {"id": "signpost_02", "type": "signpost", "position": {"x": 2300, "y": 900}, "has_collision": false, "has_overlay": false},
+    {"id": "lantern_01", "type": "lantern", "position": {"x": 430, "y": 280}, "has_collision": false, "has_overlay": false},
+    {"id": "lantern_02", "type": "lantern", "position": {"x": 700, "y": 250}, "has_collision": false, "has_overlay": false},
+    {"id": "lantern_03", "type": "lantern", "position": {"x": 1100, "y": 550}, "has_collision": false, "has_overlay": false},
+    {"id": "building_inn", "type": "building", "position": {"x": 400, "y": 360}, "has_collision": true, "has_overlay": true},
+    {"id": "building_pharmacy", "type": "building", "position": {"x": 1000, "y": 550}, "has_collision": true, "has_overlay": true},
+    {"id": "building_house", "type": "building", "position": {"x": 700, "y": 250}, "has_collision": true, "has_overlay": true}
+  ],
+  "particles": [
+    {"id": "clouds_town", "type": "cloud", "region": {"x": 0, "y": 0, "w": 2560, "h": 300}},
+    {"id": "fog_town", "type": "fog"},
+    {"id": "water_river", "type": "water", "position": {"x": 200, "y": 1300}}
+  ]
+}
