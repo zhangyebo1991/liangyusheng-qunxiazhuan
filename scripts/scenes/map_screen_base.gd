@@ -191,9 +191,106 @@ func _create_image_background(layout: Dictionary) -> void:
 	add_child(fill)
 	move_child(fill, 0)
 
-func _create_tile_map_background(_layout: Dictionary) -> void:
-	push_warning("TileMap 模式将在后续任务中实现")
-	_create_color_background({"size": {"x": 2560, "y": 1920}})
+func _create_tile_map_background(layout: Dictionary) -> void:
+	var tileset_config_path = str(layout.get("tileset", {}).get("config", "res://data/tilesets/kenney_tiny_battle.json"))
+	var tileset_config := _load_tileset_config(tileset_config_path)
+	if tileset_config.is_empty():
+		_create_color_background(layout)
+		return
+
+	var tile_size := Vector2i(
+		int(tileset_config.get("tile_size", {}).get("x", 128)),
+		int(tileset_config.get("tile_size", {}).get("y", 128))
+	)
+	var terrain_map: Dictionary = tileset_config.get("terrain_map", {})
+
+	var layers: Dictionary = layout.get("layers", {})
+
+	# ground / decoration / overlay 按顺序创建
+	var layer_order := ["ground", "decoration", "overlay"]
+	var terrain_layer_index := 0
+
+	for layer_name in layer_order:
+		var grid: Array = layers.get(layer_name, [])
+		if grid.is_empty():
+			continue
+
+		var tile_map_layer := TileMapLayer.new()
+		tile_map_layer.name = layer_name.capitalize()
+		tile_map_layer.tile_set = _build_tileset(tileset_config_path, tile_size, terrain_map)
+		tile_map_layer.z_index = terrain_layer_index
+		terrain_layer_index += 1
+		add_child(tile_map_layer)
+
+		for row_idx in range(grid.size()):
+			var row = grid[row_idx]
+			if typeof(row) != TYPE_ARRAY:
+				continue
+			for col_idx in range(row.size()):
+				var terrain_id = str(row[col_idx])
+				if terrain_id.is_empty() or terrain_id == "null":
+					continue
+				var terrain = terrain_map.get(terrain_id, {})
+				if terrain.is_empty():
+					continue
+				var tile_index := int(terrain.get("tile_index", 0))
+				var columns := int(tileset_config.get("columns", 16))
+				var tile_coord := Vector2i(tile_index % columns, tile_index / columns)
+				tile_map_layer.set_cell(Vector2i(col_idx, row_idx), 0, tile_coord)
+
+		# 非 ground 层 z_index 提升
+		if layer_name == "decoration":
+			tile_map_layer.z_index = 10
+		elif layer_name == "overlay":
+			tile_map_layer.z_index = 60
+
+	var size := _read_size(layout.get("size", {}), Vector2(2560, 1920))
+	_apply_map_bounds(size)
+
+
+func _load_tileset_config(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		push_error("tileset 配置不存在: %s" % path)
+		return {}
+	var file = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return {}
+	return parsed
+
+
+func _build_tileset(config_path: String, tile_size: Vector2i, terrain_map: Dictionary) -> TileSet:
+	var tileset := TileSet.new()
+	tileset.tile_size = tile_size
+
+	var image_path = str(_load_tileset_config(config_path).get("path", ""))
+	if image_path.is_empty():
+		return tileset
+
+	var texture: Texture2D = null
+	if ResourceLoader.exists(image_path, "Texture2D"):
+		texture = load(image_path)
+	if texture == null:
+		return tileset
+
+	var source := TileSetAtlasSource.new()
+	source.texture = texture
+	source.texture_region_size = tile_size
+	var source_id := tileset.add_source(source)
+
+	# 为每个 terrain 注册 tile
+	for terrain_id in terrain_map:
+		var terrain = terrain_map[terrain_id]
+		var tile_index := int(terrain.get("tile_index", -1))
+		if tile_index < 0:
+			continue
+		var columns := int(texture.get_width() / tile_size.x)
+		var atlas_coords := Vector2i(tile_index % columns, tile_index / columns)
+		source.create_tile(atlas_coords)
+
+	return tileset
 
 func _apply_map_bounds(size: Vector2) -> void:
 	_map_size = size
