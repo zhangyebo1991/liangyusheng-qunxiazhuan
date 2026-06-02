@@ -58,6 +58,7 @@ func _ready() -> void:
 	_create_player()
 	_create_camera()
 	_spawn_decorations()
+	_spawn_particles()
 	_create_ui()
 	_spawn_objects()
 	_update_quest_text()
@@ -556,6 +557,145 @@ func _spawn_split_decoration(deco_type: String, position: Vector2, has_collision
 		shape.position = Vector2(0, tex_height * 0.15)
 		body.add_child(shape)
 		add_child(body)
+
+func _spawn_particles() -> void:
+	var layout = _get_layout_data()
+	var particles = layout.get("particles", [])
+	if typeof(particles) != TYPE_ARRAY:
+		return
+
+	for particle_cfg in particles:
+		if typeof(particle_cfg) != TYPE_DICTIONARY:
+			continue
+		var particle_type = str(particle_cfg.get("type", ""))
+		match particle_type:
+			"cloud":
+				_spawn_cloud_particles(particle_cfg)
+			"fog":
+				_spawn_fog_particles(particle_cfg)
+			"leaves":
+				_spawn_leaves_particles(particle_cfg)
+			"water":
+				_spawn_water_animation(particle_cfg)
+			"snow":
+				_spawn_snow_particles(particle_cfg)
+
+
+func _spawn_cloud_particles(cfg: Dictionary) -> void:
+	var particles = GPUParticles2D.new()
+	particles.name = str(cfg.get("id", "clouds"))
+	particles.amount = 8
+	particles.lifetime = 30.0
+	particles.one_shot = false
+	particles.explosiveness = 0.0
+
+	var region = cfg.get("region", {})
+	var rx := float(region.get("x", 0.0))
+	var rw := float(region.get("w", 2560.0))
+
+	var process_material = ParticleProcessMaterial.new()
+	process_material.spread = 90.0
+	process_material.direction = Vector3(1, 0, 0)
+	process_material.initial_velocity_min = 15.0
+	process_material.initial_velocity_max = 30.0
+	process_material.scale_min = 3.0
+	process_material.scale_max = 6.0
+	process_material.color = Color(1.0, 1.0, 1.0, 0.25)
+	particles.process_material = process_material
+
+	var ry := float(region.get("y", 0.0))
+	particles.position = Vector2(rx + rw / 2.0, ry)
+	particles.emitting = true
+	particle_layer.add_child(particles)
+
+	var tex := Image.create(16, 8, false, Image.FORMAT_RGBA8)
+	tex.fill(Color(1, 1, 1, 1))
+	particles.texture = ImageTexture.create_from_image(tex)
+
+
+func _spawn_fog_particles(cfg: Dictionary) -> void:
+	var particles = GPUParticles2D.new()
+	particles.name = str(cfg.get("id", "fog"))
+	particles.amount = 20
+	particles.lifetime = 20.0
+	particles.one_shot = false
+	particles.explosiveness = 0.0
+
+	var process_material = ParticleProcessMaterial.new()
+	process_material.spread = 180.0
+	process_material.direction = Vector3(0.5, 0, 0)
+	process_material.initial_velocity_min = 5.0
+	process_material.initial_velocity_max = 15.0
+	process_material.scale_min = 5.0
+	process_material.scale_max = 10.0
+	process_material.color = Color(1.0, 1.0, 1.0, 0.12)
+	particles.process_material = process_material
+
+	var layout = _get_layout_data()
+	var size = _read_size(layout.get("size", {}), Vector2(1280, 720))
+	particles.position = Vector2(size.x / 2.0, size.y / 2.0)
+	particles.emitting = true
+	particle_layer.add_child(particles)
+
+	var tex := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	tex.fill(Color(1, 1, 1, 1))
+	particles.texture = ImageTexture.create_from_image(tex)
+
+
+func _spawn_leaves_particles(cfg: Dictionary) -> void:
+	var particles = CPUParticles2D.new()
+	particles.name = str(cfg.get("id", "leaves"))
+	particles.amount = 15
+	particles.lifetime = 4.0
+	particles.one_shot = false
+	particles.explosiveness = 0.3
+	particles.spread = 60.0
+	particles.direction = Vector2(0.5, 1.0)
+	particles.initial_velocity_min = 20.0
+	particles.initial_velocity_max = 60.0
+	particles.gravity = Vector2(0, 30)
+	particles.scale_min = 0.5
+	particles.scale_max = 1.2
+	particles.color = Color(0.9, 0.5, 0.15, 0.7)
+
+	var position_data = cfg.get("position", {})
+	particles.position = Vector2(float(position_data.get("x", 640.0)), float(position_data.get("y", 100.0)))
+	particles.emitting = true
+	particle_layer.add_child(particles)
+
+	var tex := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	tex.fill(Color(1, 1, 1, 1))
+	particles.texture = ImageTexture.create_from_image(tex)
+
+
+func _spawn_water_animation(cfg: Dictionary) -> void:
+	var sprite = AnimatedSprite2D.new()
+	sprite.name = str(cfg.get("id", "water"))
+	var position_data = cfg.get("position", {})
+	sprite.position = Vector2(float(position_data.get("x", 0.0)), float(position_data.get("y", 0.0)))
+
+	var frames = SpriteFrames.new()
+	frames.add_animation("ripple")
+	frames.set_animation_speed("ripple", 3.0)
+	frames.set_animation_loop("ripple", true)
+	for i in range(4):
+		var img := Image.create(320, 80, false, Image.FORMAT_RGBA8)
+		img.fill(Color(0, 0, 0, 0))
+		for y in range(0, 80):
+			for x in range(0, 320):
+				var wave := sin(float(x) * 0.05 + float(i) * PI / 2.0) * 0.08
+				var alpha := 0.15 + wave
+				img.set_pixel(x, y, Color(0.3, 0.55, 0.85, alpha))
+		frames.add_frame("ripple", ImageTexture.create_from_image(img))
+	sprite.sprite_frames = frames
+	sprite.play("ripple")
+	sprite.z_index = -5
+	add_child(sprite)
+
+
+func _spawn_snow_particles(_cfg: Dictionary) -> void:
+	# 第一版预留：不默认开启
+	pass
 
 func _update_nearest_interactable() -> void:
 	if player == null or hud == null:
