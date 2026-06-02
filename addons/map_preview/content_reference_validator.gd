@@ -4,6 +4,9 @@ extends RefCounted
 const SEVERITY_ERROR := "error"
 const SEVERITY_WARNING := "warning"
 const DEFAULT_LAYOUTS_DIR := "res://data/map_layouts"
+const VALID_DECO_TYPES := ["tree", "bush", "rock", "signpost", "lantern", "building", "bridge"]
+const VALID_PARTICLE_TYPES := ["cloud", "fog", "leaves", "water", "snow"]
+
 const DEFAULT_DATA_PATHS := {
 	"actors": "res://data/actors.json",
 	"items": "res://data/items.json",
@@ -40,6 +43,14 @@ func validate_map(map_data: Dictionary) -> Array[Dictionary]:
 			issues.append(_issue(SEVERITY_ERROR, "", "objects", "地图对象必须是字典。"))
 			continue
 		_validate_object(issues, object_data, object_ids)
+
+	# 校验 layout 文件中的字段
+	var map_id = str(map_data.get("id", "")).strip_edges()
+	if not map_id.is_empty():
+		var layout = _load_layout(map_id)
+		if not layout.is_empty():
+			_validate_layout_fields(issues, layout)
+
 	return issues
 
 func _refresh_indexes(issues: Array[Dictionary]) -> void:
@@ -217,6 +228,65 @@ func _load_layout(map_id: String) -> Dictionary:
 				layout = parsed
 	layouts_by_map_id[map_id] = layout
 	return layout
+
+func _validate_layout_fields(issues: Array[Dictionary], layout: Dictionary) -> void:
+	var mode = str(layout.get("mode", ""))
+
+	# 大图底图模式
+	if mode == "big_image":
+		var bg_path = str(layout.get("background", {}).get("path", ""))
+		if not bg_path.is_empty() and not FileAccess.file_exists(bg_path):
+			issues.append(_issue(SEVERITY_WARNING, "", "background.path", "底图文件不存在：%s" % bg_path))
+
+	# TileMap 模式
+	if mode == "tile_map":
+		var tileset_config = str(layout.get("tileset", {}).get("config", ""))
+		if tileset_config.is_empty():
+			issues.append(_issue(SEVERITY_ERROR, "", "tileset.config", "TileMap 模式缺少 tileset 配置路径"))
+		elif not FileAccess.file_exists(tileset_config):
+			issues.append(_issue(SEVERITY_ERROR, "", "tileset.config", "tileset 配置文件不存在：%s" % tileset_config))
+		_validate_tile_layers(issues, layout.get("layers", {}))
+
+	# 装饰物校验
+	var decorations = layout.get("decorations", [])
+	if typeof(decorations) == TYPE_ARRAY:
+		for deco in decorations:
+			if typeof(deco) != TYPE_DICTIONARY:
+				continue
+			var deco_type = str(deco.get("type", ""))
+			var deco_id = str(deco.get("id", ""))
+			if deco_type.is_empty():
+				issues.append(_issue(SEVERITY_WARNING, deco_id, "type", "装饰物缺少类型"))
+			elif not VALID_DECO_TYPES.has(deco_type):
+				issues.append(_issue(SEVERITY_WARNING, deco_id, "type", "未知装饰物类型：%s" % deco_type))
+
+	# 粒子校验
+	var particles = layout.get("particles", [])
+	if typeof(particles) == TYPE_ARRAY:
+		for p in particles:
+			if typeof(p) != TYPE_DICTIONARY:
+				continue
+			var ptype = str(p.get("type", ""))
+			var pid = str(p.get("id", ""))
+			if not VALID_PARTICLE_TYPES.has(ptype):
+				issues.append(_issue(SEVERITY_WARNING, pid, "type", "未知粒子类型：%s" % ptype))
+
+func _validate_tile_layers(issues: Array[Dictionary], layers: Dictionary) -> void:
+	for layer_name in layers:
+		var grid = layers[layer_name]
+		if typeof(grid) != TYPE_ARRAY:
+			issues.append(_issue(SEVERITY_ERROR, "", "layers.%s" % layer_name, "tile 层必须是二维数组"))
+			continue
+		var col_count := -1
+		for row_idx in range(grid.size()):
+			var row = grid[row_idx]
+			if typeof(row) != TYPE_ARRAY:
+				issues.append(_issue(SEVERITY_ERROR, "", "layers.%s[%d]" % [layer_name, row_idx], "行必须是数组"))
+				continue
+			if col_count < 0:
+				col_count = row.size()
+			elif row.size() != col_count:
+				issues.append(_issue(SEVERITY_WARNING, "", "layers.%s[%d]" % [layer_name, row_idx], "行宽度不一致"))
 
 func _issue(severity: String, object_id: String, field: String, message: String) -> Dictionary:
 	return {
