@@ -1,0 +1,93 @@
+{
+  "map_id": "wilderness_trail",
+  "mode": "tile_map",
+  "size": {"x": 2560, "y": 1920},
+  "tileset": {
+    "config": "res://data/tilesets/kenney_tiny_battle.json"
+  },
+  "camera": {
+    "zoom": 1.0,
+    "bounds": {"x": 0, "y": 0, "w": 2560, "h": 1920}
+  },
+  "spawn_points": {
+    "from_town": {"x": 160, "y": 960},
+    "from_mountain": {"x": 2400, "y": 960}
+  },
+  "layers": {
+    "ground": [
+      ["grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass"],
+      ["grass","grass","grass","path","path","grass","grass","grass","grass","grass","grass","grass","grass","grass","path","path","grass","grass","grass","grass"],
+      ["grass","grass","grass","path","path","grass","grass","mountain","mountain","grass","grass","grass","grass","grass","path","path","grass","grass","grass","grass"],
+      ["grass","path","path","path","path","grass","grass","mountain","mountain","grass","grass","tree","grass","grass","path","path","grass","grass","grass","grass"],
+      ["grass","path","path","path","path","path","path","path","path","path","path","path","path","path","path","path","path","path","grass","grass"],
+      ["grass","grass","grass","path","path","grass","grass","grass","water","water","bridge","bridge","water","grass","grass","path","path","grass","grass","grass"],
+      ["grass","grass","grass","path","path","grass","grass","grass","water","water","bridge","bridge","water","grass","grass","path","path","grass","grass","grass"],
+      ["grass","grass","grass","path","path","grass","grass","grass","water","water","water","water","water","grass","grass","steps","steps","grass","grass","grass"],
+      ["grass","grass","grass","path","path","grass","grass","grass","grass","water","water","water","grass","grass","grass","steps","steps","grass","grass","grass"],
+      ["grass","grass","grass","path","path","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","path","path","grass","grass","grass"],
+      ["grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","path","path","grass","grass","grass"],
+      ["grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","path","path","grass","grass","grass"],
+      ["grass","grass","grass","grass","grass","grass","mountain","mountain","mountain","grass","grass","grass","grass","grass","grass","path","path","grass","grass","grass"],
+      ["grass","grass","grass","grass","grass","grass","mountain","mountain","mountain","grass","grass","grass","grass","grass","grass","path","path","grass","grass","grass"],
+      ["grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass","grass"]
+    ],
+    "decoration": [
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,"tree",null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,"tree",null,null,null,null,null,"rock",null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,"rock",null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,"rock",null,null,null,null,null,null,null,null,null,null,null,null,"rock",null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,"rock",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,"rock",null,null,null,null,null,null],
+      [null,null,null,null,null,"rock",null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]
+    ],
+    "overlay": [
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]
+    ]
+  },
+  "obstacles": [
+    {"id": "border_top", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 2560, "h": 8}},
+    {"id": "border_bottom", "shape": "rect", "rect": {"x": 0, "y": 1912, "w": 2560, "h": 8}},
+    {"id": "border_left", "shape": "rect", "rect": {"x": 0, "y": 0, "w": 8, "h": 1920}},
+    {"id": "border_right", "shape": "rect", "rect": {"x": 2552, "y": 0, "w": 8, "h": 1920}}
+  ],
+  "objects": {
+    "npc_scholar_zhang": {"position": {"x": 800, "y": 600}, "radius": 72},
+    "npc_bandit_scout": {"position": {"x": 1600, "y": 800}, "radius": 72},
+    "exit_to_town": {"position": {"x": 80, "y": 960}, "radius": 72},
+    "exit_to_mountain": {"position": {"x": 2480, "y": 960}, "radius": 72},
+    "pickup_coins_trail": {"position": {"x": 1200, "y": 500}, "radius": 56}
+  },
+  "decorations": [
+    {"id": "trail_tree_01", "type": "tree", "position": {"x": 700, "y": 300}, "has_collision": true, "has_overlay": true},
+    {"id": "trail_tree_02", "type": "tree", "position": {"x": 1400, "y": 400}, "has_collision": true, "has_overlay": true},
+    {"id": "trail_rock_01", "type": "rock", "position": {"x": 1000, "y": 700}, "has_collision": true, "has_overlay": false},
+    {"id": "trail_rock_02", "type": "rock", "position": {"x": 2000, "y": 500}, "has_collision": true, "has_overlay": false},
+    {"id": "trail_signpost", "type": "signpost", "position": {"x": 400, "y": 920}, "has_collision": false, "has_overlay": false}
+  ],
+  "particles": [
+    {"id": "leaves_trail", "type": "leaves", "position": {"x": 700, "y": 200}},
+    {"id": "fog_trail", "type": "fog"}
+  ]
+}

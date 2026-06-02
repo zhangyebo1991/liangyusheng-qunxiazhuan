@@ -340,5 +340,22 @@
       {"id": "exit_to_wilderness", "type": "exit", "name": "野外山道", "position": {"x": 2400, "y": 960}, "radius": 72, "target_map_id": "wilderness_trail", "target_spawn_id": "from_town"},
       {"id": "pickup_herb_town", "type": "pickup", "name": "遗落的药草", "position": {"x": 1800, "y": 700}, "radius": 56, "reward_items": ["herb_small"], "reward_item_amounts": {"herb_small": 1}, "reward_coins": 0, "effects": [{"type": "add_item", "item_id": "herb_small", "amount": 1}, {"type": "resolve_map_object", "object_id": "pickup_herb_town"}]}
     ]
+  },
+  {
+    "id": "wilderness_trail",
+    "name": "野外山道",
+    "scene_path": "res://scenes/wilderness_trail.tscn",
+    "spawn_position": {"x": 160, "y": 960},
+    "spawn_points": {
+      "from_town": {"x": 160, "y": 960},
+      "from_mountain": {"x": 2400, "y": 960}
+    },
+    "objects": [
+      {"id": "npc_scholar_zhang", "type": "npc", "name": "张书生", "actor_id": "scholar_01", "position": {"x": 800, "y": 600}, "radius": 72, "dialogue_id": ""},
+      {"id": "npc_bandit_scout", "type": "npc", "name": "山寨探子", "actor_id": "villager_01", "position": {"x": 1600, "y": 800}, "radius": 72, "dialogue_id": ""},
+      {"id": "exit_to_town", "type": "exit", "name": "江南小镇", "position": {"x": 80, "y": 960}, "radius": 72, "target_map_id": "jiangnan_town", "target_spawn_id": "start"},
+      {"id": "exit_to_mountain", "type": "exit", "name": "山道", "position": {"x": 2480, "y": 960}, "radius": 72, "target_map_id": "mountain_pass", "target_spawn_id": "return_from_village"},
+      {"id": "pickup_coins_trail", "type": "pickup", "name": "行人遗落的钱袋", "position": {"x": 1200, "y": 500}, "radius": 56, "reward_coins": 50, "effects": [{"type": "add_coins", "amount": 50}, {"type": "resolve_map_object", "object_id": "pickup_coins_trail"}]}
+    ]
   }
 ]
